@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pet_shop</title>
+
+  <!-- Lottie animation library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.10.2/lottie.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAxEw9emL14TScHCzbJDcSXrvJgwD3DfR0"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    #loading h3 {
+      margin-top: 16px;
+      font-family: sans-serif;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- Hiển thị loading -->
+<div id="loading">
+  <div id="lottie-loading" style="width: 200px; height: 200px;"></div>
+</div>
+
+<!-- Khởi tạo animation Lottie -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof lottie !== 'undefined') {
+      lottie.loadAnimation({
+        container: document.getElementById('lottie-loading'),
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: 'assets/loading.json' // đúng đường dẫn assets
+      });
+    }
+  });
+
+  // Khi Flutter đã render xong, ẩn loading
+  window.addEventListener("flutter-first-frame", function () {
+    const loading = document.getElementById("loading");
+    if (loading) loading.remove();
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  window.sendOrderUpdate = function(name, email, orderId, orderStatus) {
+    emailjs.init("5bElnLHhuSdWW9Bro");
+    emailjs.send("service_pig1cpr", "template_f83z09a", {
+      user_name: name,
+      user_email: email,
+      order_id: orderId,
+      order_status: orderStatus
+    }).then(function(response) {
+      console.log("✅ Email sent", response.status, response.text);
+    }, function(error) {
+      console.error("❌ Failed to send email", error);
+    });
+  };
+</script>
+
+
+<!-- Bootstrap Flutter -->
+<script src="flutter.js" defer></script>
+<script src="main.dart.js" defer></script>
+
+</body>
+</html>
