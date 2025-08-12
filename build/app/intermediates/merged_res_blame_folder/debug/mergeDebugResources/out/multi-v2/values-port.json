@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.example.pet_shop.app-mergeDebugResources-97:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "D:\\Android_Virtual\\.gradle\\caches\\8.9\\transforms\\23bd9aa07e823bef316425933a7f07a1\\transformed\\appcompat-1.6.1\\res\\values-port\\values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        }
+    ]
+}
