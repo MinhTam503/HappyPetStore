@@ -53,7 +53,8 @@ class MyApp extends StatelessWidget {
                   } else {
                     return const LoginOrRegister();
                   }
-                }),
+                },
+              ),
       ),
     );
   }

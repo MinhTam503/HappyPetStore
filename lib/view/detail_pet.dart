@@ -58,8 +58,7 @@ class _DetailPetState extends State<DetailPet> {
       if (!mounted) return;
 
       setState(() {
-        petItems = extractPets(breedSnap)
-          ..addAll(extractPets(categorySnap));
+        petItems = extractPets(breedSnap)..addAll(extractPets(categorySnap));
       });
     } catch (e) {
       print("Lỗi khi lọc thú cưng: $e");
@@ -74,9 +73,8 @@ class _DetailPetState extends State<DetailPet> {
       bool isFavorite = false;
 
       if (state is FavLoaded) {
-        isFavorite =
-            state.items.any((item) =>
-            item['productId'] == widget.grocery['id']);
+        isFavorite = state.items
+            .any((item) => item['productId'] == widget.grocery['id']);
       }
 
       return Scaffold(
@@ -97,18 +95,20 @@ class _DetailPetState extends State<DetailPet> {
                             image: NetworkImage(widget.grocery["imageUrl"]))),
                   ),
                   Positioned(
-                    top: 25,
+                    top: 35,
                     left: 5,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle, color: Colors.grey.shade400),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        print("Back to previous screen");
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.grey.shade400),
+                        child: const Icon(Icons.arrow_back),
                       ),
                     ),
                   ),
@@ -117,7 +117,10 @@ class _DetailPetState extends State<DetailPet> {
               // Name
               Padding(
                 padding: const EdgeInsets.only(
-                  left: 10, right: 10, top: 10,),
+                  left: 10,
+                  right: 10,
+                  top: 10,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -146,21 +149,21 @@ class _DetailPetState extends State<DetailPet> {
                         }
                         if (!isFavorite) {
                           context.read<FavBloc>().add(
-                            AddToFav(
-                              userEmail,
-                              {
-                                'productId': widget.grocery['id'],
-                                'name': widget.grocery['name'],
-                                'imageUrl': widget.grocery['imageUrl'],
-                                'price': widget.grocery['weight'],
-                              },
-                            ),
-                          );
+                                AddToFav(
+                                  userEmail,
+                                  {
+                                    'productId': widget.grocery['id'],
+                                    'name': widget.grocery['name'],
+                                    'imageUrl': widget.grocery['imageUrl'],
+                                    'price': widget.grocery['weight'],
+                                  },
+                                ),
+                              );
                         } else {
                           context.read<FavBloc>().add(RemoveFromFav(
-                            userEmail,
-                            widget.grocery['id'],
-                          ));
+                                userEmail,
+                                widget.grocery['id'],
+                              ));
                         }
                       },
                       child: Icon(
@@ -174,15 +177,16 @@ class _DetailPetState extends State<DetailPet> {
               ),
 
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text("\$ " + widget.grocery["weight"],
                     style: TextStyle(
                         fontSize: 18,
                         color: Colors.black.withOpacity(0.6),
                         fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(
+                height: 10,
+              ),
               //Detail pet
               Padding(
                 padding: const EdgeInsets.only(left: 10, right: 10),
@@ -254,9 +258,9 @@ class _DetailPetState extends State<DetailPet> {
                                 widget.grocery['breed'].length > 10
                                     ? '${widget.grocery['breed'].substring(0, 10)}...'
                                     : widget.grocery['breed'],
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold),
                               ),
-
                             ],
                           ),
                         ],
@@ -366,8 +370,9 @@ class _DetailPetState extends State<DetailPet> {
                   children: [
                     Text(
                       maxLines: isExpand ? null : 3,
-                      overflow:
-                      isExpand ? TextOverflow.visible : TextOverflow.ellipsis,
+                      overflow: isExpand
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
                       widget.grocery["about"],
                       style: const TextStyle(
                         fontSize: 14,
@@ -464,39 +469,41 @@ class _DetailPetState extends State<DetailPet> {
               ),
               petItems.isEmpty
                   ? const Padding(
-                padding: EdgeInsets.all(10),
-                child: Text("Không có sản phẩm tương tự",
-                  style: TextStyle(fontWeight: FontWeight.w500),),
-              )
+                      padding: EdgeInsets.all(10),
+                      child: Text(
+                        "Không có sản phẩm tương tự",
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    )
                   : GridView.builder(
-                itemCount: petItems.length,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.903,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              DetailPet(grocery: petItems[index]),
-                        ),
-                      );
-                    },
-                    child: PetItemsAll(
-                      pet: petItems[index],
+                      itemCount: petItems.length,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.903,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    DetailPet(grocery: petItems[index]),
+                              ),
+                            );
+                          },
+                          child: PetItemsAll(
+                            pet: petItems[index],
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
               const SizedBox(
                 height: 20,
               )
