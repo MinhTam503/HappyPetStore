@@ -9,13 +9,15 @@ class MyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment:  MainAxisAlignment.end,
-      children: [ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.pink.shade300,
-            foregroundColor: Colors.white
-          ),
-          onPressed: onPressed, child: Text(text))],
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pink.shade300,
+                foregroundColor: Colors.white),
+            onPressed: onPressed,
+            child: Text(text))
+      ],
     );
   }
 }

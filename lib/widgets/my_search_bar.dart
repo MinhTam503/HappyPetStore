@@ -25,7 +25,7 @@ class MySearchBar extends StatelessWidget {
           ]),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: 300,
             child: TextField(
               onChanged: onSearch,

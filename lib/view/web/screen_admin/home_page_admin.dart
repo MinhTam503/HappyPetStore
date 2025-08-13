@@ -10,6 +10,7 @@ import 'package:pet_shop/view/web/screen_admin/shop_info.dart';
 import '../../../auth/login_or_register.dart';
 import 'account_admin.dart';
 import 'category_admin.dart';
+import 'login_admin_page.dart';
 import 'orders_admin.dart';
 
 class HomePageAdmin extends StatefulWidget {
@@ -56,7 +57,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
           }
           String role = snapshot.data ?? "user";
           if (role != "admin") {
-            return const LoginOrRegister();
+            return  const LoginAdminPage();
           }
           return Scaffold(
             body: Column(
