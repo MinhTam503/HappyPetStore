@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pet_shop/utils/contants.dart';
 
-import '../utils/list_city.dart';
+import '../../utils/list_city.dart';
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});

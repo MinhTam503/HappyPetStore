@@ -5,12 +5,12 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/utils/contants.dart';
 import 'package:pet_shop/view/Edit_profile.dart';
-import 'package:pet_shop/view/change_password_page.dart';
-import 'package:pet_shop/view/chat_page.dart';
-import 'package:pet_shop/view/tab/favorite_screen.dart';
-import 'package:pet_shop/view/your_order_screen.dart';
+import 'package:pet_shop/view/mobile/change_password_page.dart';
+import 'package:pet_shop/view/mobile/chat_page.dart';
+import 'package:pet_shop/view/mobile/your_order_screen.dart';
 
-import '../orderSuccess.dart';
+import 'favorite_screen.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

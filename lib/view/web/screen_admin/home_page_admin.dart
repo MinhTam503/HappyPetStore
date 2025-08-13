@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:pet_shop/auth/auth_service.dart';
-import 'package:pet_shop/utils/contants.dart';
+import 'package:pet_shop/utils/contants.dart'; // Chứa primaryColor, secondaryColor
 import 'package:pet_shop/view/web/screen_admin/inbox_page_admin.dart';
-import 'package:pet_shop/view/web/screen_admin/pets_admin.dart';
+import 'package:pet_shop/view/web/screen_admin/pet/pets_admin.dart';
 import 'package:pet_shop/view/web/screen_admin/revenue_page.dart';
 import 'package:pet_shop/view/web/screen_admin/shop_info.dart';
 
-
-import '../../../auth/login_or_register.dart';
 import 'account_admin.dart';
-import 'category_admin.dart';
+import 'category/category_admin.dart';
 import 'login_admin_page.dart';
 import 'orders_admin.dart';
 
@@ -21,107 +19,123 @@ class HomePageAdmin extends StatefulWidget {
 }
 
 class _HomePageAdminState extends State<HomePageAdmin> {
-  Future<String?> fetchUserRole() async {
-    Map<String, dynamic>? userInfo = await authService.value.getUserInfo();
-    setState(() {});
-    return userInfo?['role'] ?? "user";
-  }
-
   int _selectedIndex = 0;
-  final List<Widget> _pages = [
-    // const DashboardPage(),
-    const PetsAdmin(),
-    const CategoryAdmin(),
-    const AccountAdmin(),
-    const OrdersAdmin(),
-    const InboxPageAdmin(),
-    const ShopInfo(),
-    const RevenuePage(),
-    // const SettingsPage(),
+  String? _role;
+  bool _loading = true;
+
+  final List<Widget> _pages = const [
+    PetsAdmin(),
+    CategoryAdmin(),
+    AccountAdmin(),
+    OrdersAdmin(),
+    InboxPageAdmin(),
+    ShopInfo(),
+    RevenuePage(),
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: fetchUserRole(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            if (!snapshot.hasData) {
-              return const Scaffold(
-                backgroundColor: secondaryColor,
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-          }
-          String role = snapshot.data ?? "user";
-          if (role != "admin") {
-            return  const LoginAdminPage();
-          }
-          return Scaffold(
-            body: Column(
-              children: [
-                // Thanh Navigation
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  color: Colors.blue,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Admin Panel",
-                        style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Row(
-                        children: [
-                          navButton("Pets", 0),
-                          navButton("Category", 1),
-                          navButton("Account", 2),
-                          navButton("Orders", 3),
-                          navButton("Inbox", 4),
-                          navButton("ShopInfo", 5),
-                          navButton("Revenue", 6),
-                          navButton("Logout", -1),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Nội dung trang
-                Expanded(
-                  child: _selectedIndex == -1
-                      ? const Center(
-                          child: Text("Đang đăng xuất...",
-                              style: TextStyle(fontSize: 18)))
-                      : _pages[_selectedIndex],
-                ),
-              ],
-            ),
-          );
-        });
+  void initState() {
+    super.initState();
+    _fetchRole();
   }
 
-  Widget navButton(String text, int index) {
-    return TextButton(
-      onPressed: () {
-        if (index == -1) {
-          authService.value.signOut();
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => const LoginOrRegister()));
-        } else {
-          setState(() {
-            _selectedIndex = index;
-          });
-        }
-      },
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
+  Future<void> _fetchRole() async {
+    final info = await authService.value.getUserInfo();
+    setState(() {
+      _role = info?['role'] ?? 'user';
+      _loading = false;
+    });
+  }
+
+  void _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận'),
+        content: const Text('Bạn có chắc muốn đăng xuất?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Huỷ')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Đăng xuất')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await authService.value.signOut();
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginAdminPage()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: primaryColor)),
+      );
+    }
+    if (_role != 'admin') {
+      return const LoginAdminPage();
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        title: const Text('Admin Panel', style: TextStyle(color: Colors.white)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _logout,
+            tooltip: 'Đăng xuất',
+          ),
+        ],
+      ),
+      body: Row(
+        children: [
+          NavigationRail(
+            backgroundColor: secondaryColor,
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) =>
+                setState(() => _selectedIndex = index),
+            labelType: NavigationRailLabelType.all,
+            selectedIconTheme:
+                const IconThemeData(color: primaryColor, size: 28),
+            unselectedIconTheme:
+                IconThemeData(color: Colors.grey.shade600, size: 24),
+            selectedLabelTextStyle: const TextStyle(
+                color: primaryColor, fontWeight: FontWeight.bold),
+            unselectedLabelTextStyle: TextStyle(color: Colors.grey.shade700),
+            destinations: const [
+              NavigationRailDestination(
+                  icon: Icon(Icons.pets_outlined), label: Text('Pets')),
+              NavigationRailDestination(
+                  icon: Icon(Icons.category_outlined), label: Text('Category')),
+              NavigationRailDestination(
+                  icon: Icon(Icons.group_outlined), label: Text('Account')),
+              NavigationRailDestination(
+                  icon: Icon(Icons.receipt_long_outlined),
+                  label: Text('Orders')),
+              NavigationRailDestination(
+                  icon: Icon(Icons.inbox_outlined), label: Text('Inbox')),
+              NavigationRailDestination(
+                  icon: Icon(Icons.store_outlined), label: Text('Shop Info')),
+              NavigationRailDestination(
+                  icon: Icon(Icons.bar_chart_outlined), label: Text('Revenue')),
+            ],
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _pages[_selectedIndex],
+            ),
+          ),
+        ],
       ),
     );
   }

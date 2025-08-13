@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/utils/contants.dart';
-import 'package:pet_shop/view/detail_pet.dart';
+import 'package:pet_shop/view/mobile/detail_pet.dart';
 import 'package:pet_shop/widgets/my_search_bar.dart';
 import 'package:pet_shop/widgets/pet_items_all.dart';
 import 'dart:io';
@@ -11,8 +11,8 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'dart:convert';
 
-import '../bloc/favBloc/fav_bloc.dart';
-import '../bloc/favBloc/fav_event.dart';
+import '../../bloc/favBloc/fav_bloc.dart';
+import '../../bloc/favBloc/fav_event.dart';
 
 class AllPet extends StatefulWidget {
   const AllPet({super.key});

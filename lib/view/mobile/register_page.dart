@@ -4,9 +4,9 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/components/my_button.dart';
 import 'package:pet_shop/components/my_textfield.dart';
 import 'package:pet_shop/utils/contants.dart';
-import 'package:pet_shop/view/VerifyEmailPage.dart';
+import 'package:pet_shop/view/mobile/VerifyEmailPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pet_shop/view/login_page.dart';
+import 'package:pet_shop/view/mobile/login_page.dart';
 
 class RegisterPage extends StatefulWidget {
   final void Function()? onTap;

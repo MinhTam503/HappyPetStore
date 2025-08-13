@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 
 import 'package:pet_shop/utils/contants.dart';
-import 'package:pet_shop/view/tab/cart_screen.dart';
-import 'package:pet_shop/view/tab/favorite_screen.dart';
-import 'package:pet_shop/view/tab/home_page.dart';
-import 'package:pet_shop/view/tab/profile_screen.dart';
+import 'package:pet_shop/view/mobile/tab/cart_screen.dart';
+import 'package:pet_shop/view/mobile/tab/favorite_screen.dart';
+import 'package:pet_shop/view/mobile/tab/home_page.dart' show HomePage;
+import 'package:pet_shop/view/mobile/tab/profile_screen.dart';
 
 class BottomNavigator extends StatefulWidget {
   const BottomNavigator({super.key});
@@ -68,7 +68,6 @@ class _HomePageState extends State<BottomNavigator> {
           ),
         ],
       ),
-
       body: pages[selectedIndex],
     );
   }

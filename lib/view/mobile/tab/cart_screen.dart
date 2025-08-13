@@ -6,7 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:http/http.dart' as http;
 import 'package:pet_shop/utils/list_city.dart';
-import 'package:pet_shop/view/orderSuccess.dart';
+import 'package:pet_shop/view/mobile/orderSuccess.dart';
+import '../../../bloc/model/cart_model.dart';
 import '../../../services/apriori/apriori_algorithm.dart';
 import '../../../auth/payment/keys.dart';
 import '../../../utils/contants.dart';
@@ -14,7 +15,6 @@ import '../../../widgets/cart_item.dart';
 import '../../../bloc/cartBloc/cart_bloc.dart';
 import '../../../bloc/cartBloc/cart_event.dart';
 import '../../../bloc/cartBloc/cart_state.dart';
-import '../../bloc/model/cart_model.dart';
 import '../../../auth/auth_service.dart';
 import '../detail_pet.dart';
 

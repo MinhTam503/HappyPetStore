@@ -3,12 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/utils/contants.dart';
-import 'package:pet_shop/view/StoreInfoScreen.dart';
+import 'package:pet_shop/view/mobile/StoreInfoScreen.dart';
 
-import '../bloc/favBloc/fav_bloc.dart';
-import '../bloc/favBloc/fav_event.dart';
-import '../bloc/favBloc/fav_state.dart';
-import '../widgets/pet_items_all.dart';
+import '../../bloc/favBloc/fav_bloc.dart';
+import '../../bloc/favBloc/fav_event.dart';
+import '../../bloc/favBloc/fav_state.dart';
+import '../../widgets/pet_items_all.dart';
 
 class DetailPet extends StatefulWidget {
   final Map<String, dynamic> grocery;

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/view/web/screen_admin/home_page_admin.dart';
-import '../../bottom_navigator.dart';
+import '../../mobile/bottom_navigator.dart';
 
 class LoginAdminPage extends StatefulWidget {
   const LoginAdminPage({super.key});

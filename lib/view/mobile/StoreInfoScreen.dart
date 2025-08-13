@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/auth/firestore_service.dart';
-import 'package:pet_shop/view/chat_page.dart';
+import 'package:pet_shop/view/mobile/chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../auth/auth_service.dart';
-import '../utils/contants.dart';
+import '../../auth/auth_service.dart';
+import '../../utils/contants.dart';
 
 class StoreInfoScreen extends StatefulWidget {
   @override

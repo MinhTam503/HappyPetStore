@@ -6,7 +6,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/payment/keys.dart';
 import 'package:pet_shop/bloc/favBloc/fav_bloc.dart';
-import 'package:pet_shop/view/bottom_navigator.dart';
+import 'package:pet_shop/view/mobile/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/view/web/screen_admin/home_page_admin.dart';
 import 'package:provider/provider.dart';
