@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/utils/contants.dart';
 
+import '../../components/empty_state.dart';
 import 'components/category_card.dart';
 
 class CategoryAdmin extends StatefulWidget {
@@ -479,7 +480,10 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                       child: CircularProgressIndicator(color: primaryColor));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const _EmptyState();
+                  return const EmptyState(
+                    label: 'No categories found',
+                    icon: Icons.category_outlined,
+                  );
                 }
 
                 var docs = snapshot.data!.docs;
@@ -566,27 +570,6 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                 ],
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.category_outlined,
-              size: 64, color: primaryColor.withOpacity(.6)),
-          const SizedBox(height: 8),
-          const Text('No categories found'),
         ],
       ),
     );

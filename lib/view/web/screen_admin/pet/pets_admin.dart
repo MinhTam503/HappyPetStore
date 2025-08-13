@@ -25,7 +25,7 @@ class _PetsState extends State<PetsAdmin> {
   String? _fileName;
 
   final CollectionReference petsCollection =
-  FirebaseFirestore.instance.collection('Pets');
+      FirebaseFirestore.instance.collection('Pets');
 
   // Filters
   String selectedCategory = 'All';
@@ -51,13 +51,10 @@ class _PetsState extends State<PetsAdmin> {
     try {
       String ext = 'jpg';
       if (fileName.contains('.')) {
-        ext = fileName
-            .split('.')
-            .last
-            .toLowerCase();
+        ext = fileName.split('.').last.toLowerCase();
       }
       final finalFileName =
-      fileName.contains('.') ? fileName : '$fileName.$ext';
+          fileName.contains('.') ? fileName : '$fileName.$ext';
       String contentType = 'image/jpeg';
       if (ext == 'png')
         contentType = 'image/png';
@@ -310,7 +307,7 @@ class _PetsState extends State<PetsAdmin> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const EmptyState(
                     label: 'No categories found',
-                    icon: Icons.category_outlined,
+                    icon: Icons.pets_outlined,
                   );
                 }
                 var pets = snapshot.data!.docs
@@ -343,13 +340,12 @@ class _PetsState extends State<PetsAdmin> {
                         childAspectRatio: 3 / 2,
                       ),
                       itemCount: pets.length,
-                      itemBuilder: (context, i) =>
-                          PetCard(
-                            pet: pets[i],
-                            onEdit: () => _showPetDialog(pet: pets[i]),
-                            onDelete: () => _confirmDelete(pets[i].id),
-                            onTap: () => _showPetDetailsDialog(pets[i]),
-                          ),
+                      itemBuilder: (context, i) => PetCard(
+                        pet: pets[i],
+                        onEdit: () => _showPetDialog(pet: pets[i]),
+                        onDelete: () => _confirmDelete(pets[i].id),
+                        onTap: () => _showPetDetailsDialog(pets[i]),
+                      ),
                     );
                   },
                 );
@@ -377,21 +373,18 @@ class _PetsState extends State<PetsAdmin> {
   Future<void> _confirmDelete(String id) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) =>
-          AlertDialog(
-            title: const Text('Xác nhận'),
-            content: const Text(
-                'Bạn có chắc chắn muốn xóa thú cưng này không?'),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Hủy')),
-              TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text(
-                      'Xóa', style: TextStyle(color: Colors.red))),
-            ],
-          ),
+      builder: (_) => AlertDialog(
+        title: const Text('Xác nhận'),
+        content: const Text('Bạn có chắc chắn muốn xóa thú cưng này không?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+        ],
+      ),
     );
     if (ok == true) deletePet(id);
   }
@@ -422,7 +415,7 @@ class _PetsState extends State<PetsAdmin> {
           builder: (context, setStateDialog) {
             return AlertDialog(
               insetPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               title: Text(pet == null ? 'Add Pet' : 'Edit Pet'),
               content: SingleChildScrollView(
                 child: ConstrainedBox(
@@ -446,7 +439,7 @@ class _PetsState extends State<PetsAdmin> {
                                   value: pickedCategory,
                                   decoration: _input('Category',
                                       prefix:
-                                      const Icon(Icons.category_outlined)),
+                                          const Icon(Icons.category_outlined)),
                                   onChanged: (v) async {
                                     setStateDialog(() {
                                       pickedCategory = v!;
@@ -458,8 +451,7 @@ class _PetsState extends State<PetsAdmin> {
                                   },
                                   items: categories
                                       .sublist(1)
-                                      .map((e) =>
-                                      DropdownMenuItem(
+                                      .map((e) => DropdownMenuItem(
                                           value: e, child: Text(e)))
                                       .toList(),
                                 ),
@@ -469,12 +461,11 @@ class _PetsState extends State<PetsAdmin> {
                                     value: selectedBreed,
                                     decoration: _input('Breed',
                                         prefix:
-                                        const Icon(Icons.pets_outlined)),
+                                            const Icon(Icons.pets_outlined)),
                                     onChanged: (v) =>
                                         setStateDialog(() => selectedBreed = v),
                                     items: breedsList
-                                        .map((e) =>
-                                        DropdownMenuItem(
+                                        .map((e) => DropdownMenuItem(
                                             value: e, child: Text(e)))
                                         .toList(),
                                   ),
@@ -497,13 +488,10 @@ class _PetsState extends State<PetsAdmin> {
                                       : null,
                                   decoration: _input('Gender',
                                       prefix: const Icon(Icons.wc_outlined)),
-                                  onChanged: (v) =>
-                                      setStateDialog(
-                                              () =>
-                                          genderController.text = v ?? ''),
+                                  onChanged: (v) => setStateDialog(
+                                      () => genderController.text = v ?? ''),
                                   items: genderOptions
-                                      .map((e) =>
-                                      DropdownMenuItem(
+                                      .map((e) => DropdownMenuItem(
                                           value: e, child: Text(e)))
                                       .toList(),
                                 ),
@@ -536,25 +524,25 @@ class _PetsState extends State<PetsAdmin> {
                                         color: secondaryColor,
                                         border: Border.all(
                                             color:
-                                            primaryColor.withOpacity(.25)),
+                                                primaryColor.withOpacity(.25)),
                                       ),
                                       child: _imageBytes != null
                                           ? FittedBox(
-                                        fit: BoxFit.contain,
-                                        // hiển thị nguyên hình
-                                        child: Image.memory(_imageBytes!),
-                                      )
+                                              fit: BoxFit.contain,
+                                              // hiển thị nguyên hình
+                                              child: Image.memory(_imageBytes!),
+                                            )
                                           : (pet != null
-                                          ? FittedBox(
-                                        fit: BoxFit.contain,
-                                        // hiển thị nguyên hình
-                                        child: Image.network(
-                                            pet.imageUrl),
-                                      )
-                                          : const Center(
-                                          child: Icon(
-                                              Icons.image_outlined,
-                                              size: 48))),
+                                              ? FittedBox(
+                                                  fit: BoxFit.contain,
+                                                  // hiển thị nguyên hình
+                                                  child: Image.network(
+                                                      pet.imageUrl),
+                                                )
+                                              : const Center(
+                                                  child: Icon(
+                                                      Icons.image_outlined,
+                                                      size: 48))),
                                     ),
                                   ),
                                 ),
@@ -578,7 +566,7 @@ class _PetsState extends State<PetsAdmin> {
                                         tooltip: 'Clear',
                                         onPressed: () {
                                           setStateDialog(
-                                                  () => _imageBytes = null);
+                                              () => _imageBytes = null);
                                         },
                                         icon: const Icon(Icons.clear),
                                       ),
@@ -606,24 +594,14 @@ class _PetsState extends State<PetsAdmin> {
                   style: FilledButton.styleFrom(backgroundColor: primaryColor),
                   onPressed: () async {
                     // Validate
-                    if (nameController.text
-                        .trim()
-                        .isEmpty ||
+                    if (nameController.text.trim().isEmpty ||
                         pickedCategory.isEmpty ||
-                        ageController.text
-                            .trim()
-                            .isEmpty ||
+                        ageController.text.trim().isEmpty ||
                         selectedBreed == null ||
-                        aboutController.text
-                            .trim()
-                            .isEmpty ||
-                        genderController.text
-                            .trim()
-                            .isNotEmpty &&
+                        aboutController.text.trim().isEmpty ||
+                        genderController.text.trim().isNotEmpty &&
                             !genderOptions.contains(genderController.text) ||
-                        weightController.text
-                            .trim()
-                            .isEmpty ||
+                        weightController.text.trim().isEmpty ||
                         (_imageBytes == null &&
                             (pet == null || imageController.text.isEmpty))) {
                       _snack('Vui lòng nhập đầy đủ thông tin và chọn ảnh!');
@@ -691,7 +669,7 @@ class _PetsState extends State<PetsAdmin> {
       builder: (context) {
         return AlertDialog(
           insetPadding:
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           title: Text(
             pet.name,
             maxLines: 2,
@@ -719,8 +697,8 @@ class _PetsState extends State<PetsAdmin> {
                             child: Image.network(
                               pet.imageUrl,
                               errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.broken_image,
-                                  size: 56, color: Colors.grey),
+                                  const Icon(Icons.broken_image,
+                                      size: 56, color: Colors.grey),
                               loadingBuilder:
                                   (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
@@ -779,7 +757,7 @@ class _PetsState extends State<PetsAdmin> {
           const SizedBox(width: 8),
           Text('$title: ',
               style:
-              const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Expanded(
             child: Text(
               value,
@@ -793,5 +771,3 @@ class _PetsState extends State<PetsAdmin> {
     );
   }
 }
-
-
