@@ -155,12 +155,14 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                   ),
                 ],
               ),
-              content: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxWidth: 520, maxHeight: 360),
+              content: SizedBox(
+                width: 520,
+                height: 360,
                 child: breeds.isEmpty
                     ? const Center(child: Text('Chưa có giống nào'))
                     : ListView.separated(
+                        primary: false,
+                        shrinkWrap: true,
                         itemCount: breeds.length,
                         separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, i) => ListTile(
