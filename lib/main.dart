@@ -8,7 +8,7 @@ import 'package:pet_shop/auth/payment/keys.dart';
 import 'package:pet_shop/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/view/mobile/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:pet_shop/view/web/screen_admin/home_page_admin.dart';
+import 'package:pet_shop/view/web/screen_admin/home/home_page_admin.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'bloc/cartBloc/cart_bloc.dart';

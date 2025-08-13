@@ -7,7 +7,7 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/components/my_button.dart';
 import 'package:pet_shop/components/my_textfield.dart';
 import 'package:pet_shop/utils/contants.dart';
-import 'package:pet_shop/view/web/screen_admin/home_page_admin.dart';
+import 'package:pet_shop/view/web/screen_admin/home/home_page_admin.dart';
 
 import 'bottom_navigator.dart';
 
