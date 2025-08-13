@@ -6,10 +6,10 @@ import 'package:pet_shop/view/web/screen_admin/pet/pets_admin.dart';
 import 'package:pet_shop/view/web/screen_admin/revenue_page.dart';
 import 'package:pet_shop/view/web/screen_admin/shop_info.dart';
 
-import 'account_admin.dart';
+import 'account/account_admin.dart';
 import 'category/category_admin.dart';
 import 'login_admin_page.dart';
-import 'orders_admin.dart';
+import 'order/orders_admin.dart';
 
 class HomePageAdmin extends StatefulWidget {
   const HomePageAdmin({super.key});
