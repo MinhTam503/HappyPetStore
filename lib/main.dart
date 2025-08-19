@@ -12,11 +12,14 @@ import 'package:pet_shop/view/web/screen_admin/home/home_page_admin.dart';
 import 'package:pet_shop/view/web_user/home_page_web_user.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:url_strategy/url_strategy.dart';
 import 'bloc/cartBloc/cart_bloc.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Use path URL strategy on web to remove the `#` from routes.
+  if (kIsWeb) setPathUrlStrategy();
   try {
     await dotenv.load();
   } catch (e) {
@@ -78,10 +81,9 @@ class MyApp extends StatelessWidget {
                     }
                   },
                 ),
-          '/home': (context) => HomePageWebUser(), // Route cho HomePageWebUser
+          '/home': (context) => HomePageWebUser(),
         },
       ),
     );
   }
-  
 }
