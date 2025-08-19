@@ -55,6 +55,12 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.debug
+            // Temporarily disable code shrinking/minification to avoid R8 failures
+            // caused by newer Kotlin metadata in some dependencies (kotlinx-metadata-jvm).
+            // Remove these lines once the Android Gradle Plugin / R8 supports Kotlin 2.1 metadata.
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
