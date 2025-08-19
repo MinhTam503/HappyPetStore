@@ -9,6 +9,7 @@ import 'package:pet_shop/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/view/mobile/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/view/web/screen_admin/home/home_page_admin.dart';
+import 'package:pet_shop/view/web_user/home_page_web_user.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'bloc/cartBloc/cart_bloc.dart';
@@ -16,7 +17,12 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  try {
+    await dotenv.load();
+  } catch (e) {
+    // Non-fatal: if .env is missing on web or failed to load, continue with defaults.
+    debugPrint('dotenv.load() failed (non-blocking): $e');
+  }
   if (!kIsWeb) {
     Stripe.publishableKey = PublishableKey;
     await Stripe.instance.applySettings();
@@ -40,22 +46,42 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: kIsWeb
-            ? const HomePageAdmin()
-            : StreamBuilder<User?>(
-                stream: FirebaseAuth.instance.authStateChanges(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasData) {
-                    return const BottomNavigator();
-                  } else {
-                    return const LoginOrRegister();
-                  }
-                },
-              ),
+        initialRoute: '/',
+        // home: kIsWeb
+        //     ? const HomePageAdmin()
+        //     : StreamBuilder<User?>(
+        //         stream: FirebaseAuth.instance.authStateChanges(),
+        //         builder: (context, snapshot) {
+        //           if (snapshot.connectionState == ConnectionState.waiting) {
+        //             return const Center(child: CircularProgressIndicator());
+        //           }
+        //           if (snapshot.hasData) {
+        //             return const BottomNavigator();
+        //           } else {
+        //             return const LoginOrRegister();
+        //           }
+        //         },
+        //       ),
+        routes: {
+          '/': (context) => kIsWeb
+              ? const HomePageAdmin()
+              : StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasData) {
+                      return const BottomNavigator();
+                    } else {
+                      return const LoginOrRegister();
+                    }
+                  },
+                ),
+          '/home': (context) => HomePageWebUser(), // Route cho HomePageWebUser
+        },
       ),
     );
   }
+  
 }

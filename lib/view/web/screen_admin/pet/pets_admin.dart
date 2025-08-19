@@ -225,14 +225,21 @@ class _PetsState extends State<PetsAdmin> {
         backgroundColor: Colors.white,
         title: Row(
           children: [
-            const Text('Manage Pets', style: TextStyle(color: Colors.black)),
+            const Text('Quản lý thú cưng',
+                style: TextStyle(color: Colors.black)),
             const SizedBox(width: 12),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: Colors.white),
-              onPressed: _showPetDialog,
-              icon: const Icon(Icons.add, color: primaryColor),
-              label: const Text('Create New',
-                  style: TextStyle(color: primaryColor)),
+            Card(
+              // decoration: BoxDecoration(
+              //   borderRadius:BorderRadius.circular(12),
+              //   border: Border.all(color: Colors.grey)
+              // ),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: Colors.white),
+                onPressed: _showPetDialog,
+                icon: const Icon(Icons.add, color: primaryColor),
+                label: const Text('Thêm thú cưng',
+                    style: TextStyle(color: primaryColor)),
+              ),
             ),
           ],
         ),

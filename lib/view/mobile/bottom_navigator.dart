@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
 
 import 'package:pet_shop/utils/contants.dart';
 import 'package:pet_shop/view/mobile/tab/cart_screen.dart';
@@ -42,13 +41,13 @@ class _HomePageState extends State<BottomNavigator> {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.home),
-            activeIcon: Icon(Iconsax.home5),
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
             label: "Home",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.heart),
-            activeIcon: Icon(Iconsax.heart5),
+            icon: Icon(Icons.favorite_border),
+            activeIcon: Icon(Icons.favorite),
             label: "Favorite",
           ),
           // BottomNavigationBarItem(
@@ -57,8 +56,8 @@ class _HomePageState extends State<BottomNavigator> {
           //   label: "Messages",
           // ),
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.shopping_cart),
-            activeIcon: Icon(Iconsax.shopping_cart5),
+            icon: Icon(Icons.shopping_cart_outlined),
+            activeIcon: Icon(Icons.shopping_cart),
             label: "Cart",
           ),
           BottomNavigationBarItem(

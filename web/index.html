@@ -4,11 +4,13 @@
   <base href="/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pet_shop</title>
+  <title>Happy Pet</title>
+
+  <link rel="icon" type="image/png" href="favicon.png">
 
   <!-- Lottie animation library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.10.2/lottie.min.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAxEw9emL14TScHCzbJDcSXrvJgwD3DfR0"></script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAxEw9emL14TScHCzbJDcSXrvJgwD3DfR0"></script>
 
   <style>
     body {
@@ -78,7 +80,16 @@
     });
   };
 </script>
-
+<script>
+  // Unregister existing service workers so clients fetch the newest deployed assets.
+  // This helps when debugging deploys; it can be removed later if you rely on SW caching.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations()
+      .then(regs => regs.forEach(r => r.unregister()))
+      .then(() => console.log('Service workers unregistered (debug)'))
+      .catch(() => {});
+  }
+</script>
 
 <!-- Bootstrap Flutter -->
 <script src="flutter.js" defer></script>
