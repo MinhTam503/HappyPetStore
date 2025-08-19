@@ -33,10 +33,10 @@ class _AllPetState extends State<AllPet> {
   void initState() {
     super.initState();
     fetchAllProduct();
-      final userEmail = FirebaseAuth.instance.currentUser?.email;
-      if (userEmail != null) {
-        context.read<FavBloc>().add(LoadFav(userEmail));
-      }
+    final userEmail = FirebaseAuth.instance.currentUser?.email;
+    if (userEmail != null) {
+      context.read<FavBloc>().add(LoadFav(userEmail));
+    }
   }
 
   Future<void> fetchAllProduct() async {
@@ -84,20 +84,23 @@ class _AllPetState extends State<AllPet> {
     try {
       final uri = Uri.parse('http://10.0.2.2:5000/search');
       var request = http.MultipartRequest('POST', uri);
-      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+      request.files
+          .add(await http.MultipartFile.fromPath('file', imageFile.path));
       var response = await request.send();
       if (response.statusCode == 200) {
         final respStr = await response.stream.bytesToString();
         final data = jsonDecode(respStr);
-        if (data['similar_images'] != null && data['similar_images'].isNotEmpty) {
+        if (data['similar_images'] != null &&
+            data['similar_images'].isNotEmpty) {
           // Lấy danh sách tên file
           List<String> fileNames = (data['similar_images'] as List)
               .map((img) => path.basename(img['image_path'] as String))
               .toList();
           // Lọc danh sách thú cưng có imageUrl chứa tên file
-          final pets = groceryItems.where((item) =>
-            fileNames.any((fileName) => (item['imageUrl'] as String).contains(fileName))
-          ).toList();
+          final pets = groceryItems
+              .where((item) => fileNames.any((fileName) =>
+                  (item['imageUrl'] as String).contains(fileName)))
+              .toList();
           setState(() {
             filterItems = pets;
           });
@@ -122,117 +125,147 @@ class _AllPetState extends State<AllPet> {
     List<Map<String, dynamic>> filtered = groceryItems;
     // Lọc theo category
     if (selectedCategoryFilter != 'All') {
-      filtered = filtered.where((item) =>
-        (item['category']?.toString() ?? '').toLowerCase() == selectedCategoryFilter.toLowerCase()
-      ).toList();
+      filtered = filtered
+          .where((item) =>
+              (item['category']?.toString() ?? '').toLowerCase() ==
+              selectedCategoryFilter.toLowerCase())
+          .toList();
     }
     // Sắp xếp theo giá
     if (priceSortOrder == 'asc') {
-      filtered.sort((a, b) => double.parse(a['weight'].toString()).compareTo(double.parse(b['weight'].toString())));
+      filtered.sort((a, b) => double.parse(a['weight'].toString())
+          .compareTo(double.parse(b['weight'].toString())));
     } else if (priceSortOrder == 'desc') {
-      filtered.sort((a, b) => double.parse(b['weight'].toString()).compareTo(double.parse(a['weight'].toString())));
+      filtered.sort((a, b) => double.parse(b['weight'].toString())
+          .compareTo(double.parse(a['weight'].toString())));
     }
     setState(() {
       filterItems = filtered;
     });
   }
 
+  int _gridCountForWidth(double w) {
+    if (w < 600) return 2; // phone
+    if (w < 900) return 3; // small tablet
+    if (w < 1200) return 4; // large tablet / small desktop
+    if (w < 1600) return 5; // desktop
+    return 6; // wide desktop
+  }
+
+  double _spacingForWidth(double w) {
+    if (w < 600) return 12;
+    if (w < 1024) return 14;
+    return 16;
+  }
+
+  EdgeInsets _paddingForWidth(double w) {
+    if (w < 600)
+      return const EdgeInsets.symmetric(horizontal: 12, vertical: 12);
+    if (w < 1024)
+      return const EdgeInsets.symmetric(horizontal: 16, vertical: 16);
+    return const EdgeInsets.symmetric(horizontal: 20, vertical: 18);
+  }
+
+  double _aspectForCrossCount(int cross) {
+    switch (cross) {
+      case 2:
+        return 0.84; 
+      case 3:
+        return 0.80;
+      case 4:
+        return 0.78;
+      case 5:
+        return 0.74;
+      default: 
+        return 0.74;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final int cross = _gridCountForWidth(width);
+    final double gap = _spacingForWidth(width);
+    final EdgeInsets pagePad = _paddingForWidth(width);
+    final double aspect = _aspectForCrossCount(cross); // tỷ lệ card theo cột
+
     return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
         backgroundColor: secondaryColor,
         elevation: 0,
         title: const Text(
-          "All Pets  ",
-          style: TextStyle(color: Colors.black,fontWeight: FontWeight.w500),
+          "All Pets",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         ),
-        actions: [
-          // Dropdown lọc theo category
-          DropdownButton<String>(
-            value: selectedCategoryFilter,
-            items: ['All', 'Dogs', 'Cats', 'Fish', 'Birds']
-                .map((cat) => DropdownMenuItem<String>(
-                      value: cat,
-                      child: Text(cat),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              selectedCategoryFilter = value!;
-              filterAndSortItems();
-            },
-            underline: Container(),
-            style: const TextStyle(color: Colors.black, fontSize: 16),
-          ),
-          const SizedBox(width: 10),
-          // Dropdown sắp xếp giá
-          DropdownButton<String>(
-            value: priceSortOrder,
-            items: const [
-              DropdownMenuItem(value: 'none', child: Text('Giá')),
-              DropdownMenuItem(value: 'asc', child: Text('Giá tăng dần')),
-              DropdownMenuItem(value: 'desc', child: Text('Giá giảm dần')),
-            ],
-            onChanged: (value) {
-              priceSortOrder = value!;
-              filterAndSortItems();
-            },
-            underline: Container(),
-            style: const TextStyle(color: Colors.black, fontSize: 16),
-          ),
-          const SizedBox(width: 10),
-        ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : SingleChildScrollView(
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(15),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      MySearchBar(
-                        onSearch: searchFilterItems,
-                        onImageSearch: searchByImage,
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      SizedBox(
-                        width: double.maxFinite,
-                        child: GridView.builder(
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: SingleChildScrollView(
+                    padding: pagePad,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Search
+                        MySearchBar(
+                          onSearch: searchFilterItems,
+                          onImageSearch: searchByImage,
+                        ),
+                        SizedBox(height: gap),
+
+                        // Filter bar (tự wrap)
+                        _FilterBar(
+                          selectedCategory: selectedCategoryFilter,
+                          onCategoryChanged: (v) {
+                            setState(() {
+                              selectedCategoryFilter = v;
+                              filterAndSortItems();
+                            });
+                          },
+                          priceSortOrder: priceSortOrder,
+                          onPriceOrderChanged: (v) {
+                            setState(() {
+                              priceSortOrder = v;
+                              filterAndSortItems();
+                            });
+                          },
+                        ),
+                        SizedBox(height: gap),
+
+                        // Grid responsive
+                        GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: filterItems.length,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 15,
-                            mainAxisSpacing: 15,
-                            childAspectRatio: 0.865,
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: cross,
+                            crossAxisSpacing: gap,
+                            mainAxisSpacing: gap,
+                            childAspectRatio: aspect,
                           ),
                           itemBuilder: (context, index) {
+                            final pet = filterItems[index];
                             return GestureDetector(
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => DetailPet(grocery: filterItems[index]),
+                                    builder: (context) =>
+                                        DetailPet(grocery: pet),
                                   ),
                                 );
                               },
-                              child: PetItemsAll(
-                                pet: filterItems[index],
-                              ),
+                              child: PetItemsAll(pet: pet),
                             );
                           },
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -241,39 +274,87 @@ class _AllPetState extends State<AllPet> {
   }
 }
 
-class PetSearchResultScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> pets;
-  const PetSearchResultScreen({super.key, required this.pets});
+class _FilterBar extends StatelessWidget {
+  final String selectedCategory;
+  final ValueChanged<String> onCategoryChanged;
+  final String priceSortOrder;
+  final ValueChanged<String> onPriceOrderChanged;
+
+  const _FilterBar({
+    super.key,
+    required this.selectedCategory,
+    required this.onCategoryChanged,
+    required this.priceSortOrder,
+    required this.onPriceOrderChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Kết quả tìm kiếm')),
-      body: pets.isEmpty
-          ? const Center(child: Text('Không tìm thấy thú cưng phù hợp!'))
-          : GridView.builder(
-              padding: const EdgeInsets.all(15),
-              itemCount: pets.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-                childAspectRatio: 0.865,
-              ),
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailPet(grocery: pets[index]),
-                      ),
-                    );
-                  },
-                  child: PetItemsAll(pet: pets[index]),
-                );
-              },
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        // Category
+        _LabeledBox(
+          label: "Danh mục",
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selectedCategory,
+              items: ['All', 'Dogs', 'Cats', 'Fish', 'Birds']
+                  .map((cat) => DropdownMenuItem<String>(
+                        value: cat,
+                        child: Text(cat),
+                      ))
+                  .toList(),
+              onChanged: (v) => onCategoryChanged(v ?? 'All'),
             ),
+          ),
+        ),
+
+        // Price order
+        _LabeledBox(
+          label: "Sắp xếp",
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: priceSortOrder,
+              items: const [
+                DropdownMenuItem(value: 'none', child: Text('Mặc định')),
+                DropdownMenuItem(value: 'asc', child: Text('Giá tăng dần')),
+                DropdownMenuItem(value: 'desc', child: Text('Giá giảm dần')),
+              ],
+              onChanged: (v) => onPriceOrderChanged(v ?? 'none'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LabeledBox extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _LabeledBox({super.key, required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 10),
+          child,
+        ],
+      ),
     );
   }
 }
