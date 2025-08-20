@@ -29,6 +29,7 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
     showDialog(
       context: context,
+  useRootNavigator: true,
       barrierDismissible: false,
       barrierColor: Colors.black54,
       builder: (context) {
@@ -71,8 +72,12 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
-      // Đảm bảo loading dialog được tắt
-      if (mounted) Navigator.pop(context);
+      // Đảm bảo loading dialog được tắt (đóng dialog trên root navigator)
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+      }
 
       if (userCredential.user != null) {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
@@ -116,8 +121,12 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on FirebaseAuthException catch (e) {
       // Đảm bảo loading dialog được tắt
-      if (mounted) Navigator.pop(context);
-      if (e.message ==
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+      }
+      if (mounted && e.message ==
           "The supplied auth credential is incorrect, malformed or has expired.") {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -127,10 +136,16 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       // Đảm bảo loading dialog được tắt
-      if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi không xác định: $e")),
-      );
+      if (mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lỗi không xác định: $e")),
+        );
+      }
     }
   }
   void sendEmailRestPassWord() async {

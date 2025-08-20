@@ -169,9 +169,9 @@ class _AllPetState extends State<AllPet> {
   double _aspectForCrossCount(int cross) {
     switch (cross) {
       case 2:
-        return 0.84; 
+        return 0.80; 
       case 3:
-        return 0.80;
+        return 0.78;
       case 4:
         return 0.78;
       case 5:

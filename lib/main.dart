@@ -25,10 +25,22 @@ void main() async {
   } catch (e) {
     // Non-fatal: if .env is missing on web or failed to load, continue with defaults.
     debugPrint('dotenv.load() failed (non-blocking): $e');
-  }
+  }  
   if (!kIsWeb) {
-    Stripe.publishableKey = PublishableKey;
-    await Stripe.instance.applySettings();
+    // Only initialize Stripe if a publishable key is available. dotenv.load()
+    // may fail (for example when .env is missing), so skip Stripe init to
+    // avoid platform exceptions from the native plugin.
+    try {
+      if (PublishableKey.isNotEmpty) {
+        Stripe.publishableKey = PublishableKey;
+        await Stripe.instance.applySettings();
+      } else {
+        debugPrint('Stripe publishable key is empty; skipping Stripe initialization.');
+      }
+    } catch (e, st) {
+      // Non-fatal: log and continue so the app can run even if Stripe init fails.
+      debugPrint('Stripe initialization failed: $e\n$st');
+    }
   }
 
   await Firebase.initializeApp(

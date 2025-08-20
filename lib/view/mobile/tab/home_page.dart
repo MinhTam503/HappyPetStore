@@ -19,7 +19,6 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
 
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -262,6 +261,15 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    final cardW = (screenW * 0.45).clamp(150.0, 220.0);
+    final imageH = cardW * 3 / 4;
+
+// Tổng thực tế ~ imageH + 6 (gap) + 20 (name) + 6 (gap) + 34 (pill)
+// + 8 (gap) + 36 (button) + 10 (padding) ≈ imageH + 120
+// Thêm buffer cho font/máy: + 16
+    final listH = imageH + 120; // <- tăng từ công thức cũ
+
     return Scaffold(
       backgroundColor: secondaryColor,
       body: SafeArea(
@@ -269,7 +277,7 @@ class _HomePageState extends State<HomePage> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
+                padding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 child: Row(
                   children: [
                     Text.rich(
@@ -375,13 +383,15 @@ class _HomePageState extends State<HomePage> {
                       child: Center(child: CircularProgressIndicator()),
                     ),
                   )
-                : SliverToBoxAdapter(
+                : // Trong build() của HomePage, ngay trước SliverToBoxAdapter list ngang:
+                SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(right: 10.0),
                       child: SizedBox(
-                        height: 220,
+                        height: listH, // 👈 chiều cao động theo cardW
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
+                          itemExtent: cardW, // 👈 bề rộng động theo màn hình
                           itemCount: top5BestSell.length,
                           itemBuilder: (context, index) {
                             return Padding(
@@ -392,12 +402,11 @@ class _HomePageState extends State<HomePage> {
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) => DetailPet(
-                                              grocery: top5BestSell[index])));
+                                        builder: (_) => DetailPet(
+                                            grocery: top5BestSell[index]),
+                                      ));
                                 },
-                                child: PetItems(
-                                  pet: top5BestSell[index],
-                                ),
+                                child: PetItems(pet: top5BestSell[index]),
                               ),
                             );
                           },
@@ -405,6 +414,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
+
             // Tất cả thú cưng
             SliverToBoxAdapter(
               child: Padding(
@@ -475,11 +485,12 @@ class _HomePageState extends State<HomePage> {
                         childCount: petItems.length,
                       ),
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 220,
                         mainAxisSpacing: 10,
                         crossAxisSpacing: 10,
-                        childAspectRatio: 0.88,
+                        childAspectRatio:
+                            0.78, // có thể tinh chỉnh theo thiết kế
                       ),
                     ),
                   ),

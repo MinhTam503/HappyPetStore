@@ -220,16 +220,16 @@ class _PetItemsAllState extends State<PetItemsAll> {
                             ),
                           ),
                         ),
-
+                      Spacer(),
                       // Hàng nút action (Add to cart)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+                        padding: const EdgeInsets.fromLTRB(5, 6, 5, 8),
                         child: Row(
                           children: [
                             SizedBox(
                               height: 40,
                               child: _PrimaryButton(
-                                label: 'Thêm vào giỏ',
+                                label: 'Thêm vào giỏ hàng',
                                 icon: Icons.shopping_cart_outlined,
                                 onTap: () {
                                   final email =
