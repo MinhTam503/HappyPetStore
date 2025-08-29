@@ -92,6 +92,21 @@
 </script>
 
 <!-- Bootstrap Flutter -->
+<script>
+  // Debug localStorage availability
+  try {
+    if (typeof Storage !== "undefined") {
+      console.log('✅ LocalStorage is available');
+      localStorage.setItem('test', 'test');
+      localStorage.removeItem('test');
+      console.log('✅ LocalStorage is working');
+    } else {
+      console.log('❌ LocalStorage is not available');
+    }
+  } catch (e) {
+    console.error('❌ LocalStorage error:', e);
+  }
+</script>
 <script src="flutter.js" defer></script>
 <script src="main.dart.js" defer></script>
 

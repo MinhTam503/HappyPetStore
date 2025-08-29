@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,15 +13,36 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   void _loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool(_themeKey) ?? false;
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isDarkMode = prefs.getBool(_themeKey) ?? false;
+      if (kDebugMode) {
+        print('🎨 Theme loaded: ${_isDarkMode ? 'Dark' : 'Light'}');
+      }
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Failed to load theme from SharedPreferences: $e');
+      }
+      // Fallback to light theme if SharedPreferences fails
+      _isDarkMode = false;
+      notifyListeners();
+    }
   }
 
   void toggleTheme() async {
     _isDarkMode = !_isDarkMode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_themeKey, _isDarkMode);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_themeKey, _isDarkMode);
+      if (kDebugMode) {
+        print('🎨 Theme toggled to: ${_isDarkMode ? 'Dark' : 'Light'}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Failed to save theme to SharedPreferences: $e');
+      }
+    }
     notifyListeners();
   }
 
