@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/utils/contants.dart';
 import 'package:pet_shop/auth/auth_service.dart';
@@ -14,22 +15,30 @@ class OrdersAdmin extends StatefulWidget {
 }
 
 class _OrdersAdminState extends State<OrdersAdmin> {
-  // Platform filter options
-  final List<String> platforms = const [
-    'All',
-    'Mobile App',
-    'Web App'
-  ];
-  String selectedPlatform = 'All';
-
-  final List<String> statuses = const [
-    'All',
+  // Raw status values for database operations
+  static const List<String> rawStatusValues = [
     'Pending',
-    'Processing',
+    'Processing', 
     'Completed',
     'Cancelled'
   ];
-  String selectedStatus = 'All';
+  
+  // Platform filter options
+  List<String> get platforms => [
+    AppLocalizations.of(context)!.all,
+    AppLocalizations.of(context)!.mobileApp,
+    AppLocalizations.of(context)!.webApp
+  ];
+  int selectedPlatformIndex = 0; // 0=All, 1=Mobile, 2=Web
+
+  List<String> get statuses => [
+    AppLocalizations.of(context)!.all,
+    AppLocalizations.of(context)!.pending,
+    AppLocalizations.of(context)!.processing,
+    AppLocalizations.of(context)!.completed,
+    AppLocalizations.of(context)!.cancelled
+  ];
+  int selectedStatusIndex = 0; // 0=All, 1=Pending, 2=Processing, 3=Completed, 4=Cancelled
 
   String orderSort = 'desc'; // 'desc' = mới nhất trước, 'asc' = cũ nhất trước
   bool isLoading = false;
@@ -39,17 +48,17 @@ class _OrdersAdminState extends State<OrdersAdmin> {
 
   // Get the appropriate collection based on selected platform
   Stream<List<Map<String, dynamic>>> _getOrdersStream() {
-    if (selectedPlatform == 'Mobile App') {
+    if (selectedPlatformIndex == 1) { // Mobile App
       return FirebaseFirestore.instance
           .collection('orders')
           .snapshots()
           .map(_processSnapshot);
-    } else if (selectedPlatform == 'Web App') {
+    } else if (selectedPlatformIndex == 2) { // Web App
       return FirebaseFirestore.instance
           .collection('ordersWeb')
           .snapshots()
           .map(_processSnapshot);
-    } else {
+    } else { // All
       // All - combine both collections
       return Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
         final ordersSnapshot = await FirebaseFirestore.instance.collection('orders').get();
@@ -91,7 +100,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
         hintText: hint,
         prefixIcon: const Icon(Icons.search),
         filled: true,
-        fillColor: secondaryColor,
+        fillColor: Theme.of(context).inputDecorationTheme.fillColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12),
         border: OutlineInputBorder(
           borderSide: BorderSide.none,
@@ -130,9 +139,10 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title:
-            const Text('Manage Orders', style: TextStyle(color: Colors.black)),
+            Text(AppLocalizations.of(context)!.manageOrders, 
+                style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)),
         actions: [
           // Filter status
           Padding(
@@ -144,50 +154,52 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                 child: Row(
                   children: [
                     // Platform filter
-                    for (final p in platforms)
+                    for (int i = 0; i < platforms.length; i++)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: ChoiceChip(
-                          label: Text(p),
-                          selected: selectedPlatform == p,
-                          selectedColor: Colors.blue.withOpacity(.15),
+                          label: Text(platforms[i]),
+                          selected: selectedPlatformIndex == i,
+                          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(.15),
+                          backgroundColor: Theme.of(context).chipTheme.backgroundColor,
                           labelStyle: TextStyle(
-                            color: selectedPlatform == p
-                                ? Colors.blue
-                                : Colors.black87,
+                            color: selectedPlatformIndex == i
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).textTheme.bodyMedium?.color,
                           ),
-                          onSelected: (_) => setState(() => selectedPlatform = p),
+                          onSelected: (_) => setState(() => selectedPlatformIndex = i),
                         ),
                       ),
                     const SizedBox(width: 16),
                     // Status filter
-                    for (final s in statuses)
+                    for (int i = 0; i < statuses.length; i++)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: ChoiceChip(
-                          label: Text(s),
-                          selected: selectedStatus == s,
-                          selectedColor: primaryColor.withOpacity(.15),
+                          label: Text(statuses[i]),
+                          selected: selectedStatusIndex == i,
+                          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(.15),
+                          backgroundColor: Theme.of(context).chipTheme.backgroundColor,
                           labelStyle: TextStyle(
-                            color: selectedStatus == s
-                                ? primaryColor
-                                : Colors.black87,
+                            color: selectedStatusIndex == i
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).textTheme.bodyMedium?.color,
                           ),
-                          onSelected: (_) => setState(() => selectedStatus = s),
+                          onSelected: (_) => setState(() => selectedStatusIndex = i),
                         ),
                       ),
                     const SizedBox(width: 8),
                     // Sort
                     DropdownButton<String>(
                       value: orderSort,
-                      items: const [
+                      items: [
                         DropdownMenuItem(
-                            value: 'desc', child: Text('Mới nhất')),
-                        DropdownMenuItem(value: 'asc', child: Text('Cũ nhất')),
+                            value: 'desc', child: Text(AppLocalizations.of(context)!.newest)),
+                        DropdownMenuItem(value: 'asc', child: Text(AppLocalizations.of(context)!.oldest)),
                       ],
                       onChanged: (v) => setState(() => orderSort = v ?? 'desc'),
                       underline: Container(),
-                      style: const TextStyle(color: Colors.black, fontSize: 16),
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 16),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -207,7 +219,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                 onChanged: (v) =>
                     setState(() => _query = v.trim().toLowerCase()),
                 decoration: _searchInput(
-                    'Tìm theo Order ID, email, địa chỉ hoặc trạng thái...'),
+                    AppLocalizations.of(context)!.searchOrders),
               ),
             ),
           ),
@@ -225,18 +237,19 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                       child: CircularProgressIndicator(color: primaryColor));
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const EmptyState(
-                      label: 'No orders available',
+                  return EmptyState(
+                      label: AppLocalizations.of(context)!.noOrdersAvailable,
                       icon: Icons.receipt_long_outlined);
                 }
 
                 var orders = snapshot.data!;
 
                 // Filter by status
-                if (selectedStatus != 'All') {
+                if (selectedStatusIndex != 0) { // 0 = All
+                  String statusToFilter = rawStatusValues[selectedStatusIndex - 1];
                   orders = orders
                       .where((d) =>
-                          (d['statusOrder'] ?? '').toString() == selectedStatus)
+                          (d['statusOrder'] ?? '').toString() == statusToFilter)
                       .toList();
                 }
 
@@ -255,8 +268,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                 }
 
                 if (orders.isEmpty) {
-                  return const EmptyState(
-                      label: 'Không có đơn hàng phù hợp',
+                  return EmptyState(
+                      label: AppLocalizations.of(context)!.noMatchingOrders,
                       icon: Icons.search_off);
                 }
 
@@ -333,7 +346,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                               }
                             }
                           },
-                          allStatuses: statuses.sublist(1),
+                          allStatuses: rawStatusValues,
                         );
                       },
                     );
@@ -346,12 +359,12 @@ class _OrdersAdminState extends State<OrdersAdmin> {
             Container(
               color: Colors.black38,
               alignment: Alignment.center,
-              child: const Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
+                  CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                   SizedBox(height: 8),
-                  Text('Đang xử lý...', style: TextStyle(color: Colors.white)),
+                  Text('Đang xử lý...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 ],
               ),
             ),
@@ -371,13 +384,13 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () async {
               await deleteOrder(orderId, collection);
               if (!mounted) return;
               Navigator.pop(context);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -396,7 +409,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
       context: context,
       builder: (context) => AlertDialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        title: const Text("Edit Order"),
+        title: Text(AppLocalizations.of(context)!.editOrder),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Column(
@@ -404,26 +417,33 @@ class _OrdersAdminState extends State<OrdersAdmin> {
             children: [
               TextField(
                   controller: emailController,
-                  decoration: const InputDecoration(
-                      labelText: 'Email', border: OutlineInputBorder())),
+                  decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.email, border: OutlineInputBorder())),
               const SizedBox(height: 10),
               TextField(
                 controller: totalAmountController,
-                decoration: const InputDecoration(
-                    labelText: 'Total Amount', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.totalAmountLabel, border: OutlineInputBorder()),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: selected,
-                items: statuses
-                    .sublist(1)
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                items: rawStatusValues
+                    .map((rawStatus) {
+                      // Find index to get localized text
+                      int index = rawStatusValues.indexOf(rawStatus);
+                      String localizedText = statuses[index + 1]; // +1 because statuses includes "All"
+                      return DropdownMenuItem(
+                        value: rawStatus, 
+                        child: Text(localizedText)
+                      );
+                    })
                     .toList(),
                 onChanged: (v) => selected = v ?? selected,
-                decoration: const InputDecoration(
-                    labelText: 'Status', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.statusLabel, border: OutlineInputBorder()),
               ),
             ],
           ),
@@ -431,9 +451,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context)!.cancel)),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: primaryColor),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
             onPressed: () async {
               await updateOrder(orderId, collection, {
                 'email': emailController.text.trim(),
@@ -447,7 +467,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               if (!mounted) return;
               Navigator.pop(context);
             },
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+            child: Text(AppLocalizations.of(context)!.save, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -498,6 +518,21 @@ class _OrdersAdminState extends State<OrdersAdmin> {
       return '';
     }
 
+    String _getLocalizedStatus(String rawStatus) {
+      switch (rawStatus) {
+        case 'Pending':
+          return AppLocalizations.of(context)!.pending;
+        case 'Processing':
+          return AppLocalizations.of(context)!.processing;
+        case 'Completed':
+          return AppLocalizations.of(context)!.completed;
+        case 'Cancelled':
+          return AppLocalizations.of(context)!.cancelled;
+        default:
+          return rawStatus;
+      }
+    }
+
     Widget _kv(String k, String v) => Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -523,7 +558,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
             children: [
               Expanded(
                 child: Text(
-                  'Order Details · $orderId',
+                  '${AppLocalizations.of(context)!.orderDetails} · $orderId',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w700),
@@ -542,7 +577,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                   children: [
                     Icon(Icons.circle, size: 10, color: _statusColor(status)),
                     const SizedBox(width: 6),
-                    Text(status, style: TextStyle(color: _statusColor(status))),
+                    Text(_getLocalizedStatus(status), style: TextStyle(color: _statusColor(status))),
                   ],
                 ),
               ),
@@ -569,51 +604,51 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                             children: [
                               Row(
                                 children: [
-                                  Expanded(child: _kv('Email', email)),
+                                  Expanded(child: _kv(AppLocalizations.of(context)!.email, email)),
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
                                     Expanded(
-                                        child: _kv('Total Amount', '\$$total')),
+                                        child: _kv(AppLocalizations.of(context)!.totalAmountLabel, '\$$total')),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
                               if (isNarrow)
                                 Row(children: [
                                   Expanded(
-                                      child: _kv('Total Amount', '\$$total'))
+                                      child: _kv(AppLocalizations.of(context)!.totalAmountLabel, '\$$total'))
                                 ]),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Expanded(child: _kv('Status Pay', statusPay)),
+                                  Expanded(child: _kv(AppLocalizations.of(context)!.statusPay, statusPay)),
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
                                     Expanded(
-                                        child: _kv('Payment Method', method)),
+                                        child: _kv(AppLocalizations.of(context)!.paymentMethod, method)),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
                               if (isNarrow)
                                 Row(children: [
-                                  Expanded(child: _kv('Payment Method', method))
+                                  Expanded(child: _kv(AppLocalizations.of(context)!.paymentMethod, method))
                                 ]),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Expanded(child: _kv('Address', address)),
+                                  Expanded(child: _kv(AppLocalizations.of(context)!.address, address)),
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
-                                    Expanded(child: _kv('Phone', phone)),
+                                    Expanded(child: _kv(AppLocalizations.of(context)!.phone, phone)),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
                               if (isNarrow)
                                 Row(children: [
-                                  Expanded(child: _kv('Phone', phone))
+                                  Expanded(child: _kv(AppLocalizations.of(context)!.phone, phone))
                                 ]),
                               const SizedBox(height: 8),
                               Row(children: [
-                                Expanded(child: _kv('Created At', _fmtDate(ts)))
+                                Expanded(child: _kv(AppLocalizations.of(context)!.createdAt, _fmtDate(ts)))
                               ]),
                             ],
                           );
@@ -622,9 +657,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                     ),
 
                     const SizedBox(height: 16),
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Items',
+                      child: Text(AppLocalizations.of(context)!.items,
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
@@ -634,7 +669,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                     SizedBox(
                       height: 300,
                       child: items.isEmpty
-                          ? const Center(child: Text('No items'))
+                          ? Center(child: Text(AppLocalizations.of(context)!.noItems))
                           : ListView.separated(
                               primary: false,
                               shrinkWrap: true,
@@ -693,7 +728,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(context)!.close),
             ),
           ],
         );

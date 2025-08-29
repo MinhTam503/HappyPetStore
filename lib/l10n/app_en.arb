@@ -1,0 +1,801 @@
+{
+  "@@locale": "en",
+  "appTitle": "Pet Shop Admin",
+  "@appTitle": {
+    "description": "Title of the application"
+  },
+  "dashboard": "Dashboard",
+  "@dashboard": {
+    "description": "Dashboard menu item"
+  },
+  "pets": "Pets",
+  "@pets": {
+    "description": "Pets menu item"
+  },
+  "category": "Category",
+  "@category": {
+    "description": "Category menu item"
+  },
+  "account": "Account",
+  "@account": {
+    "description": "Account menu item"
+  },
+  "orders": "Orders",
+  "@orders": {
+    "description": "Orders menu item"
+  },
+  "inbox": "Inbox",
+  "@inbox": {
+    "description": "Inbox menu item"
+  },
+  "shopInfo": "Shop Info",
+  "@shopInfo": {
+    "description": "Shop Info menu item"
+  },
+  "revenue": "Revenue",
+  "@revenue": {
+    "description": "Revenue menu item"
+  },
+  "adminPanel": "Admin Panel",
+  "@adminPanel": {
+    "description": "Admin panel title"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout button"
+  },
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "Confirm dialog title"
+  },
+  "areYouSureLogout": "Are you sure you want to logout?",
+  "@areYouSureLogout": {
+    "description": "Logout confirmation message"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button"
+  },
+  "totalRevenue": "Total Revenue",
+  "@totalRevenue": {
+    "description": "Total revenue card title"
+  },
+  "totalRevenueAll": "Total Revenue (Mobile + Web)",
+  "@totalRevenueAll": {
+    "description": "Total revenue card title for all sources"
+  },
+  "totalRevenueMobile": "Total Revenue (Mobile App)",
+  "@totalRevenueMobile": {
+    "description": "Total revenue card title for mobile"
+  },
+  "totalRevenueWeb": "Total Revenue (Web)",
+  "@totalRevenueWeb": {
+    "description": "Total revenue card title for web"
+  },
+  "dataSource": "Data Source",
+  "@dataSource": {
+    "description": "Data source filter label"
+  },
+  "all": "All",
+  "@all": {
+    "description": "All option in filter"
+  },
+  "mobileApp": "Mobile App",
+  "@mobileApp": {
+    "description": "Mobile app option in filter"
+  },
+  "webApp": "Web App",
+  "@webApp": {
+    "description": "Web app option in filter"
+  },
+  "web": "Web",
+  "@web": {
+    "description": "Web option in filter"
+  },
+  "year": "Year",
+  "@year": {
+    "description": "Year filter label"
+  },
+  "statisticsBy": "Statistics by",
+  "@statisticsBy": {
+    "description": "Statistics filter label"
+  },
+  "month": "Month",
+  "@month": {
+    "description": "Month option in statistics filter"
+  },
+  "day": "Day",
+  "@day": {
+    "description": "Day option in statistics filter"
+  },
+  "selectDateRange": "Select Date Range",
+  "@selectDateRange": {
+    "description": "Date range picker button"
+  },
+  "monthName": "Month {number}",
+  "@monthName": {
+    "description": "Month name with number",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "dailyRevenueOverview": "Daily Revenue Overview",
+  "@dailyRevenueOverview": {
+    "description": "Chart title for daily revenue"
+  },
+  "dailyRevenueOverviewAll": "Daily Revenue Overview (Mobile & Web Combined)",
+  "@dailyRevenueOverviewAll": {
+    "description": "Chart title for all sources"
+  },
+  "dailyRevenueOverviewMobile": "Daily Revenue Overview (Mobile App)",
+  "@dailyRevenueOverviewMobile": {
+    "description": "Chart title for mobile"
+  },
+  "dailyRevenueOverviewWeb": "Daily Revenue Overview (Web)",
+  "@dailyRevenueOverviewWeb": {
+    "description": "Chart title for web"
+  },
+  "orderDetails": "Order Details",
+  "@orderDetails": {
+    "description": "Order details dialog title"
+  },
+  "noOrders": "No orders",
+  "@noOrders": {
+    "description": "No orders message"
+  },
+  "total": "Total: ${amount}",
+  "@total": {
+    "description": "Total amount label",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "$100"
+      }
+    }
+  },
+  "status": "Status: {status}",
+  "@status": {
+    "description": "Status label",
+    "placeholders": {
+      "status": {
+        "type": "String",
+        "example": "Completed"
+      }
+    }
+  },
+  "date": "Date: {date}",
+  "@date": {
+    "description": "Date label",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "01/01/2025"
+      }
+    }
+  },
+  "items": "Items:",
+  "@items": {
+    "description": "Items label"
+  },
+  "pet": "Pet:",
+  "@pet": {
+    "description": "Pet label"
+  },
+  "noPetInfo": "No pet information",
+  "@noPetInfo": {
+    "description": "No pet information message"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Close button"
+  },
+  "mobile": "Mobile",
+  "@mobile": {
+    "description": "Mobile label"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Language selector label"
+  },
+  "english": "English",
+  "@english": {
+    "description": "English language option"
+  },
+  "vietnamese": "Vietnamese",
+  "@vietnamese": {
+    "description": "Vietnamese language option"
+  },
+  "totalAmount": "Total: ${amount}",
+  "@totalAmount": {
+    "description": "Total amount with dollar sign",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "100"
+      }
+    }
+  },
+  "statusOrder": "Status: {status}",
+  "@statusOrder": {
+    "description": "Order status with label",
+    "placeholders": {
+      "status": {
+        "type": "String",
+        "example": "Completed"
+      }
+    }
+  },
+  "dateOrder": "Date: {date}",
+  "@dateOrder": {
+    "description": "Order date with label",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "01/01/2025"
+      }
+    }
+  },
+  "totalUsers": "Total Users",
+  "@totalUsers": {
+    "description": "Total users metric"
+  },
+  "totalOrders": "Total Orders",
+  "@totalOrders": {
+    "description": "Total orders metric"
+  },
+  "totalPets": "Total Pets",
+  "@totalPets": {
+    "description": "Total pets metric"
+  },
+  "activeUsers": "Active Users",
+  "@activeUsers": {
+    "description": "Active users metric"
+  },
+  "recentOrders": "Recent Orders",
+  "@recentOrders": {
+    "description": "Recent orders section title"
+  },
+  "orderStatusChart": "Order Status Distribution",
+  "@orderStatusChart": {
+    "description": "Order status chart title"
+  },
+  "revenueChart": "Revenue Trends",
+  "@revenueChart": {
+    "description": "Revenue chart title"
+  },
+  "viewAllOrders": "View All Orders",
+  "@viewAllOrders": {
+    "description": "View all orders button"
+  },
+  "completed": "Completed",
+  "@completed": {
+    "description": "Completed status"
+  },
+  "pending": "Pending",
+  "@pending": {
+    "description": "Pending status"
+  },
+  "processing": "Processing",
+  "@processing": {
+    "description": "Processing status"
+  },
+  "cancelled": "Cancelled",
+  "@cancelled": {
+    "description": "Cancelled status"
+  },
+  "cancelled": "Cancelled",
+  "@cancelled": {
+    "description": "Cancelled status"
+  },
+  "lastDays": "Last {days} days",
+  "@lastDays": {
+    "description": "Last X days filter",
+    "placeholders": {
+      "days": {
+        "type": "String",
+        "example": "7"
+      }
+    }
+  },
+  "lastMonth": "Last month",
+  "@lastMonth": {
+    "description": "Last month filter"
+  },
+  "last3Months": "Last 3 months",
+  "@last3Months": {
+    "description": "Last 3 months filter"
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Loading indicator text"
+  },
+  "noData": "No data available",
+  "@noData": {
+    "description": "No data message"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email label"
+  },
+  "customer": "Customer",
+  "@customer": {
+    "description": "Customer label"
+  },
+  "amount": "Amount",
+  "@amount": {
+    "description": "Amount label"
+  },
+  "avatarUpdatedSuccessfully": "Avatar updated successfully!",
+  "@avatarUpdatedSuccessfully": {
+    "description": "Avatar update success message"
+  },
+  "shopLocation": "Shop Location",
+  "@shopLocation": {
+    "description": "Shop location section title"
+  },
+  "selectOnMap": "Select on map",
+  "@selectOnMap": {
+    "description": "Select location on map button"
+  },
+  "pleaseEnterAllInfo": "Please enter all information",
+  "@pleaseEnterAllInfo": {
+    "description": "Validation message for incomplete form"
+  },
+  "saveChanges": "Save Changes",
+  "@saveChanges": {
+    "description": "Save changes button"
+  },
+  "selectShopLocation": "Select shop location • {location}",
+  "@selectShopLocation": {
+    "description": "Map picker title with location",
+    "placeholders": {
+      "location": {
+        "type": "String",
+        "example": "10.762622, 106.660172"
+      }
+    }
+  },
+  "tapMapToSelectLocation": "Tap on the map to select location",
+  "@tapMapToSelectLocation": {
+    "description": "Map instruction text"
+  },
+  "confirmLocation": "Confirm Location",
+  "@confirmLocation": {
+    "description": "Confirm location button"
+  },
+  "managePets": "Manage Pets",
+  "@managePets": {
+    "description": "Pet management page title"
+  },
+  "addPet": "Add Pet",
+  "@addPet": {
+    "description": "Add pet button"
+  },
+  "confirmDeletePet": "Are you sure you want to delete this pet?",
+  "@confirmDeletePet": {
+    "description": "Delete pet confirmation message"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button"
+  },
+  "pickImage": "Pick Image",
+  "@pickImage": {
+    "description": "Pick image button"
+  },
+  "about": "About:",
+  "@about": {
+    "description": "About section label"
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit button"
+  },
+  "manageOrders": "Manage Orders",
+  "@manageOrders": {
+    "description": "Order management page title"
+  },
+  "newest": "Newest",
+  "@newest": {
+    "description": "Newest sort option"
+  },
+  "oldest": "Oldest",
+  "@oldest": {
+    "description": "Oldest sort option"
+  },
+  "confirmDeleteOrder": "Are you sure you want to delete this order?",
+  "@confirmDeleteOrder": {
+    "description": "Delete order confirmation message"
+  },
+  "confirmDeleteTitle": "Confirm Delete",
+  "@confirmDeleteTitle": {
+    "description": "Delete confirmation dialog title"
+  },
+  "editOrder": "Edit Order",
+  "@editOrder": {
+    "description": "Edit order dialog title"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button"
+  },
+  "noItems": "No items",
+  "@noItems": {
+    "description": "No items message"
+  },
+  "quantity": "Qty: {qty} • Price: ${price}",
+  "@quantity": {
+    "description": "Item quantity and price format",
+    "placeholders": {
+      "qty": {
+        "type": "String",
+        "example": "2"
+      },
+      "price": {
+        "type": "String", 
+        "example": "25.99"
+      }
+    }
+  },
+  "orderNumber": "Order: {orderId}",
+  "@orderNumber": {
+    "description": "Order number format",
+    "placeholders": {
+      "orderId": {
+        "type": "String",
+        "example": "ORD-001"
+      }
+    }
+  },
+  "last7Days": "Last 7 Days",
+  "@last7Days": {
+    "description": "Last 7 days filter"
+  },
+  "customRange": "Custom Range",
+  "@customRange": {
+    "description": "Custom range filter"
+  },
+  "allTime": "All Time",
+  "@allTime": {
+    "description": "All time filter"
+  },
+  "noRevenueData": "No revenue data available",
+  "@noRevenueData": {
+    "description": "No revenue data message"
+  },
+  "viewAll": "View All",
+  "@viewAll": {
+    "description": "View all button"
+  },
+  "noRecentOrders": "No recent orders found",
+  "@noRecentOrders": {
+    "description": "No recent orders message"
+  },
+  "showingDetailedView": "Showing detailed view for {title}",
+  "@showingDetailedView": {
+    "description": "Detailed view message",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Revenue"
+      }
+    }
+  },
+  "loadingError": "Error loading data",
+  "@loadingError": {
+    "description": "Loading error message"
+  },
+  "startConversation": "Let's start the conversation...",
+  "@startConversation": {
+    "description": "Start conversation prompt"
+  },
+  "editCategory": "Edit",
+  "@editCategory": {
+    "description": "Edit category option"
+  },
+  "manageCategories": "Category Admin",
+  "@manageCategories": {
+    "description": "Category management page title"
+  },
+  "createNew": "Create New",
+  "@createNew": {
+    "description": "Create new button"
+  },
+  "deleteSuccessfully": "Delete successfully",
+  "@deleteSuccessfully": {
+    "description": "Delete success message"
+  },
+  "noBreeds": "No breeds yet",
+  "@noBreeds": {
+    "description": "No breeds message"
+  },
+  "pleaseEnterBreedName": "Please enter a breed name",
+  "@pleaseEnterBreedName": {
+    "description": "Breed name validation message"
+  },
+  "image": "Image",
+  "@image": {
+    "description": "Image label"
+  },
+  "clear": "Clear",
+  "@clear": {
+    "description": "Clear button"
+  },
+  "pleaseEnterCategoryName": "Please enter category name",
+  "@pleaseEnterCategoryName": {
+    "description": "Category name validation message"
+  },
+  "pleaseSelectImage": "Please select an image",
+  "@pleaseSelectImage": {
+    "description": "Image selection validation message"
+  },
+  "imageUploadError": "Image upload error!",
+  "@imageUploadError": {
+    "description": "Image upload error message"
+  },
+  "manageBreeds": "Manage breeds",
+  "@manageBreeds": {
+    "description": "Manage breeds option"
+  },
+  "breeds": "Breeds",
+  "@breeds": {
+    "description": "Breeds label"
+  },
+  "accountAdded": "Account added",
+  "@accountAdded": {
+    "description": "Account added success message"
+  },
+  "accountUpdated": "Account updated",
+  "@accountUpdated": {
+    "description": "Account updated success message"
+  },
+  "accountDeleted": "Account deleted",
+  "@accountDeleted": {
+    "description": "Account deleted success message"
+  },
+  "forgotPassword": "Forgot password?",
+  "@forgotPassword": {
+    "description": "Forgot password link"
+  },
+  "breedOf": "Breed of {name}",
+  "@breedOf": {
+    "description": "Breed dialog title",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addBreed": "Add breed",
+  "@addBreed": {
+    "description": "Add breed tooltip"
+  },
+  "addNewBreed": "Add New Breed",
+  "@addNewBreed": {
+    "description": "Add new breed dialog title"
+  },
+  "editBreed": "Edit Breed",
+  "@editBreed": {
+    "description": "Edit breed dialog title"
+  },
+  "breedName": "Breed name",
+  "@breedName": {
+    "description": "Breed name input label"
+  },
+  "enterBreedName": "Please enter a breed name",
+  "@enterBreedName": {
+    "description": "Breed name validation message"
+  },
+  "addCategory": "Add Category",
+  "@addCategory": {
+    "description": "Add category dialog title"
+  },
+  "categoryName": "Category Name",
+  "@categoryName": {
+    "description": "Category name input label"
+  },
+  "searchCategories": "Search categories... (by name)",
+  "@searchCategories": {
+    "description": "Search categories hint text"
+  },
+  "noCategoriesFound": "No categories found",
+  "@noCategoriesFound": {
+    "description": "Empty state message for categories"
+  },
+  "breedsCount": "{count} breeds",
+  "@breedsCount": {
+    "description": "Breeds count text",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchOrders": "Search by Order ID, email, address or status...",
+  "@searchOrders": {
+    "description": "Search orders hint text"
+  },
+  "noOrdersAvailable": "No orders available",
+  "@noOrdersAvailable": {
+    "description": "Empty state message for orders"
+  },
+  "noMatchingOrders": "No matching orders found",
+  "@noMatchingOrders": {
+    "description": "Empty state message for filtered orders"
+  },
+  "admin": "Admin",
+  "@admin": {
+    "description": "Admin role"
+  },
+  "user": "User", 
+  "@user": {
+    "description": "User role"
+  },
+  "searchAccounts": "Search accounts...",
+  "@searchAccounts": {
+    "description": "Search accounts hint text"
+  },
+  "noAccountsAvailable": "No accounts available",
+  "@noAccountsAvailable": {
+    "description": "Empty state message for accounts"
+  },
+  "noMatchingAccounts": "No matching accounts found",
+  "totalAmountLabel": "Total Amount",
+  "statusLabel": "Status",
+  "statusPay": "Status Pay",
+  "paymentMethod": "Payment Method",
+  "address": "Address",
+  "phone": "Phone",
+  "createdAt": "Created At",
+  "manageAccounts": "Manage Accounts",
+  "searchByNameOrEmail": "Search by name or email...",
+  "confirmDeleteAccount": "Are you sure you want to delete this account?",
+  "ordersOf": "Orders of {userName}",
+  "@ordersOf": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "noOrdersFound": "No orders found",
+  "addAccount": "Add Account",
+  "editAccount": "Edit Account",
+  "displayName": "Display Name",
+  "role": "Role",
+  "imageUrl": "Image URL",
+  "avatarPreview": "Avatar preview",
+  "refreshData": "Refresh Data",
+  "ordersStatus": "Orders Status",
+  "loadingRecentOrders": "Loading recent orders...",
+  "loadingChartData": "Loading chart data...",
+  "sevenDays": "7 Days",
+  "oneMonth": "1 Month", 
+  "threeMonths": "3 Months",
+  "revenueTrend": "Revenue Trend",
+  "orderStatus": "Order Status",
+  "users": "Users",
+  "categories": "Categories",
+  "@categories": {
+    "description": "Categories label"
+  },
+  "conversationsList": "Conversations List",
+  "@conversationsList": {
+    "description": "Title for conversations/inbox page"
+  },
+  "searchByEmailOrMessage": "Search by email or message content...",
+  "@searchByEmailOrMessage": {
+    "description": "Placeholder for search input in inbox"
+  },
+  "errorLoadingData": "Error occurred while loading data",
+  "@errorLoadingData": {
+    "description": "Error message for data loading failure"
+  },
+  "noConversationsYet": "No conversations yet",
+  "@noConversationsYet": {
+    "description": "Empty state message for no conversations"
+  },
+  "noMatchingResults": "No matching results found",
+  "@noMatchingResults": {
+    "description": "Empty state message for search with no results"
+  },
+  "errorLoadingChatData": "Error loading data",
+  "@errorLoadingChatData": {
+    "description": "Error message for chat data loading failure"
+  },
+  "enterMessage": "Enter message...",
+  "@enterMessage": {
+    "description": "Placeholder text for message input"
+  },
+  "emoji": "Emoji",
+  "@emoji": {
+    "description": "Tooltip for emoji button"
+  },
+  "signIn": "Sign In",
+  "@signIn": {
+    "description": "Sign in button text"
+  },
+  "pleaseSignInToContinue": "Please sign in to continue",
+  "@pleaseSignInToContinue": {
+    "description": "Sign in subtitle"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+  "pleaseEnterEmail": "Please enter email",
+  "@pleaseEnterEmail": {
+    "description": "Email validation message"
+  },
+  "pleaseEnterPassword": "Please enter password",
+  "@pleaseEnterPassword": {
+    "description": "Password validation message"
+  },
+  "passwordMinimum6Characters": "Password minimum 6 characters",
+  "@passwordMinimum6Characters": {
+    "description": "Password length validation message"
+  },
+  "showPassword": "Show password",
+  "@showPassword": {
+    "description": "Show password tooltip"
+  },
+  "hidePassword": "Hide password",
+  "@hidePassword": {
+    "description": "Hide password tooltip"
+  },
+  "signingIn": "Signing in...",
+  "@signingIn": {
+    "description": "Loading message during sign in"
+  },
+  "accountNotFoundInSystem": "Account not found in system",
+  "@accountNotFoundInSystem": {
+    "description": "Account not found error message"
+  },
+  "errorOccurred": "An error occurred: {error}",
+  "@errorOccurred": {
+    "description": "Generic error message",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "userAccountDisabled": "User account disabled",
+  "@userAccountDisabled": {
+    "description": "Account disabled error message"
+  },
+  "userNotFound": "User not found",
+  "@userNotFound": {
+    "description": "User not found error message"
+  },
+  "wrongPassword": "Wrong password",
+  "@wrongPassword": {
+    "description": "Wrong password error message"
+  },
+  "invalidCredentials": "Invalid login credentials",
+  "@invalidCredentials": {
+    "description": "Invalid credentials error message"
+  },
+  "authenticationError": "Authentication error",
+  "@authenticationError": {
+    "description": "Generic authentication error message"
+  },
+  "cannotIdentifyUser": "Cannot identify user",
+  "@cannotIdentifyUser": {
+    "description": "User identification error message"
+  },
+  "lightMode": "Light Mode",
+  "@lightMode": {
+    "description": "Light theme mode label"
+  },
+  "darkMode": "Dark Mode",
+  "@darkMode": {
+    "description": "Dark theme mode label"
+  },
+  "@noMatchingAccounts": {
+    "description": "Empty state message for filtered accounts"
+  }
+}

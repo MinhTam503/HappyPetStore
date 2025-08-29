@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/utils/contants.dart'; // Chứa primaryColor, secondaryColor
 import 'package:pet_shop/view/web/screen_admin/chat/inbox_page_admin.dart';
+import 'package:pet_shop/view/web/screen_admin/dashboard/dashboard_page.dart';
 import 'package:pet_shop/view/web/screen_admin/pet/pets_admin.dart';
 import 'package:pet_shop/view/web/screen_admin/revenue/revenue_page.dart';
 import 'package:pet_shop/view/web/screen_admin/shop_info/shop_info.dart';
-import 'package:pet_shop/view/web/screen_admin/dashboard/optimized_dashboard_page.dart';
+import 'package:pet_shop/widgets/settings_menu.dart';
 
 import '../account/account_admin.dart';
 import '../category/category_admin.dart';
@@ -24,15 +26,15 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   String? _role;
   bool _loading = true;
 
-  final List<Widget> _pages = const [
-    OptimizedDashboardPage(),
-    PetsAdmin(),
-    CategoryAdmin(),
-    AccountAdmin(),
-    OrdersAdmin(),
-    InboxPageAdmin(),
-    ShopInfo(),
-    RevenuePage(),
+  final List<Widget> _pages = [
+    const DashboardPage(),
+    const PetsAdmin(),
+    const CategoryAdmin(),
+    const AccountAdmin(),
+    const OrdersAdmin(),
+    const InboxPageAdmin(),
+    const ShopInfo(),
+    const RevenuePage(),
   ];
 
   @override
@@ -50,18 +52,19 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   }
 
   void _logout() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc muốn đăng xuất?'),
+        title: Text(l10n.confirm),
+        content: Text(l10n.areYouSureLogout),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Huỷ')),
+              child: Text(l10n.cancel)),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Đăng xuất')),
+              child: Text(l10n.logout)),
         ],
       ),
     );
@@ -77,6 +80,8 @@ class _HomePageAdminState extends State<HomePageAdmin> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (_loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: primaryColor)),
@@ -88,49 +93,43 @@ class _HomePageAdminState extends State<HomePageAdmin> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: primaryColor,
-        title: const Text('Admin Panel', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).primaryColor,
+        title: Text(l10n.adminPanel, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
         actions: [
+          const SettingsMenu(),
+          const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
+            icon: Icon(Icons.logout, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _logout,
-            tooltip: 'Đăng xuất',
+            tooltip: l10n.logout,
           ),
         ],
       ),
       body: Row(
         children: [
           NavigationRail(
-            backgroundColor: secondaryColor,
             selectedIndex: _selectedIndex,
             onDestinationSelected: (index) =>
                 setState(() => _selectedIndex = index),
             labelType: NavigationRailLabelType.all,
-            selectedIconTheme:
-                const IconThemeData(color: primaryColor, size: 28),
-            unselectedIconTheme:
-                IconThemeData(color: Colors.grey.shade600, size: 24),
-            selectedLabelTextStyle: const TextStyle(
-                color: primaryColor, fontWeight: FontWeight.bold),
-            unselectedLabelTextStyle: TextStyle(color: Colors.grey.shade700),
-            destinations: const [
+            destinations: [
               NavigationRailDestination(
-                  icon: Icon(Icons.dashboard_outlined), label: Text('Dashboard')),
+                  icon: const Icon(Icons.dashboard_outlined), label: Text(l10n.dashboard)),
               NavigationRailDestination(
-                  icon: Icon(Icons.pets_outlined), label: Text('Pets')),
+                  icon: const Icon(Icons.pets_outlined), label: Text(l10n.pets)),
               NavigationRailDestination(
-                  icon: Icon(Icons.category_outlined), label: Text('Category')),
+                  icon: const Icon(Icons.category_outlined), label: Text(l10n.category)),
               NavigationRailDestination(
-                  icon: Icon(Icons.group_outlined), label: Text('Account')),
+                  icon: const Icon(Icons.group_outlined), label: Text(l10n.account)),
               NavigationRailDestination(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  label: Text('Orders')),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: Text(l10n.orders)),
               NavigationRailDestination(
-                  icon: Icon(Icons.inbox_outlined), label: Text('Inbox')),
+                  icon: const Icon(Icons.inbox_outlined), label: Text(l10n.inbox)),
               NavigationRailDestination(
-                  icon: Icon(Icons.store_outlined), label: Text('Shop Info')),
+                  icon: const Icon(Icons.store_outlined), label: Text(l10n.shopInfo)),
               NavigationRailDestination(
-                  icon: Icon(Icons.bar_chart_outlined), label: Text('Revenue')),
+                  icon: const Icon(Icons.bar_chart_outlined), label: Text(l10n.revenue)),
             ],
           ),
           Expanded(

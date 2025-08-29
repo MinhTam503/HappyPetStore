@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-import '../../../../../utils/contants.dart';
 import '../../../model/pet_model.dart';
 
 class PetCard extends StatelessWidget {
@@ -14,6 +14,7 @@ class PetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -68,12 +69,12 @@ class PetCard extends StatelessWidget {
                       children: [
                         Text(pet.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
                         const SizedBox(height: 4),
-                        Text(pet.breed, style: TextStyle(color: Colors.grey.shade700)),
+                        Text(pet.breed, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7))),
                       ],
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('\$${pet.weight}', style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                  Text('\$${pet.weight}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -85,16 +86,16 @@ class PetCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onEdit,
                       icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
+                      label: Text(l10n.edit),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
+                      style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
                       onPressed: onDelete,
                       icon: const Icon(Icons.delete, color: Colors.white),
-                      label: const Text('Delete', style: TextStyle(color: Colors.white)),
+                      label: Text(l10n.delete, style: const TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],

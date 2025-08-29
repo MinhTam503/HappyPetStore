@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/utils/contants.dart';
 
 import '../../components/empty_state.dart';
@@ -18,10 +19,17 @@ class _AccountAdminState extends State<AccountAdmin> {
   final CollectionReference ordersCollection =
       FirebaseFirestore.instance.collection('orders');
 
+  // Raw role values for database operations
+  static const List<String> rawRoleValues = ['admin', 'user'];
+
   // UI states
   bool isLoading = false;
-  String _roleFilter = 'All';
-  final List<String> roleChips = const ['All', 'admin', 'user'];
+  int selectedRoleIndex = 0; // 0=All, 1=Admin, 2=User
+  List<String> get roleChips => [
+    AppLocalizations.of(context)!.all,
+    AppLocalizations.of(context)!.admin,
+    AppLocalizations.of(context)!.user
+  ];
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -31,7 +39,7 @@ class _AccountAdminState extends State<AccountAdmin> {
       await accountsCollection.add(account);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Account added')));
+          .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.accountAdded)));
     } catch (e) {
       debugPrint('Error adding account: $e');
     } finally {
@@ -45,7 +53,7 @@ class _AccountAdminState extends State<AccountAdmin> {
       await accountsCollection.doc(id).update(account);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Account updated')));
+          .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.accountUpdated)));
     } catch (e) {
       debugPrint('Error updating account: $e');
     } finally {
@@ -59,7 +67,7 @@ class _AccountAdminState extends State<AccountAdmin> {
       await accountsCollection.doc(id).delete();
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Account deleted')));
+          .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.accountDeleted)));
     } catch (e) {
       debugPrint('Error deleting account: $e');
     } finally {
@@ -80,9 +88,9 @@ class _AccountAdminState extends State<AccountAdmin> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text('Quản lý tài khoản',
-            style: TextStyle(color: Colors.black)),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        title: Text(AppLocalizations.of(context)!.manageAccounts,
+            style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -92,29 +100,32 @@ class _AccountAdminState extends State<AccountAdmin> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    for (final r in roleChips)
+                    for (int i = 0; i < roleChips.length; i++)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: ChoiceChip(
-                          label: Text(r),
-                          selected: _roleFilter == r,
-                          selectedColor: primaryColor.withOpacity(.15),
+                          label: Text(roleChips[i]),
+                          selected: selectedRoleIndex == i,
+                          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(.15),
+                          backgroundColor: Theme.of(context).chipTheme.backgroundColor,
                           labelStyle: TextStyle(
-                            color: _roleFilter == r
-                                ? primaryColor
-                                : Colors.black87,
+                            color: selectedRoleIndex == i
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).textTheme.bodyMedium?.color,
                           ),
-                          onSelected: (_) => setState(() => _roleFilter = r),
+                          onSelected: (_) => setState(() => selectedRoleIndex = i),
                         ),
                       ),
                     const SizedBox(width: 8),
                     FilledButton.icon(
-                      style:
-                          FilledButton.styleFrom(backgroundColor: Colors.white),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).cardColor,
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                      ),
                       onPressed: () => _showAccountDialog(null, null),
-                      icon: const Icon(Icons.add, color: primaryColor),
-                      label: const Text('Create New',
-                          style: TextStyle(color: primaryColor)),
+                      icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
+                      label: Text(AppLocalizations.of(context)!.createNew,
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                     ),
                   ],
                 ),
@@ -133,10 +144,10 @@ class _AccountAdminState extends State<AccountAdmin> {
                 onChanged: (v) =>
                     setState(() => _searchQuery = v.trim().toLowerCase()),
                 decoration: InputDecoration(
-                  hintText: 'Tìm theo tên hoặc email...',
+                  hintText: AppLocalizations.of(context)!.searchByNameOrEmail,
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: secondaryColor,
+                  fillColor: Theme.of(context).inputDecorationTheme.fillColor,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   border: OutlineInputBorder(
                     borderSide: BorderSide.none,
@@ -160,19 +171,20 @@ class _AccountAdminState extends State<AccountAdmin> {
                       child: CircularProgressIndicator(color: primaryColor));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const EmptyState(
-                      label: 'No accounts available',
+                  return EmptyState(
+                      label: AppLocalizations.of(context)!.noAccountsAvailable,
                       icon: Icons.person_outline);
                 }
 
                 // Build list
                 var docs = snapshot.data!.docs;
                 // Client-side filter by role
-                if (_roleFilter != 'All') {
+                if (selectedRoleIndex != 0) { // 0 = All
+                  String roleToFilter = rawRoleValues[selectedRoleIndex - 1];
                   docs = docs.where((d) {
                     final data = d.data() as Map<String, dynamic>;
                     final role = (data['role'] ?? '').toString().toLowerCase();
-                    return role == _roleFilter.toLowerCase();
+                    return role == roleToFilter.toLowerCase();
                   }).toList();
                 }
                 // Search by name or email
@@ -189,8 +201,8 @@ class _AccountAdminState extends State<AccountAdmin> {
                 }
 
                 if (docs.isEmpty) {
-                  return const EmptyState(
-                      label: 'Không có tài khoản phù hợp',
+                  return EmptyState(
+                      label: AppLocalizations.of(context)!.noMatchingAccounts,
                       icon: Icons.search_off);
                 }
 
@@ -238,12 +250,12 @@ class _AccountAdminState extends State<AccountAdmin> {
             Container(
               color: Colors.black38,
               alignment: Alignment.center,
-              child: const Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   CircularProgressIndicator(color: Colors.white),
                   SizedBox(height: 8),
-                  Text('Đang xử lý...', style: TextStyle(color: Colors.white)),
+                  Text(AppLocalizations.of(context)!.processing, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 ],
               ),
             ),
@@ -263,15 +275,15 @@ class _AccountAdminState extends State<AccountAdmin> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc chắn muốn xóa tài khoản này?'),
+        title: Text(AppLocalizations.of(context)!.confirm),
+        content: Text(AppLocalizations.of(context)!.confirmDeleteAccount),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Hủy')),
+              child: Text(AppLocalizations.of(context)!.cancel)),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+              child: Text(AppLocalizations.of(context)!.delete, style: TextStyle(color: Theme.of(context).colorScheme.error))),
         ],
       ),
     );
@@ -283,7 +295,7 @@ class _AccountAdminState extends State<AccountAdmin> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Orders of ${userName ?? email}',
+          title: Text(AppLocalizations.of(context)!.ordersOf(userName ?? email),
               maxLines: 2, overflow: TextOverflow.ellipsis),
           content: SizedBox(
             width: 720, // hoặc MediaQuery.of(context).size.width * 0.6
@@ -296,7 +308,7 @@ class _AccountAdminState extends State<AccountAdmin> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No orders found'));
+                  return Center(child: Text(AppLocalizations.of(context)!.noOrdersFound));
                 }
 
                 final orders = snapshot.data!.docs;
@@ -329,7 +341,7 @@ class _AccountAdminState extends State<AccountAdmin> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(context)!.close),
             ),
           ],
         );
@@ -357,7 +369,7 @@ class _AccountAdminState extends State<AccountAdmin> {
             return AlertDialog(
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              title: Text(id == null ? 'Add Account' : 'Edit Account'),
+              title: Text(id == null ? AppLocalizations.of(context)!.addAccount : AppLocalizations.of(context)!.editAccount),
               content: SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
@@ -372,20 +384,20 @@ class _AccountAdminState extends State<AccountAdmin> {
                               children: [
                                 TextField(
                                   controller: nameController,
-                                  decoration: _input('Display Name',
+                                  decoration: _input(AppLocalizations.of(context)!.displayName,
                                       prefix: const Icon(Icons.badge_outlined)),
                                 ),
                                 const SizedBox(height: 10),
                                 TextField(
                                   controller: emailController,
-                                  decoration: _input('Email',
+                                  decoration: _input(AppLocalizations.of(context)!.email,
                                       prefix:
                                           const Icon(Icons.alternate_email)),
                                 ),
                                 const SizedBox(height: 10),
                                 TextField(
                                   controller: phoneController,
-                                  decoration: _input('Phone',
+                                  decoration: _input(AppLocalizations.of(context)!.phone,
                                       prefix: const Icon(Icons.phone_outlined)),
                                 ),
                                 const SizedBox(height: 10),
@@ -393,12 +405,19 @@ class _AccountAdminState extends State<AccountAdmin> {
                                   value: roleController.text.isNotEmpty
                                       ? roleController.text
                                       : 'user',
-                                  decoration: _input('Role',
+                                  decoration: _input(AppLocalizations.of(context)!.role,
                                       prefix: const Icon(
                                           Icons.lock_person_outlined)),
-                                  items: const ['admin', 'user']
-                                      .map((e) => DropdownMenuItem(
-                                          value: e, child: Text(e)))
+                                  items: rawRoleValues
+                                      .map((rawRole) {
+                                        // Map raw roles to localized display text
+                                        String displayText = rawRole == 'admin' 
+                                            ? AppLocalizations.of(context)!.admin
+                                            : AppLocalizations.of(context)!.user;
+                                        return DropdownMenuItem(
+                                            value: rawRole, 
+                                            child: Text(displayText));
+                                      })
                                       .toList(),
                                   onChanged: (v) => setStateDialog(
                                       () => roleController.text = v ?? 'user'),
@@ -406,7 +425,7 @@ class _AccountAdminState extends State<AccountAdmin> {
                                 const SizedBox(height: 10),
                                 TextField(
                                   controller: imageUrlController,
-                                  decoration: _input('Image URL',
+                                  decoration: _input(AppLocalizations.of(context)!.imageUrl,
                                       prefix: const Icon(Icons.link_outlined)),
                                 ),
                               ],
@@ -435,7 +454,7 @@ class _AccountAdminState extends State<AccountAdmin> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                const Text('Avatar preview',
+                                Text(AppLocalizations.of(context)!.avatarPreview,
                                     style: TextStyle(
                                         fontSize: 12, color: Colors.black54)),
                               ],
@@ -450,9 +469,9 @@ class _AccountAdminState extends State<AccountAdmin> {
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel')),
+                    child: Text(AppLocalizations.of(context)!.cancel)),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: primaryColor),
+                  style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                   onPressed: () {
                     final data = {
                       'displayName': nameController.text.trim(),
@@ -472,7 +491,7 @@ class _AccountAdminState extends State<AccountAdmin> {
                     Navigator.pop(context);
                   },
                   child:
-                      const Text('Save', style: TextStyle(color: Colors.white)),
+                      Text(AppLocalizations.of(context)!.save, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
                 ),
               ],
             );

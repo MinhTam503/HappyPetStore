@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../../../../../utils/contants.dart';
 
@@ -59,8 +60,8 @@ class CategoryCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
-                      Text('$breedCount breeds',
-                          style: TextStyle(color: Colors.grey.shade700)),
+                      Text(AppLocalizations.of(context)!.breedsCount(breedCount),
+                          style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7))),
                     ],
                   ),
                 ),
@@ -70,11 +71,11 @@ class CategoryCard extends StatelessWidget {
                     if (v == 'delete') onDelete();
                     if (v == 'breeds') onManageBreeds();
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(value: 'edit', child: Text(AppLocalizations.of(context)!.edit)),
                     PopupMenuItem(
-                        value: 'breeds', child: Text('Manage breeds')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                        value: 'breeds', child: Text(AppLocalizations.of(context)!.manageBreeds)),
+                    PopupMenuItem(value: 'delete', child: Text(AppLocalizations.of(context)!.delete)),
                   ],
                   child: const Padding(
                     padding: EdgeInsets.all(4.0),
@@ -92,17 +93,17 @@ class CategoryCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onManageBreeds,
                     icon: const Icon(Icons.list_alt),
-                    label: const Text('Breeds'),
+                    label: Text(AppLocalizations.of(context)!.breeds),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton.icon(
                     style:
-                    FilledButton.styleFrom(backgroundColor: primaryColor),
+                    FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit, color: Colors.white),
-                    label: const Text('Edit',
+                    label: Text(AppLocalizations.of(context)!.edit,
                         style: TextStyle(color: Colors.white)),
                   ),
                 ),

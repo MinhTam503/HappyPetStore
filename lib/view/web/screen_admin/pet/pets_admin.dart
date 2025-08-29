@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/utils/contants.dart';
 import 'package:uuid/uuid.dart';
@@ -213,20 +214,21 @@ class _PetsState extends State<PetsAdmin> {
         prefixIcon: prefix,
         suffixIcon: suffix,
         border: const OutlineInputBorder(),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: primaryColor, width: 2),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
         ),
       );
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: Row(
           children: [
-            const Text('Quản lý thú cưng',
-                style: TextStyle(color: Colors.black)),
+            Text(l10n.managePets,
+                style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)),
             const SizedBox(width: 12),
             Card(
               // decoration: BoxDecoration(
@@ -234,11 +236,14 @@ class _PetsState extends State<PetsAdmin> {
               //   border: Border.all(color: Colors.grey)
               // ),
               child: FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: Colors.white),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).cardColor,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                ),
                 onPressed: _showPetDialog,
-                icon: const Icon(Icons.add, color: primaryColor),
-                label: const Text('Thêm thú cưng',
-                    style: TextStyle(color: primaryColor)),
+                icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
+                label: Text(l10n.addPet,
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary)),
               ),
             ),
           ],
@@ -258,11 +263,12 @@ class _PetsState extends State<PetsAdmin> {
                         child: ChoiceChip(
                           label: Text(c),
                           selected: selectedCategory == c,
-                          selectedColor: primaryColor.withOpacity(.15),
+                          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(.15),
+                          backgroundColor: Theme.of(context).chipTheme.backgroundColor,
                           labelStyle: TextStyle(
                             color: selectedCategory == c
-                                ? primaryColor
-                                : Colors.black87,
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).textTheme.bodyMedium?.color,
                           ),
                           onSelected: (_) =>
                               setState(() => selectedCategory = c),
@@ -288,7 +294,7 @@ class _PetsState extends State<PetsAdmin> {
                   hintText: 'Tìm theo tên thú cưng...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: secondaryColor,
+                  fillColor: Theme.of(context).inputDecorationTheme.fillColor,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   border: OutlineInputBorder(
                     borderSide: BorderSide.none,
@@ -308,8 +314,8 @@ class _PetsState extends State<PetsAdmin> {
               stream: petsCollection.snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator(color: primaryColor));
+                  return Center(
+                      child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const EmptyState(
@@ -363,12 +369,12 @@ class _PetsState extends State<PetsAdmin> {
             Container(
               color: Colors.black38,
               alignment: Alignment.center,
-              child: const Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
+                  CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                   SizedBox(height: 8),
-                  Text('Đang xử lý...', style: TextStyle(color: Colors.white)),
+                  Text('Đang xử lý...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 ],
               ),
             ),
@@ -378,18 +384,19 @@ class _PetsState extends State<PetsAdmin> {
   }
 
   Future<void> _confirmDelete(String id) async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc chắn muốn xóa thú cưng này không?'),
+        title: Text(l10n.confirm),
+        content: Text(l10n.confirmDeletePet),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Hủy')),
+              child: Text(l10n.cancel)),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+              child: Text(l10n.delete, style: TextStyle(color: Theme.of(context).colorScheme.error))),
         ],
       ),
     );
@@ -420,10 +427,11 @@ class _PetsState extends State<PetsAdmin> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
+            final l10n = AppLocalizations.of(context)!;
             return AlertDialog(
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              title: Text(pet == null ? 'Add Pet' : 'Edit Pet'),
+              title: Text(pet == null ? l10n.addPet : l10n.edit),
               content: SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
@@ -564,7 +572,7 @@ class _PetsState extends State<PetsAdmin> {
                                           await _pickImage();
                                           setStateDialog(() {});
                                         },
-                                        label: const Text('Pick Image'),
+                                        label: Text(l10n.pickImage),
                                       ),
                                     ),
                                     if (pet != null && _imageBytes != null) ...[
@@ -595,10 +603,10 @@ class _PetsState extends State<PetsAdmin> {
                     Navigator.pop(context);
                     _imageBytes = null;
                   },
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: primaryColor),
+                  style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                   onPressed: () async {
                     // Validate
                     if (nameController.text.trim().isEmpty ||
@@ -659,8 +667,8 @@ class _PetsState extends State<PetsAdmin> {
                     Navigator.pop(context);
                     _imageBytes = null;
                   },
-                  child: Text(pet == null ? 'Add' : 'Update',
-                      style: const TextStyle(color: Colors.white)),
+                  child: Text(pet == null ? l10n.addPet : l10n.save,
+                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
                 ),
               ],
             );
@@ -671,6 +679,7 @@ class _PetsState extends State<PetsAdmin> {
   }
 
   void _showPetDetailsDialog(Pet pet) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) {
@@ -709,12 +718,12 @@ class _PetsState extends State<PetsAdmin> {
                               loadingBuilder:
                                   (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
-                                return const SizedBox(
+                                return SizedBox(
                                   width: 240,
                                   height: 240,
                                   child: Center(
                                       child: CircularProgressIndicator(
-                                          color: primaryColor)),
+                                          color: Theme.of(context).colorScheme.primary)),
                                 );
                               },
                             ),
@@ -731,8 +740,8 @@ class _PetsState extends State<PetsAdmin> {
                     _infoRow(
                         Icons.monitor_weight, 'Weight', '${pet.weight} Kg'),
                     const SizedBox(height: 10),
-                    const Text('About:',
-                        style: TextStyle(
+                    Text(l10n.about,
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
                     SelectableText(
                       pet.about,
@@ -747,7 +756,7 @@ class _PetsState extends State<PetsAdmin> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close', style: TextStyle(fontSize: 16)),
+              child: Text(l10n.close, style: const TextStyle(fontSize: 16)),
             ),
           ],
         );
@@ -760,7 +769,7 @@ class _PetsState extends State<PetsAdmin> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: primaryColor),
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 8),
           Text('$title: ',
               style:

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pet_shop/utils/contants.dart'; // dùng primaryColor, secondaryColor nếu có
 import 'package:pet_shop/view/web/screen_admin/shop_info/MapPicker.dart';
@@ -125,8 +126,9 @@ class _ShopInfoState extends State<ShopInfo> {
         await _fService.updateAvatarShop(cacheBust);
         await fetchShopInfo();
         if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Avatar updated successfully!")),
+          SnackBar(content: Text(l10n.avatarUpdatedSuccessfully)),
         );
       }
     }
@@ -170,27 +172,30 @@ class _ShopInfoState extends State<ShopInfo> {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
       ),
-      fillColor: Colors.white,
+      fillColor: Theme.of(context).inputDecorationTheme.fillColor,
       filled: true,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isReady = shopInfo != null;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Shop Info', style: TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.white,
+        title: Text(l10n.shopInfo, style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).appBarTheme.foregroundColor,
+        )),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: .5,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        titleTextStyle: const TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.w600),
+        iconTheme: IconThemeData(color: Theme.of(context).appBarTheme.foregroundColor),
       ),
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: !isReady
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
+          ? Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor))
           : SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
@@ -201,7 +206,7 @@ class _ShopInfoState extends State<ShopInfo> {
                 // Header + avatar
                 Card(
                   elevation: 0,
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -254,7 +259,7 @@ class _ShopInfoState extends State<ShopInfo> {
                 // Form fields
                 Card(
                   elevation: 0,
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -307,17 +312,17 @@ class _ShopInfoState extends State<ShopInfo> {
                 // Map picker
                 Card(
                   elevation: 0,
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        const Row(
+                        Row(
                           children:  [
-                            Icon(Icons.map_outlined, color: primaryColor),
-                            SizedBox(width: 8),
-                            Text('Vị trí cửa hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            const Icon(Icons.map_outlined, color: primaryColor),
+                            const SizedBox(width: 8),
+                            Text(l10n.shopLocation, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -345,7 +350,7 @@ class _ShopInfoState extends State<ShopInfo> {
                           child: OutlinedButton.icon(
                             onPressed: _pickLocation,
                             icon: const Icon(Icons.edit_location_alt_outlined),
-                            label: const Text('Chọn trên bản đồ'),
+                            label: Text(l10n.selectOnMap),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: primaryColor,
                               side: const BorderSide(color: primaryColor),
@@ -364,7 +369,7 @@ class _ShopInfoState extends State<ShopInfo> {
                   alignment: Alignment.center,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: primaryColor,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -376,7 +381,7 @@ class _ShopInfoState extends State<ShopInfo> {
                           addressController.text.trim().isEmpty ||
                           aboutController.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin')),
+                          SnackBar(content: Text(l10n.pleaseEnterAllInfo)),
                         );
                         setState(() => isLoading = false);
                         return;
@@ -399,7 +404,7 @@ class _ShopInfoState extends State<ShopInfo> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                         : const Icon(Icons.save_outlined, color: Colors.white),
-                    label: const Text('Lưu thay đổi', style: TextStyle(color: Colors.white)),
+                    label: Text(l10n.saveChanges, style: const TextStyle(color: Colors.white)),
                   ),
                 ),
               ],

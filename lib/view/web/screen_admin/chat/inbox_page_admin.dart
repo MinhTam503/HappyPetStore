@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:pet_shop/utils/contants.dart'; // có primaryColor, secondaryColor
 
@@ -45,15 +46,18 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0.5,
-        title: const Text(
-          "Danh sách cuộc trò chuyện",
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+        title: Text(
+          AppLocalizations.of(context)!.conversationsList,
+          style: TextStyle(
+            color: Theme.of(context).appBarTheme.foregroundColor, 
+            fontWeight: FontWeight.w600
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: IconThemeData(color: Theme.of(context).appBarTheme.foregroundColor),
       ),
-      backgroundColor: const Color(0xFFF6F8FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           // Search
@@ -63,14 +67,14 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
               controller: _searchCtl,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Tìm theo email hoặc nội dung tin nhắn...',
+                hintText: AppLocalizations.of(context)!.searchByEmailOrMessage,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).inputDecorationTheme.fillColor,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -84,8 +88,8 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
               stream: conversations,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return const EmptyState(
-                    label: 'Đã xảy ra lỗi khi tải dữ liệu',
+                  return EmptyState(
+                    label: AppLocalizations.of(context)!.errorLoadingData,
                     icon: Icons.forum_outlined,
                   );
                 }
@@ -94,8 +98,8 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
                       child: CircularProgressIndicator(color: primaryColor));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const EmptyState(
-                    label: 'Chưa có cuộc trò chuyện nào',
+                  return EmptyState(
+                    label: AppLocalizations.of(context)!.noConversationsYet,
                     icon: Icons.forum_outlined,
                   );
                 }
@@ -111,8 +115,8 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
                 }).toList();
 
                 if (docs.isEmpty) {
-                  return const EmptyState(
-                    label: 'Không tìm thấy kết quả phù hợp',
+                  return EmptyState(
+                    label: AppLocalizations.of(context)!.noMatchingResults,
                     icon: Icons.forum_outlined,
                   );
                 }

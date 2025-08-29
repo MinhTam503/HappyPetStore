@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class RevenuePage extends StatefulWidget {
@@ -36,14 +37,14 @@ class _RevenuePageState extends State<RevenuePage> {
       {int? year, DateTimeRange? range}) async {
     // Lấy dữ liệu từ collection dựa trên dataSource được chọn
     List<QuerySnapshot> snapshots = [];
-    
+
     if (dataSource == 'all' || dataSource == 'orders') {
       QuerySnapshot ordersSnapshot = await ordersCollection
           .where('statusOrder', isEqualTo: 'Completed')
           .get();
       snapshots.add(ordersSnapshot);
     }
-    
+
     if (dataSource == 'all' || dataSource == 'ordersWeb') {
       QuerySnapshot ordersWebSnapshot = await ordersWebCollection
           .where('statusOrder', isEqualTo: 'Completed')
@@ -91,7 +92,7 @@ class _RevenuePageState extends State<RevenuePage> {
         }
       }
     }
-    
+
     setState(() {
       dailyRevenue = revenueData;
       totalRevenue = total;
@@ -130,12 +131,12 @@ class _RevenuePageState extends State<RevenuePage> {
 
     // Lấy dữ liệu từ collection dựa trên dataSource được chọn
     final List<Map<String, dynamic>> orders = [];
-    
+
     if (dataSource == 'all' || dataSource == 'orders') {
       final snap = await ordersCollection
           .where('statusOrder', isEqualTo: 'Completed')
           .get();
-      
+
       // Xử lý orders từ collection orders
       for (final doc in snap.docs) {
         final data = (doc.data() as Map).cast<String, dynamic>();
@@ -191,24 +192,30 @@ class _RevenuePageState extends State<RevenuePage> {
       context: context,
       useRootNavigator: true,
       builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           title: Row(
-            children: const [
-              Icon(Icons.receipt_long, color: Color(0xFF4158D0)),
-              SizedBox(width: 8),
-              Text('Order Details',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+            children: [
+              Icon(Icons.receipt_long,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF6C7CE0)
+                      : const Color(0xFF4158D0)),
+              const SizedBox(width: 8),
+              Text(l10n.orderDetails,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.titleLarge?.color)),
             ],
           ),
           content: SizedBox(
             width: 520, // cố định bề ngang
             height: 560, // và CHIỀU CAO HỮU HẠN
             child: orders.isEmpty
-                ? const Center(child: Text('No orders'))
+                ? Center(child: Text(l10n.noOrders))
                 : ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: orders.length,
@@ -218,7 +225,8 @@ class _RevenuePageState extends State<RevenuePage> {
                       final email = (o['email'] ?? '').toString();
                       final total = (o['totalAmount'] ?? '').toString();
                       final status = (o['statusOrder'] ?? '').toString();
-                      final source = (o['source'] ?? 'orders').toString(); // Nguồn order
+                      final source =
+                          (o['source'] ?? 'orders').toString(); // Nguồn order
                       final ts = o['timestamp'];
                       final dateStr = (ts is Timestamp)
                           ? DateFormat('dd/MM/yyyy').format(ts.toDate())
@@ -235,7 +243,7 @@ class _RevenuePageState extends State<RevenuePage> {
 
                       return Card(
                         elevation: 0,
-                        color: const Color(0xFFF5F7FA),
+                        color: Theme.of(context).cardColor,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         child: Padding(
@@ -247,16 +255,30 @@ class _RevenuePageState extends State<RevenuePage> {
                                 Row(
                                   children: [
                                     Icon(
-                                      source == 'ordersWeb' ? Icons.web : Icons.phone_android,
+                                      source == 'ordersWeb'
+                                          ? Icons.web
+                                          : Icons.phone_android,
                                       size: 16,
-                                      color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                      color: source == 'ordersWeb'
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       source == 'ordersWeb' ? 'Web' : 'Mobile',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                        color: source == 'ordersWeb'
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .secondary,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -267,20 +289,24 @@ class _RevenuePageState extends State<RevenuePage> {
                               _rowIconText(Icons.email, email),
                               const SizedBox(height: 6),
                               _rowIconText(
-                                  Icons.attach_money, 'Total: \$$total',
-                                  iconColor: Colors.green),
-                              const SizedBox(height: 6),
-                              _rowIconText(Icons.verified, 'Status: $status',
-                                  iconColor: Colors.blue),
+                                  Icons.attach_money, l10n.totalAmount(total),
+                                  iconColor:
+                                      Theme.of(context).colorScheme.primary),
                               const SizedBox(height: 6),
                               _rowIconText(
-                                  Icons.calendar_today, 'Date: $dateStr',
-                                  iconColor: Colors.indigo),
+                                  Icons.verified, l10n.statusOrder(status),
+                                  iconColor:
+                                      Theme.of(context).colorScheme.secondary),
+                              const SizedBox(height: 6),
+                              _rowIconText(
+                                  Icons.calendar_today, l10n.dateOrder(dateStr),
+                                  iconColor:
+                                      Theme.of(context).colorScheme.tertiary),
                               const SizedBox(height: 10),
                               if (items.isNotEmpty) ...[
-                                const Text('Items:',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w600)),
+                                Text(l10n.items,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 6),
                                 ...items.map((it) {
                                   final name = (it['name'] ?? '').toString();
@@ -290,18 +316,30 @@ class _RevenuePageState extends State<RevenuePage> {
                                         left: 4, bottom: 4),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.pets,
-                                            size: 16, color: Color(0xFF4158D0)),
+                                        Icon(Icons.pets,
+                                            size: 16,
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFF6C7CE0)
+                                                    : const Color(0xFF4158D0)),
                                         const SizedBox(width: 6),
                                         Expanded(
                                             child: Text(name,
                                                 maxLines: 1,
-                                                overflow:
-                                                    TextOverflow.ellipsis)),
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.color))),
                                         const SizedBox(width: 8),
                                         Text(price,
-                                            style: const TextStyle(
-                                                color: Colors.black54)),
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.color)),
                                       ],
                                     ),
                                   );
@@ -309,26 +347,38 @@ class _RevenuePageState extends State<RevenuePage> {
                               ] else if ((o['petName'] ?? '')
                                   .toString()
                                   .isNotEmpty) ...[
-                                const Text('Pet:',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w600)),
+                                Text(l10n.pet,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
-                                    const Icon(Icons.pets,
-                                        size: 16, color: Color(0xFF4158D0)),
+                                    Icon(Icons.pets,
+                                        size: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
                                     const SizedBox(width: 6),
                                     Expanded(
                                         child: Text(o['petName'].toString())),
                                     const SizedBox(width: 8),
                                     Text(o['totalAmount'].toString(),
-                                        style: const TextStyle(
-                                            color: Colors.black54)),
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.color
+                                                ?.withOpacity(0.7))),
                                   ],
                                 ),
                               ] else
-                                const Text('Không có thông tin thú cưng',
-                                    style: TextStyle(color: Colors.black54)),
+                                Text(l10n.noPetInfo,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color
+                                            ?.withOpacity(0.7))),
                             ],
                           ),
                         ),
@@ -339,73 +389,85 @@ class _RevenuePageState extends State<RevenuePage> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close',
-                    style: TextStyle(color: Color(0xFF4158D0)))),
+                child: Text(l10n.close,
+                    style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF6C7CE0)
+                            : const Color(0xFF4158D0)))),
           ],
         );
       },
     );
   }
 
-  Widget _rowIconText(IconData icon, String text,
-      {Color iconColor = const Color(0xFF4158D0)}) {
+  Widget _rowIconText(IconData icon, String text, {Color? iconColor}) {
+    final defaultIconColor = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF6C7CE0)
+        : const Color(0xFF4158D0);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: iconColor, size: 18),
+        Icon(icon, color: iconColor ?? defaultIconColor, size: 18),
         const SizedBox(width: 6),
-        Expanded(child: Text(text)),
+        Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyMedium?.color))),
       ],
     );
   }
 
   String _getDataSourceTitle() {
+    final l10n = AppLocalizations.of(context)!;
     switch (dataSource) {
       case 'orders':
-        return '(Mobile App)';
+        return '(${l10n.mobileApp})';
       case 'ordersWeb':
-        return '(Web)';
+        return '(${l10n.web})';
       case 'all':
       default:
-        return '(Mobile & Web)';
+        return '(${l10n.mobileApp} & ${l10n.web})';
     }
   }
 
   String _getRevenueTitle() {
+    final l10n = AppLocalizations.of(context)!;
     switch (dataSource) {
       case 'orders':
-        return 'Total Revenue (Mobile App)';
+        return l10n.totalRevenueMobile;
       case 'ordersWeb':
-        return 'Total Revenue (Web)';
+        return l10n.totalRevenueWeb;
       case 'all':
       default:
-        return 'Total Revenue (Mobile + Web)';
+        return l10n.totalRevenueAll;
     }
   }
 
   String _getChartTitle() {
+    final l10n = AppLocalizations.of(context)!;
     switch (dataSource) {
       case 'orders':
-        return 'Daily Revenue Overview (Mobile App)';
+        return l10n.dailyRevenueOverviewMobile;
       case 'ordersWeb':
-        return 'Daily Revenue Overview (Web)';
+        return l10n.dailyRevenueOverviewWeb;
       case 'all':
       default:
-        return 'Daily Revenue Overview (Mobile & Web Combined)';
+        return l10n.dailyRevenueOverviewAll;
     }
   }
 
   Future<void> showOrdersForDay(String day) async {
     final date = DateTime(selectedYear, selectedMonth, int.tryParse(day) ?? 1);
-    
+
     // Lấy dữ liệu từ collection dựa trên dataSource được chọn
     final List<Map<String, dynamic>> orders = [];
-    
+
     if (dataSource == 'all' || dataSource == 'orders') {
       final snap = await ordersCollection
           .where('statusOrder', isEqualTo: 'Completed')
           .get();
-      
+
       // Xử lý orders từ collection orders
       for (final doc in snap.docs) {
         final data = (doc.data() as Map).cast<String, dynamic>();
@@ -454,24 +516,30 @@ class _RevenuePageState extends State<RevenuePage> {
       context: context,
       useRootNavigator: true,
       builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.receipt_long, color: Color(0xFF4158D0)),
-              SizedBox(width: 8),
-              Text('Order Details',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Icon(Icons.receipt_long,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF6C7CE0)
+                      : const Color(0xFF4158D0)),
+              const SizedBox(width: 8),
+              Text(l10n.orderDetails,
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.titleLarge?.color)),
             ],
           ),
           content: SizedBox(
             width: 520,
             height: 560, // KHÔNG để unbounded
             child: orders.isEmpty
-                ? const Center(child: Text('No orders'))
+                ? Center(child: Text(l10n.noOrders))
                 : ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: orders.length,
@@ -480,7 +548,8 @@ class _RevenuePageState extends State<RevenuePage> {
                       final o = orders[idx];
                       final email = (o['email'] ?? '').toString();
                       final total = (o['totalAmount'] ?? '').toString();
-                      final source = (o['source'] ?? 'orders').toString(); // Nguồn order
+                      final source =
+                          (o['source'] ?? 'orders').toString(); // Nguồn order
                       final ts = o['timestamp'];
                       final dateStr = (ts is Timestamp)
                           ? DateFormat('dd/MM/yyyy').format(ts.toDate())
@@ -497,7 +566,7 @@ class _RevenuePageState extends State<RevenuePage> {
 
                       return Card(
                         elevation: 0,
-                        color: const Color(0xFFF5F7FA),
+                        color: Theme.of(context).cardColor,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         child: Padding(
@@ -509,16 +578,30 @@ class _RevenuePageState extends State<RevenuePage> {
                                 Row(
                                   children: [
                                     Icon(
-                                      source == 'ordersWeb' ? Icons.web : Icons.phone_android,
+                                      source == 'ordersWeb'
+                                          ? Icons.web
+                                          : Icons.phone_android,
                                       size: 16,
-                                      color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                      color: source == 'ordersWeb'
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       source == 'ordersWeb' ? 'Web' : 'Mobile',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                        color: source == 'ordersWeb'
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .secondary,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -530,20 +613,25 @@ class _RevenuePageState extends State<RevenuePage> {
                               const SizedBox(height: 6),
                               _rowIconText(
                                   Icons.attach_money, 'Total: \$$total',
-                                  iconColor: Colors.green),
+                                  iconColor:
+                                      Theme.of(context).colorScheme.primary),
                               const SizedBox(height: 6),
                               _rowIconText(
                                   Icons.calendar_today, 'Date: $dateStr',
-                                  iconColor: Colors.blue),
+                                  iconColor:
+                                      Theme.of(context).colorScheme.secondary),
                               const SizedBox(height: 8),
                               if (items.isNotEmpty) ...[
-                                const Row(
+                                Row(
                                   children: [
                                     Icon(Icons.pets,
-                                        color: Colors.orange, size: 18),
-                                    SizedBox(width: 6),
-                                    Text('Pet:',
-                                        style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(l10n.pet,
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.w500)),
                                   ],
                                 ),
@@ -556,8 +644,11 @@ class _RevenuePageState extends State<RevenuePage> {
                                         left: 22, bottom: 4),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.pets,
-                                            size: 16, color: Color(0xFF4158D0)),
+                                        Icon(Icons.pets,
+                                            size: 16, 
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? const Color(0xFF6C7CE0)
+                                                : const Color(0xFF4158D0)),
                                         const SizedBox(width: 6),
                                         Expanded(
                                             child: Text(name,
@@ -566,8 +657,12 @@ class _RevenuePageState extends State<RevenuePage> {
                                                     TextOverflow.ellipsis)),
                                         const SizedBox(width: 8),
                                         Text(price,
-                                            style: const TextStyle(
-                                                color: Colors.black54)),
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color
+                                                    ?.withOpacity(0.7))),
                                       ],
                                     ),
                                   );
@@ -575,26 +670,38 @@ class _RevenuePageState extends State<RevenuePage> {
                               ] else if ((o['petName'] ?? '')
                                   .toString()
                                   .isNotEmpty) ...[
-                                const Text('Pet:',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold)),
+                                Text(l10n.pet,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Icon(Icons.pets,
-                                        size: 16, color: Color(0xFF4158D0)),
+                                    Icon(Icons.pets,
+                                        size: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
                                     const SizedBox(width: 6),
                                     Expanded(
                                         child: Text(o['petName'].toString())),
                                     const SizedBox(width: 8),
                                     Text(o['totalAmount'].toString(),
-                                        style: const TextStyle(
-                                            color: Colors.black54)),
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.color
+                                                ?.withOpacity(0.7))),
                                   ],
                                 ),
                               ] else
-                                const Text('Không có thông tin thú cưng',
-                                    style: TextStyle(color: Colors.black54)),
+                                Text(l10n.noPetInfo,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color
+                                            ?.withOpacity(0.7))),
                             ],
                           ),
                         ),
@@ -605,7 +712,11 @@ class _RevenuePageState extends State<RevenuePage> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close')),
+                child: Text(l10n.close,
+                    style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF6C7CE0)
+                            : const Color(0xFF4158D0)))),
           ],
         );
       },
@@ -614,20 +725,22 @@ class _RevenuePageState extends State<RevenuePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Revenue Analytics ${_getDataSourceTitle()}',
-          style: const TextStyle(
+          '${l10n.revenue} ${_getDataSourceTitle()}',
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24,
-            color: Colors.black87,
+            color: Theme.of(context).appBarTheme.foregroundColor,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
       ),
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -638,15 +751,19 @@ class _RevenuePageState extends State<RevenuePage> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4158D0), Color(0xFF3B4AA8)],
+                  gradient: LinearGradient(
+                    colors: Theme.of(context).brightness == Brightness.dark
+                        ? [const Color(0xFF6C7CE0), const Color(0xFF5A67D8)]
+                        : [const Color(0xFF4158D0), const Color(0xFF3B4AA8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF4158D0).withOpacity(0.2),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF6C7CE0).withOpacity(0.2)
+                          : const Color(0xFF4158D0).withOpacity(0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -660,8 +777,10 @@ class _RevenuePageState extends State<RevenuePage> {
                         children: [
                           Text(
                             _getRevenueTitle(),
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withOpacity(0.8)
+                                  : Colors.white70,
                               fontSize: 16,
                             ),
                           ),
@@ -696,15 +815,21 @@ class _RevenuePageState extends State<RevenuePage> {
               // Bộ lọc thống kê
               Row(
                 children: [
-                  const Text('Nguồn dữ liệu:',
-                      style: TextStyle(fontWeight: FontWeight.w500)),
+                  Text(l10n.dataSource,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
                   const SizedBox(width: 8),
                   DropdownButton<String>(
                     value: dataSource,
-                    items: const [
-                      DropdownMenuItem(value: 'all', child: Text('Tất cả')),
-                      DropdownMenuItem(value: 'orders', child: Text('Mobile App')),
-                      DropdownMenuItem(value: 'ordersWeb', child: Text('Web')),
+                    dropdownColor: Theme.of(context).cardColor,
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                    items: [
+                      DropdownMenuItem(value: 'all', child: Text(l10n.all)),
+                      DropdownMenuItem(
+                          value: 'orders', child: Text(l10n.mobileApp)),
+                      DropdownMenuItem(
+                          value: 'ordersWeb', child: Text(l10n.web)),
                     ],
                     onChanged: (value) {
                       if (value == null) return;
@@ -718,16 +843,21 @@ class _RevenuePageState extends State<RevenuePage> {
                       if (statisticType == 'month') {
                         fetchRevenueData(selectedMonth, year: selectedYear);
                       } else if (selectedRange != null) {
-                        fetchRevenueData(selectedMonth, year: selectedYear, range: selectedRange);
+                        fetchRevenueData(selectedMonth,
+                            year: selectedYear, range: selectedRange);
                       }
                     },
                   ),
                   const SizedBox(width: 16),
-                  const Text('Năm:',
-                      style: TextStyle(fontWeight: FontWeight.w500)),
+                  Text(l10n.year,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
                   const SizedBox(width: 8),
                   DropdownButton<int>(
                     value: selectedYear,
+                    dropdownColor: Theme.of(context).cardColor,
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
                     items: [
                       for (int y = DateTime.now().year; y >= 2020; y--)
                         DropdownMenuItem(value: y, child: Text(y.toString())),
@@ -750,13 +880,15 @@ class _RevenuePageState extends State<RevenuePage> {
                   if (statisticType == 'day')
                     DropdownButton<int>(
                       value: selectedMonth,
+                      dropdownColor: Theme.of(context).cardColor,
+                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
                       items: List.generate(
                           selectedYear == DateTime.now().year
                               ? DateTime.now().month
                               : 12, (index) {
                         return DropdownMenuItem(
                           value: index + 1,
-                          child: Text('Tháng ${index + 1}'),
+                          child: Text(l10n.monthName(index + 1)),
                         );
                       }),
                       onChanged: (newMonth) {
@@ -770,14 +902,18 @@ class _RevenuePageState extends State<RevenuePage> {
                       },
                     ),
                   const SizedBox(width: 16),
-                  const Text('Thống kê theo:',
-                      style: TextStyle(fontWeight: FontWeight.w500)),
+                  Text(l10n.statisticsBy,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge?.color)),
                   const SizedBox(width: 12),
                   DropdownButton<String>(
                     value: statisticType,
-                    items: const [
-                      DropdownMenuItem(value: 'month', child: Text('Tháng')),
-                      DropdownMenuItem(value: 'day', child: Text('Ngày')),
+                    dropdownColor: Theme.of(context).cardColor,
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                    items: [
+                      DropdownMenuItem(value: 'month', child: Text(l10n.month)),
+                      DropdownMenuItem(value: 'day', child: Text(l10n.day)),
                     ],
                     onChanged: (value) async {
                       if (value == null) return;
@@ -801,7 +937,7 @@ class _RevenuePageState extends State<RevenuePage> {
                       icon: const Icon(Icons.date_range, size: 18),
                       label: Text(selectedRange != null
                           ? '${selectedRange!.start.day}/${selectedRange!.start.month}/${selectedRange!.start.year} - ${selectedRange!.end.day}/${selectedRange!.end.month}/${selectedRange!.end.year}'
-                          : 'Chọn khoảng ngày'),
+                          : l10n.selectDateRange),
                       onPressed: () async {
                         final now = DateTime.now();
                         final isCurrentYear = selectedYear == now.year;
@@ -842,11 +978,11 @@ class _RevenuePageState extends State<RevenuePage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Theme.of(context).shadowColor.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -854,18 +990,22 @@ class _RevenuePageState extends State<RevenuePage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today,
-                          color: Color(0xFF4158D0)),
+                      Icon(Icons.calendar_today,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF6C7CE0)
+                              : const Color(0xFF4158D0)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: selectedMonth,
                             isExpanded: true,
-                            icon: const Icon(Icons.keyboard_arrow_down,
-                                color: Color(0xFF4158D0)),
-                            style: const TextStyle(
-                              color: Colors.black87,
+                            icon: Icon(Icons.keyboard_arrow_down,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF6C7CE0)
+                                    : const Color(0xFF4158D0)),
+                            style: TextStyle(
+                              color: Theme.of(context).textTheme.bodyLarge?.color,
                               fontSize: 16,
                             ),
                             onChanged: (newMonth) {
@@ -887,8 +1027,10 @@ class _RevenuePageState extends State<RevenuePage> {
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 8.0),
                                   child: Text(
-                                    'Tháng ${index + 1}',
-                                    style: const TextStyle(fontSize: 16),
+                                    l10n.monthName(index + 1),
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: Theme.of(context).textTheme.bodyLarge?.color),
                                   ),
                                 ),
                               );
@@ -904,10 +1046,10 @@ class _RevenuePageState extends State<RevenuePage> {
               // Chart Title
               Text(
                 _getChartTitle(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3748),
+                  color: Theme.of(context).textTheme.headlineSmall?.color,
                 ),
               ),
               const SizedBox(height: 12),
@@ -925,11 +1067,11 @@ class _RevenuePageState extends State<RevenuePage> {
                         : MediaQuery.of(context).size.width - 48,
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
+                          color: Theme.of(context).shadowColor.withOpacity(0.1),
                           blurRadius: 10,
                           spreadRadius: 0,
                           offset: const Offset(0, 4),
@@ -968,9 +1110,12 @@ class _RevenuePageState extends State<RevenuePage> {
                                   padding: const EdgeInsets.only(right: 8.0),
                                   child: Text(
                                     '${value.toInt()}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF64748B),
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.color,
                                     ),
                                   ),
                                 );
@@ -988,16 +1133,23 @@ class _RevenuePageState extends State<RevenuePage> {
                                     angle: -0.5,
                                     child: Text(
                                       rangeDays[value.toInt()],
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           fontSize: 11,
-                                          color: Color(0xFF64748B)),
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.color),
                                     ),
                                   );
                                 } else if (selectedRange == null) {
                                   return Text(
                                     '${value.toInt()}',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Color(0xFF64748B)),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.color),
                                   );
                                 }
                                 return const SizedBox.shrink();
@@ -1014,11 +1166,17 @@ class _RevenuePageState extends State<RevenuePage> {
                                 barRods: [
                                   BarChartRodData(
                                     toY: dailyRevenue[rangeDays[i]] ?? 0,
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF4158D0),
-                                        Color(0xFF3B4AA8)
-                                      ],
+                                    gradient: LinearGradient(
+                                      colors: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? [
+                                              const Color(0xFF6C7CE0),
+                                              const Color(0xFF4C63D2),
+                                            ]
+                                          : [
+                                              const Color(0xFF4158D0),
+                                              const Color(0xFF3B4AA8),
+                                            ],
                                       begin: Alignment.bottomCenter,
                                       end: Alignment.topCenter,
                                     ),

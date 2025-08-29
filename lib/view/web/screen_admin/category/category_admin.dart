@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/utils/contants.dart';
 
 import '../../components/empty_state.dart';
@@ -72,12 +73,13 @@ class _CategoryAdminState extends State<CategoryAdmin> {
   }
 
   Future<void> deleteImageFromStorage(String imageUrl) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final ref = FirebaseStorage.instance.refFromURL(imageUrl);
       await ref.delete();
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Delete successfully')));
+          .showSnackBar(SnackBar(content: Text(l10n.deleteSuccessfully)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,13 +130,13 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Breed of $name',
+                      AppLocalizations.of(context)!.breedOf(name),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Add breed',
+                    tooltip: AppLocalizations.of(context)!.addBreed,
                     icon: const Icon(Icons.add_circle_outline,
                         color: primaryColor),
                     onPressed: () {
@@ -159,7 +161,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                 width: 520,
                 height: 360,
                 child: breeds.isEmpty
-                    ? const Center(child: Text('Chưa có giống nào'))
+                    ? Center(child: Text(AppLocalizations.of(context)!.noBreeds))
                     : ListView.separated(
                         primary: false,
                         shrinkWrap: true,
@@ -230,29 +232,29 @@ class _CategoryAdminState extends State<CategoryAdmin> {
         return AlertDialog(
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          title: Text(oldBreed == null ? 'Add New Breed' : 'Edit Breed'),
+          title: Text(oldBreed == null ? AppLocalizations.of(context)!.addNewBreed : AppLocalizations.of(context)!.editBreed),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: TextField(
               controller: _newBreed,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Breed name',
+                labelText: AppLocalizations.of(context)!.breedName,
               ),
             ),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel')),
+                child: Text(AppLocalizations.of(context)!.cancel)),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: primaryColor),
+              style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
               onPressed: () async {
                 final newBreed = _newBreed.text.trim();
                 if (newBreed.isEmpty) {
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Please enter a breed name')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(AppLocalizations.of(context)!.enterBreedName)));
                   return;
                 }
                 if (oldBreed == null) {
@@ -264,7 +266,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                 Navigator.pop(context);
                 refreshDialog();
               },
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+              child: Text(AppLocalizations.of(context)!.save, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
             ),
           ],
         );
@@ -287,7 +289,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
             return AlertDialog(
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              title: Text(id == null ? 'Add Category' : 'Edit Category'),
+              title: Text(id == null ? AppLocalizations.of(context)!.addCategory : AppLocalizations.of(context)!.editCategory),
               content: SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 520),
@@ -297,13 +299,13 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                     children: [
                       TextField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Category Name',
+                        decoration: InputDecoration(
+                          labelText: AppLocalizations.of(context)!.categoryName,
                           border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text('Image',
+                      Text(AppLocalizations.of(context)!.image,
                           style: Theme.of(context).textTheme.titleSmall),
                       const SizedBox(height: 8),
                       ClipRRect(
@@ -355,14 +357,14 @@ class _CategoryAdminState extends State<CategoryAdmin> {
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel')),
+                    child: Text(AppLocalizations.of(context)!.cancel)),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: primaryColor),
+                  style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                   onPressed: () async {
                     if (_nameController.text.trim().isEmpty) {
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Vui lòng nhập tên danh mục')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(AppLocalizations.of(context)!.pleaseEnterCategoryName)));
                       return;
                     }
 
@@ -372,7 +374,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                     if (id == null && _imageBytes == null) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Vui lòng chọn ảnh')));
+                          SnackBar(content: Text(AppLocalizations.of(context)!.pleaseSelectImage)));
                       setState(() => _loading = false);
                       return;
                     }
@@ -383,7 +385,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                       if (imageUrl.isEmpty) {
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Lỗi upload ảnh!')));
+                            SnackBar(content: Text(AppLocalizations.of(context)!.imageUploadError)));
                         setState(() => _loading = false);
                         return;
                       }
@@ -410,7 +412,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                     Navigator.pop(context);
                   },
                   child:
-                      const Text('Save', style: TextStyle(color: Colors.white)),
+                      Text(AppLocalizations.of(context)!.save, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
                 ),
               ],
             );
@@ -430,17 +432,21 @@ class _CategoryAdminState extends State<CategoryAdmin> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: Row(
           children: [
-            const Text('Category Admin', style: TextStyle(color: Colors.black)),
+            Text(AppLocalizations.of(context)!.manageCategories, 
+                style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)),
             const SizedBox(width: 12),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: Colors.white),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).cardColor,
+                foregroundColor: Theme.of(context).primaryColor,
+              ),
               onPressed: () => _showCategoryDialog(),
-              icon: const Icon(Icons.add, color: primaryColor),
-              label: const Text('Create New',
-                  style: TextStyle(color: primaryColor)),
+              icon: Icon(Icons.add, color: Theme.of(context).primaryColor),
+              label: Text(AppLocalizations.of(context)!.createNew,
+                  style: TextStyle(color: Theme.of(context).primaryColor)),
             ),
           ],
         ),
@@ -455,10 +461,10 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                 onChanged: (v) =>
                     setState(() => _searchQuery = v.trim().toLowerCase()),
                 decoration: InputDecoration(
-                  hintText: 'Tìm danh mục... (theo tên)',
+                  hintText: AppLocalizations.of(context)!.searchCategories,
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: secondaryColor,
+                  fillColor: Theme.of(context).inputDecorationTheme.fillColor,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   border: OutlineInputBorder(
                     borderSide: BorderSide.none,
@@ -482,8 +488,8 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                       child: CircularProgressIndicator(color: primaryColor));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const EmptyState(
-                    label: 'No categories found',
+                  return EmptyState(
+                    label: AppLocalizations.of(context)!.noCategoriesFound,
                     icon: Icons.category_outlined,
                   );
                 }
@@ -540,8 +546,8 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                                   TextButton(
                                       onPressed: () =>
                                           Navigator.pop(context, true),
-                                      child: const Text('Xóa',
-                                          style: TextStyle(color: Colors.red))),
+                                      child: Text('Xóa',
+                                          style: TextStyle(color: Theme.of(context).colorScheme.error))),
                                 ],
                               ),
                             );
@@ -563,12 +569,12 @@ class _CategoryAdminState extends State<CategoryAdmin> {
             Container(
               color: Colors.black38,
               alignment: Alignment.center,
-              child: const Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
+                  CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                   SizedBox(height: 8),
-                  Text('Đang xử lý...', style: TextStyle(color: Colors.white)),
+                  Text('Đang xử lý...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 ],
               ),
             ),

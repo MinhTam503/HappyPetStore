@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:pet_shop/utils/contants.dart';
 
@@ -93,7 +94,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0.5,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         titleSpacing: 0,
         title: Row(
           children: [
@@ -116,15 +117,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 widget.customerEmail,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: Colors.black87, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    color: Theme.of(context).appBarTheme.foregroundColor, 
+                    fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: IconThemeData(color: Theme.of(context).appBarTheme.foregroundColor),
       ),
-      backgroundColor: const Color(0xFFF6F8FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -134,7 +136,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 stream: messages,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return const Center(child: Text('Có lỗi khi tải dữ liệu'));
+                    return Center(child: Text(AppLocalizations.of(context)!.errorLoadingChatData));
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
@@ -151,8 +153,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   });
 
                   if (docs.isEmpty) {
-                    return const Center(
-                        child: Text('Hãy bắt đầu cuộc trò chuyện…'));
+                    return Center(
+                        child: Text(AppLocalizations.of(context)!.startConversation));
                   }
 
                   return ListView.builder(
@@ -204,23 +206,21 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => sendMessage(),
                       decoration: InputDecoration(
-                        hintText: 'Nhập tin nhắn…',
+                        hintText: AppLocalizations.of(context)!.enterMessage,
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: Theme.of(context).inputDecorationTheme.fillColor,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: BorderSide(color: Theme.of(context).dividerColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
-                          borderSide:
-                              const BorderSide(color: primaryColor, width: 2),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
                         ),
                         prefixIcon: IconButton(
-                          tooltip: 'Emoji',
+                          tooltip: AppLocalizations.of(context)!.emoji,
                           onPressed: () {},
                           icon: const Icon(Icons.emoji_emotions_outlined),
                         ),
@@ -233,7 +233,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     radius: 24,
                     child: IconButton(
                       onPressed: sendMessage,
-                      icon: const Icon(Icons.send, color: Colors.white),
+                      icon: Icon(Icons.send, color: Theme.of(context).colorScheme.onPrimary),
                     ),
                   ),
                 ],

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../../../../../utils/contants.dart';
 
@@ -40,6 +41,22 @@ class OrderCard extends StatelessWidget {
           '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     }
     return '';
+  }
+
+  String _getLocalizedStatus(BuildContext context, String rawStatus) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (rawStatus) {
+      case 'Pending':
+        return l10n.pending;
+      case 'Processing':
+        return l10n.processing;
+      case 'Completed':
+        return l10n.completed;
+      case 'Cancelled':
+        return l10n.cancelled;
+      default:
+        return rawStatus;
+    }
   }
 
   @override
@@ -110,7 +127,7 @@ class OrderCard extends StatelessWidget {
                       children: [
                         Icon(Icons.circle, size: 10, color: statusColor),
                         const SizedBox(width: 6),
-                        Text(status, style: TextStyle(color: statusColor)),
+                        Text(_getLocalizedStatus(context, status), style: TextStyle(color: statusColor)),
                       ],
                     ),
                   ),
@@ -119,7 +136,10 @@ class OrderCard extends StatelessWidget {
                     value: status,
                     underline: Container(),
                     items: allStatuses
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .map((s) => DropdownMenuItem(
+                            value: s, 
+                            child: Text(_getLocalizedStatus(context, s))
+                        ))
                         .toList(),
                     onChanged: onChangeStatus,
                   ),

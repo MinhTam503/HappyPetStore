@@ -17,8 +17,12 @@ class MessageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bubbleColor = isMe ? primaryColor : Colors.white;
-    final textColor = isMe ? Colors.white : const Color(0xFF0F172A);
+    final bubbleColor = isMe 
+        ? primaryColor 
+        : Theme.of(context).cardColor;
+    final textColor = isMe 
+        ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.white)
+        : Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
     return Padding(
@@ -31,7 +35,7 @@ class MessageRow extends StatelessWidget {
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: Colors.grey.shade300,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               backgroundImage:
               avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
               child:
@@ -63,7 +67,7 @@ class MessageRow extends StatelessWidget {
                     boxShadow: [
                       if (!isMe)
                         BoxShadow(
-                          color: Colors.black.withOpacity(.04),
+                          color: Theme.of(context).shadowColor.withOpacity(.04),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -78,7 +82,7 @@ class MessageRow extends StatelessWidget {
                 Text(
                   time,
                   style:
-                  const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6) ?? const Color(0xFF94A3B8)),
                 ),
               ],
             ),
@@ -87,7 +91,7 @@ class MessageRow extends StatelessWidget {
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 16,
-              backgroundColor: Colors.grey.shade300,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               backgroundImage:
               avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
               child:

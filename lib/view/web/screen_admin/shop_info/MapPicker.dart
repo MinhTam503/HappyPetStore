@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pet_shop/utils/contants.dart';
 
 class MapPicker extends StatefulWidget {
   final LatLng selected;
@@ -30,13 +30,17 @@ class _MapPickerState extends State<MapPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chọn vị trí cửa hàng • ${_fmt(_selected)}'),
-        backgroundColor: Colors.white,
+        title: Text(l10n.selectShopLocation(_fmt(_selected)), style: TextStyle(
+          color: Theme.of(context).appBarTheme.foregroundColor,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        )),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: .5,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        titleTextStyle: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w600),
+        iconTheme: IconThemeData(color: Theme.of(context).appBarTheme.foregroundColor),
       ),
       body: Stack(
         children: [
@@ -65,7 +69,7 @@ class _MapPickerState extends State<MapPicker> {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(.06), blurRadius: 8, offset: const Offset(0, 2))],
               ),
-              child: const Text('Chạm lên bản đồ để chọn vị trí', style: TextStyle(fontSize: 12, color: Colors.black87)),
+              child: Text(l10n.tapMapToSelectLocation, style: const TextStyle(fontSize: 12, color: Colors.black87)),
             ),
           ),
         ],
@@ -74,13 +78,13 @@ class _MapPickerState extends State<MapPicker> {
         minimum: const EdgeInsets.all(12),
         child: FilledButton.icon(
           style: FilledButton.styleFrom(
-            backgroundColor: primaryColor,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: () => Navigator.pop(context, _selected),
           icon: const Icon(Icons.check, color: Colors.white),
-          label: const Text('Xác nhận vị trí', style: TextStyle(color: Colors.white)),
+          label: Text(l10n.confirmLocation, style: const TextStyle(color: Colors.white)),
         ),
       ),
     );

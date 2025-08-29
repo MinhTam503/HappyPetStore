@@ -19,6 +19,7 @@ class DashboardMetrics extends StatelessWidget {
     return Column(
       children: [
         _buildMetricCard(
+          context,
           'Total Revenue',
           '\$${(data['revenue'] ?? 0).toStringAsFixed(2)}',
           Icons.attach_money,
@@ -27,6 +28,7 @@ class DashboardMetrics extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _buildMetricCard(
+          context,
           'Orders Today',
           '${data['orders'] ?? 0}',
           Icons.shopping_cart,
@@ -35,6 +37,7 @@ class DashboardMetrics extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _buildMetricCard(
+          context,
           'Active Users',
           '${data['users'] ?? 0}',
           Icons.people,
@@ -46,6 +49,7 @@ class DashboardMetrics extends StatelessWidget {
   }
 
   Widget _buildMetricCard(
+    BuildContext context,
     String title,
     String value,
     IconData icon,
@@ -55,7 +59,7 @@ class DashboardMetrics extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(

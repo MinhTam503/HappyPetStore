@@ -1,6 +1,6 @@
 
-
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../../../../../utils/contants.dart';
 
@@ -27,6 +27,11 @@ class AccountCard extends StatelessWidget {
 
   Color _roleColor(String r) =>
       r.toLowerCase() == 'admin' ? Colors.orange : primaryColor;
+
+  String _getLocalizedRole(BuildContext context, String rawRole) {
+    final l10n = AppLocalizations.of(context)!;
+    return rawRole.toLowerCase() == 'admin' ? l10n.admin : l10n.user;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +98,7 @@ class AccountCard extends StatelessWidget {
                             size: 16,
                             color: _roleColor(role)),
                         const SizedBox(width: 4),
-                        Text(role, style: TextStyle(color: _roleColor(role))),
+                        Text(_getLocalizedRole(context, role), style: TextStyle(color: _roleColor(role))),
                       ],
                     ),
                   ),

@@ -43,11 +43,11 @@ class ConversationCard extends StatelessWidget {
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(.04),
+                color: Theme.of(context).shadowColor.withOpacity(.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -87,19 +87,19 @@ class ConversationCard extends StatelessWidget {
                               email,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
-                                color: Colors.black87,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             time,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF94A3B8),
+                              color: Theme.of(context).textTheme.bodySmall?.color,
                             ),
                           ),
                         ],
@@ -110,8 +110,8 @@ class ConversationCard extends StatelessWidget {
                         lastMessage.isEmpty ? '—' : lastMessage,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF475569),
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                           height: 1.25,
                         ),
                       ),
@@ -130,8 +130,8 @@ class ConversationCard extends StatelessWidget {
                     ),
                     child: Text(
                       unread.toString(),
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w600,
                           fontSize: 12),
                     ),

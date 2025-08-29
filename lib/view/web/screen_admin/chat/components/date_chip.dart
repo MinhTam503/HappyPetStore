@@ -19,7 +19,7 @@ class DateChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.black87),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.black87),
         ),
       ),
     );
