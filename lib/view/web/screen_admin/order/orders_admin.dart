@@ -14,8 +14,13 @@ class OrdersAdmin extends StatefulWidget {
 }
 
 class _OrdersAdminState extends State<OrdersAdmin> {
-  final CollectionReference ordersCollection =
-      FirebaseFirestore.instance.collection('orders');
+  // Platform filter options
+  final List<String> platforms = const [
+    'All',
+    'Mobile App',
+    'Web App'
+  ];
+  String selectedPlatform = 'All';
 
   final List<String> statuses = const [
     'All',
@@ -31,6 +36,56 @@ class _OrdersAdminState extends State<OrdersAdmin> {
 
   final TextEditingController _searchCtl = TextEditingController();
   String _query = '';
+
+  // Get the appropriate collection based on selected platform
+  Stream<List<Map<String, dynamic>>> _getOrdersStream() {
+    if (selectedPlatform == 'Mobile App') {
+      return FirebaseFirestore.instance
+          .collection('orders')
+          .snapshots()
+          .map(_processSnapshot);
+    } else if (selectedPlatform == 'Web App') {
+      return FirebaseFirestore.instance
+          .collection('ordersWeb')
+          .snapshots()
+          .map(_processSnapshot);
+    } else {
+      // All - combine both collections
+      return Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
+        final ordersSnapshot = await FirebaseFirestore.instance.collection('orders').get();
+        final ordersWebSnapshot = await FirebaseFirestore.instance.collection('ordersWeb').get();
+        
+        List<Map<String, dynamic>> allOrders = [];
+        allOrders.addAll(_processSnapshot(ordersSnapshot));
+        allOrders.addAll(_processSnapshot(ordersWebSnapshot));
+        return allOrders;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _processSnapshot(QuerySnapshot snapshot) {
+    return snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      // Extract collection name from document reference path
+      data['collection'] = doc.reference.parent.id;
+      return data;
+    }).toList();
+  }
+
+  Future<void> _updateOrder(String orderId, String collection, Map<String, dynamic> newData) async {
+    await FirebaseFirestore.instance
+        .collection(collection)
+        .doc(orderId)
+        .update(newData);
+  }
+
+  Future<void> _deleteOrder(String orderId, String collection) async {
+    await FirebaseFirestore.instance
+        .collection(collection)
+        .doc(orderId)
+        .delete();
+  }
 
   InputDecoration _searchInput(String hint) => InputDecoration(
         hintText: hint,
@@ -59,15 +114,15 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     }
   }
 
-  Future<void> updateOrder(String orderId, Map<String, dynamic> newData) async {
+  Future<void> updateOrder(String orderId, String collection, Map<String, dynamic> newData) async {
     setState(() => isLoading = true);
-    await ordersCollection.doc(orderId).update(newData);
+    await _updateOrder(orderId, collection, newData);
     setState(() => isLoading = false);
   }
 
-  Future<void> deleteOrder(String orderId) async {
+  Future<void> deleteOrder(String orderId, String collection) async {
     setState(() => isLoading = true);
-    await ordersCollection.doc(orderId).delete();
+    await _deleteOrder(orderId, collection);
     setState(() => isLoading = false);
   }
 
@@ -88,6 +143,24 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
+                    // Platform filter
+                    for (final p in platforms)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ChoiceChip(
+                          label: Text(p),
+                          selected: selectedPlatform == p,
+                          selectedColor: Colors.blue.withOpacity(.15),
+                          labelStyle: TextStyle(
+                            color: selectedPlatform == p
+                                ? Colors.blue
+                                : Colors.black87,
+                          ),
+                          onSelected: (_) => setState(() => selectedPlatform = p),
+                        ),
+                      ),
+                    const SizedBox(width: 16),
+                    // Status filter
                     for (final s in statuses)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -144,20 +217,20 @@ class _OrdersAdminState extends State<OrdersAdmin> {
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
-            child: StreamBuilder<QuerySnapshot>(
-              stream: ordersCollection.snapshots(),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _getOrdersStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                       child: CircularProgressIndicator(color: primaryColor));
                 }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const EmptyState(
                       label: 'No orders available',
                       icon: Icons.receipt_long_outlined);
                 }
 
-                var orders = snapshot.data!.docs.toList();
+                var orders = snapshot.data!;
 
                 // Filter by status
                 if (selectedStatus != 'All') {
@@ -169,15 +242,11 @@ class _OrdersAdminState extends State<OrdersAdmin> {
 
                 // Search locally (orderId/email/address/status)
                 if (_query.isNotEmpty) {
-                  orders = orders.where((d) {
-                    final m = d.data() as Map<String, dynamic>;
-                    final orderId =
-                        (m['orderId'] ?? d.id).toString().toLowerCase();
-                    final email = (m['email'] ?? '').toString().toLowerCase();
-                    final addr =
-                        (m['shippingAddress'] ?? '').toString().toLowerCase();
-                    final st =
-                        (m['statusOrder'] ?? '').toString().toLowerCase();
+                  orders = orders.where((order) {
+                    final orderId = (order['orderId'] ?? order['id'] ?? '').toString().toLowerCase();
+                    final email = (order['email'] ?? '').toString().toLowerCase();
+                    final addr = (order['shippingAddress'] ?? order['address'] ?? '').toString().toLowerCase();
+                    final st = (order['statusOrder'] ?? '').toString().toLowerCase();
                     return orderId.contains(_query) ||
                         email.contains(_query) ||
                         addr.contains(_query) ||
@@ -193,9 +262,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
 
                 // Sort by timestamp/createdAt
                 orders.sort((a, b) {
-                  int getMs(QueryDocumentSnapshot d) {
-                    final m = d.data() as Map<String, dynamic>;
-                    final ts = m['timestamp'] ?? m['createdAt'];
+                  int getMs(Map<String, dynamic> order) {
+                    final ts = order['timestamp'] ?? order['createdAt'];
                     if (ts is Timestamp) return ts.millisecondsSinceEpoch;
                     return 0;
                   }
@@ -220,14 +288,14 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                       ),
                       itemCount: orders.length,
                       itemBuilder: (context, i) {
-                        final d = orders[i];
-                        final m = d.data() as Map<String, dynamic>;
-                        final orderId = (m['orderId'] ?? d.id).toString();
-                        final email = (m['email'] ?? '').toString();
-                        final total = m['totalAmount']?.toString() ?? '0';
-                        final status = (m['statusOrder'] ?? '').toString();
-                        final address = (m['shippingAddress'] ?? '').toString();
-                        final createdAt = m['timestamp'] ?? m['createdAt'];
+                        final order = orders[i];
+                        final orderId = (order['orderId'] ?? order['id'] ?? '').toString();
+                        final email = (order['email'] ?? '').toString();
+                        final total = order['totalAmount']?.toString() ?? '0';
+                        final status = (order['statusOrder'] ?? '').toString();
+                        final address = (order['shippingAddress'] ?? order['address'] ?? '').toString();
+                        final createdAt = order['timestamp'] ?? order['createdAt'];
+                        final collection = order['collection'] ?? 'orders';
 
                         return OrderCard(
                           orderId: orderId,
@@ -237,9 +305,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                           address: address,
                           createdAt: createdAt,
                           statusColor: _statusColor(status),
-                          onTap: () => _showOrderDetailsDialog(d),
-                          onEdit: () => _showEditOrderDialog(d),
-                          onDelete: () => _confirmDeleteOrder(d.id),
+                          onTap: () => _showOrderDetailsDialog(order),
+                          onEdit: () => _showEditOrderDialog(order),
+                          onDelete: () => _confirmDeleteOrder(orderId, collection),
                           // Inline status changer
                           onChangeStatus: (newStatus) async {
                             if (newStatus == null) return;
@@ -248,11 +316,10 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                               if (newStatus == 'Completed')
                                 'statusPayment': 'Payment Completed',
                             };
-                            await updateOrder(d.id, payload);
+                            await updateOrder(orderId, collection, payload);
 
                             // Gửi email
-                            if ((m['orderId'] ?? '').toString().isNotEmpty &&
-                                email.isNotEmpty) {
+                            if (orderId.isNotEmpty && email.isNotEmpty) {
                               final userInfo = await authService.value
                                   .getInfoUserFromEmail(email);
                               if (userInfo != null) {
@@ -293,7 +360,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     );
   }
 
-  void _confirmDeleteOrder(String orderId) {
+  void _confirmDeleteOrder(String orderId, String collection) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -306,7 +373,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              await deleteOrder(orderId);
+              await deleteOrder(orderId, collection);
               if (!mounted) return;
               Navigator.pop(context);
             },
@@ -317,12 +384,13 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     );
   }
 
-  void _showEditOrderDialog(QueryDocumentSnapshot order) {
-    final m = order.data() as Map<String, dynamic>;
-    final emailController = TextEditingController(text: m['email'] ?? '');
+  void _showEditOrderDialog(Map<String, dynamic> order) {
+    final emailController = TextEditingController(text: order['email'] ?? '');
     final totalAmountController =
-        TextEditingController(text: (m['totalAmount'] ?? '').toString());
-    String selected = (m['statusOrder'] ?? 'Pending').toString();
+        TextEditingController(text: (order['totalAmount'] ?? '').toString());
+    String selected = (order['statusOrder'] ?? 'Pending').toString();
+    final orderId = (order['orderId'] ?? order['id'] ?? '').toString();
+    final collection = order['collection'] ?? 'orders';
 
     showDialog(
       context: context,
@@ -367,11 +435,11 @@ class _OrdersAdminState extends State<OrdersAdmin> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: primaryColor),
             onPressed: () async {
-              await updateOrder(order.id, {
+              await updateOrder(orderId, collection, {
                 'email': emailController.text.trim(),
                 'totalAmount':
                     double.tryParse(totalAmountController.text.trim()) ??
-                        (m['totalAmount'] ?? 0),
+                        (order['totalAmount'] ?? 0),
                 'statusOrder': selected,
                 if (selected == 'Completed')
                   'statusPayment': 'Payment Completed',
@@ -386,21 +454,20 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     );
   }
 
-  Future<void> _showOrderDetailsDialog(QueryDocumentSnapshot order) async {
+  Future<void> _showOrderDetailsDialog(Map<String, dynamic> order) async {
     if (!mounted) return;
 
-    final m = (order.data() as Map).cast<String, dynamic>();
-    final String orderId = (m['orderId'] ?? order.id).toString();
-    final String email = (m['email'] ?? '').toString();
-    final String total = (m['totalAmount'] ?? '0').toString();
-    final String statusPay = (m['statusPayment'] ?? '').toString();
-    final String method = (m['paymentMethod'] ?? '').toString();
-    final String status = (m['statusOrder'] ?? '').toString();
-    final String address = (m['shippingAddress'] ?? '').toString();
-    final String phone = (m['phone'] ?? '').toString();
-    final dynamic ts = m['timestamp'] ?? m['createdAt'];
-    final List<Map<String, dynamic>> items = (m['items'] is List)
-        ? (m['items'] as List)
+    final String orderId = (order['orderId'] ?? order['id'] ?? '').toString();
+    final String email = (order['email'] ?? '').toString();
+    final String total = (order['totalAmount'] ?? '0').toString();
+    final String statusPay = (order['statusPayment'] ?? '').toString();
+    final String method = (order['paymentMethod'] ?? '').toString();
+    final String status = (order['statusOrder'] ?? '').toString();
+    final String address = (order['shippingAddress'] ?? order['address'] ?? '').toString();
+    final String phone = (order['phone'] ?? '').toString();
+    final dynamic ts = order['timestamp'] ?? order['createdAt'];
+    final List<Map<String, dynamic>> items = (order['items'] is List)
+        ? (order['items'] as List)
             .where((e) => e is Map)
             .map<Map<String, dynamic>>(
                 (e) => Map<String, dynamic>.from(e as Map))

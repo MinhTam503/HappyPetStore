@@ -13,6 +13,7 @@ import 'package:pet_shop/utils/contants.dart';
 
 class PetItemsAll extends StatefulWidget {
   final Map<String, dynamic> pet;
+
   const PetItemsAll({super.key, required this.pet});
 
   @override
@@ -226,51 +227,53 @@ class _PetItemsAllState extends State<PetItemsAll> {
                         padding: const EdgeInsets.fromLTRB(5, 6, 5, 8),
                         child: Row(
                           children: [
-                            SizedBox(
-                              height: 40,
-                              child: _PrimaryButton(
-                                label: 'Thêm vào giỏ hàng',
-                                icon: Icons.shopping_cart_outlined,
-                                onTap: () {
-                                  final email =
-                                      FirebaseAuth.instance.currentUser?.email;
-                                  if (email == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                            content:
-                                                Text("Something is wrong")));
-                                    return;
-                                  }
-                                  context
-                                      .read<CartBloc>()
-                                      .add(AddToCart(email, {
-                                        'productId': widget.pet['id'],
-                                        'name': name,
-                                        'imageUrl': imageUrl,
-                                        'price': widget.pet['weight'],
-                                      }));
-                                },
-                                listenCart: (ctx, state) {
-                                  if (state is CartLoaded &&
-                                      state.message != null) {
-                                    if (lastCartMessage != state.message) {
+                            Expanded(
+                              child: SizedBox(
+                                height: 40,
+                                child: _PrimaryButton(
+                                  label: 'Thêm vào giỏ hàng',
+                                  icon: Icons.shopping_cart_outlined,
+                                  onTap: () {
+                                    final email =
+                                        FirebaseAuth.instance.currentUser?.email;
+                                    if (email == null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                              content:
+                                                  Text("Something is wrong")));
+                                      return;
+                                    }
+                                    context
+                                        .read<CartBloc>()
+                                        .add(AddToCart(email, {
+                                          'productId': widget.pet['id'],
+                                          'name': name,
+                                          'imageUrl': imageUrl,
+                                          'price': widget.pet['weight'],
+                                        }));
+                                  },
+                                  listenCart: (ctx, state) {
+                                    if (state is CartLoaded &&
+                                        state.message != null) {
+                                      if (lastCartMessage != state.message) {
+                                        ScaffoldMessenger.of(ctx)
+                                            .hideCurrentSnackBar();
+                                        ScaffoldMessenger.of(ctx).showSnackBar(
+                                          SnackBar(content: Text(state.message!)),
+                                        );
+                                        lastCartMessage = state.message;
+                                      }
+                                    } else if (state is CartError) {
                                       ScaffoldMessenger.of(ctx)
                                           .hideCurrentSnackBar();
                                       ScaffoldMessenger.of(ctx).showSnackBar(
-                                        SnackBar(content: Text(state.message!)),
+                                        SnackBar(
+                                            content:
+                                                Text('Lỗi: ${state.message}')),
                                       );
-                                      lastCartMessage = state.message;
                                     }
-                                  } else if (state is CartError) {
-                                    ScaffoldMessenger.of(ctx)
-                                        .hideCurrentSnackBar();
-                                    ScaffoldMessenger.of(ctx).showSnackBar(
-                                      SnackBar(
-                                          content:
-                                              Text('Lỗi: ${state.message}')),
-                                    );
-                                  }
-                                },
+                                  },
+                                ),
                               ),
                             ),
                           ],
@@ -395,7 +398,12 @@ class _PrimaryButton extends StatelessWidget {
             textStyle: const TextStyle(fontWeight: FontWeight.w700),
           ),
           icon: Icon(icon, size: 18),
-          label: Text(label, overflow: TextOverflow.ellipsis),
+          label: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+          ),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_shop/utils/contants.dart';
 
 class MyButton extends StatelessWidget {
   final String text;
@@ -13,7 +14,8 @@ class MyButton extends StatelessWidget {
       children: [
         ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink.shade300,
+
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white),
             onPressed: onPressed,
             child: Text(text))

@@ -5,6 +5,7 @@ import 'package:pet_shop/view/web/screen_admin/chat/inbox_page_admin.dart';
 import 'package:pet_shop/view/web/screen_admin/pet/pets_admin.dart';
 import 'package:pet_shop/view/web/screen_admin/revenue/revenue_page.dart';
 import 'package:pet_shop/view/web/screen_admin/shop_info/shop_info.dart';
+import 'package:pet_shop/view/web/screen_admin/dashboard/optimized_dashboard_page.dart';
 
 import '../account/account_admin.dart';
 import '../category/category_admin.dart';
@@ -24,6 +25,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   bool _loading = true;
 
   final List<Widget> _pages = const [
+    OptimizedDashboardPage(),
     PetsAdmin(),
     CategoryAdmin(),
     AccountAdmin(),
@@ -112,6 +114,8 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                 color: primaryColor, fontWeight: FontWeight.bold),
             unselectedLabelTextStyle: TextStyle(color: Colors.grey.shade700),
             destinations: const [
+              NavigationRailDestination(
+                  icon: Icon(Icons.dashboard_outlined), label: Text('Dashboard')),
               NavigationRailDestination(
                   icon: Icon(Icons.pets_outlined), label: Text('Pets')),
               NavigationRailDestination(

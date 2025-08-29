@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:pet_shop/auth/auth_service.dart';
+import 'package:pet_shop/utils/contants.dart';
 import 'package:pet_shop/view/web/screen_admin/home/home_page_admin.dart';
 import '../../../mobile/bottom_navigator.dart';
 
@@ -104,12 +105,13 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: backgroundColorWeb,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 900;
 
           final form = Stack(
+
             children: [
               Center(
                 child: ConstrainedBox(
@@ -195,20 +197,20 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                               },
                               onFieldSubmitted: (_) => _submit(),
                             ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {},
-                                child: const Text('Quên mật khẩu?'),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            // const SizedBox(height: 8),
+                            // Align(
+                            //   alignment: Alignment.centerRight,
+                            //   child: TextButton(
+                            //     onPressed: () {},
+                            //     child: const Text('Quên mật khẩu?'),
+                            //   ),
+                            // ),
+                            const SizedBox(height: 28),
                             SizedBox(
                               height: 48,
                               child: FilledButton(
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: Colors.pink.shade300,
+                                  backgroundColor: primaryColor,
                                   foregroundColor: Colors.white,
                                 ),
                                 autofocus: true,

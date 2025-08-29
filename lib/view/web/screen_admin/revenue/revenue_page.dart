@@ -13,12 +13,15 @@ class RevenuePage extends StatefulWidget {
 class _RevenuePageState extends State<RevenuePage> {
   final CollectionReference ordersCollection =
       FirebaseFirestore.instance.collection('orders');
+  final CollectionReference ordersWebCollection =
+      FirebaseFirestore.instance.collection('ordersWeb');
 
   Map<String, double> dailyRevenue = {}; // key: 'dd/MM'
   List<String> rangeDays = [];
   int selectedMonth = DateTime.now().month;
   double totalRevenue = 0.0; // Biến lưu tổng doanh thu
   String statisticType = 'month'; // 'month' hoặc 'day'
+  String dataSource = 'all'; // 'all', 'orders', 'ordersWeb'
   DateTime? selectedDate;
   int selectedYear = DateTime.now().year;
   DateTimeRange? selectedRange;
@@ -31,9 +34,22 @@ class _RevenuePageState extends State<RevenuePage> {
 
   Future<void> fetchRevenueData(int month,
       {int? year, DateTimeRange? range}) async {
-    QuerySnapshot querySnapshot = await ordersCollection
-        .where('statusOrder', isEqualTo: 'Completed')
-        .get();
+    // Lấy dữ liệu từ collection dựa trên dataSource được chọn
+    List<QuerySnapshot> snapshots = [];
+    
+    if (dataSource == 'all' || dataSource == 'orders') {
+      QuerySnapshot ordersSnapshot = await ordersCollection
+          .where('statusOrder', isEqualTo: 'Completed')
+          .get();
+      snapshots.add(ordersSnapshot);
+    }
+    
+    if (dataSource == 'all' || dataSource == 'ordersWeb') {
+      QuerySnapshot ordersWebSnapshot = await ordersWebCollection
+          .where('statusOrder', isEqualTo: 'Completed')
+          .get();
+      snapshots.add(ordersWebSnapshot);
+    }
 
     Map<String, double> revenueData = {};
     double total = 0.0;
@@ -49,29 +65,33 @@ class _RevenuePageState extends State<RevenuePage> {
       }
     }
 
-    for (var doc in querySnapshot.docs) {
-      DateTime date;
-      var timestamp = doc['timestamp'];
-      if (timestamp is Timestamp) {
-        date = timestamp.toDate();
-      } else if (timestamp is String) {
-        date = DateTime.parse(timestamp);
-      } else {
-        continue;
-      }
-      double totalAmount = double.parse(doc['totalAmount'].toString());
-      if (range != null) {
-        if (!date.isBefore(range.start) && !date.isAfter(range.end)) {
-          String key = DateFormat('dd/MM').format(date);
+    // Xử lý dữ liệu từ tất cả các snapshots
+    for (var snapshot in snapshots) {
+      for (var doc in snapshot.docs) {
+        DateTime date;
+        var timestamp = doc['timestamp'];
+        if (timestamp is Timestamp) {
+          date = timestamp.toDate();
+        } else if (timestamp is String) {
+          date = DateTime.parse(timestamp);
+        } else {
+          continue;
+        }
+        double totalAmount = double.parse(doc['totalAmount'].toString());
+        if (range != null) {
+          if (!date.isBefore(range.start) && !date.isAfter(range.end)) {
+            String key = DateFormat('dd/MM').format(date);
+            revenueData[key] = (revenueData[key] ?? 0) + totalAmount;
+            total += totalAmount;
+          }
+        } else if (year != null && date.year == year && date.month == month) {
+          String key = date.day.toString();
           revenueData[key] = (revenueData[key] ?? 0) + totalAmount;
           total += totalAmount;
         }
-      } else if (year != null && date.year == year && date.month == month) {
-        String key = date.day.toString();
-        revenueData[key] = (revenueData[key] ?? 0) + totalAmount;
-        total += totalAmount;
       }
     }
+    
     setState(() {
       dailyRevenue = revenueData;
       totalRevenue = total;
@@ -108,26 +128,60 @@ class _RevenuePageState extends State<RevenuePage> {
       date = DateTime(year, m, d);
     }
 
-    final snap = await ordersCollection
-        .where('statusOrder', isEqualTo: 'Completed')
-        .get();
+    // Lấy dữ liệu từ collection dựa trên dataSource được chọn
     final List<Map<String, dynamic>> orders = [];
-    for (final doc in snap.docs) {
-      final data = (doc.data() as Map).cast<String, dynamic>();
-      final ts = data['timestamp'];
-      DateTime docDate;
-      if (ts is Timestamp) {
-        docDate = ts.toDate();
-      } else if (ts is String) {
-        docDate = DateTime.tryParse(ts) ?? DateTime(1970);
-      } else {
-        continue;
+    
+    if (dataSource == 'all' || dataSource == 'orders') {
+      final snap = await ordersCollection
+          .where('statusOrder', isEqualTo: 'Completed')
+          .get();
+      
+      // Xử lý orders từ collection orders
+      for (final doc in snap.docs) {
+        final data = (doc.data() as Map).cast<String, dynamic>();
+        final ts = data['timestamp'];
+        DateTime docDate;
+        if (ts is Timestamp) {
+          docDate = ts.toDate();
+        } else if (ts is String) {
+          docDate = DateTime.tryParse(ts) ?? DateTime(1970);
+        } else {
+          continue;
+        }
+        if (date != null &&
+            docDate.year == date.year &&
+            docDate.month == date.month &&
+            docDate.day == date.day) {
+          data['source'] = 'orders'; // Đánh dấu nguồn
+          orders.add(data);
+        }
       }
-      if (date != null &&
-          docDate.year == date.year &&
-          docDate.month == date.month &&
-          docDate.day == date.day) {
-        orders.add(data);
+    }
+
+    if (dataSource == 'all' || dataSource == 'ordersWeb') {
+      final snapWeb = await ordersWebCollection
+          .where('statusOrder', isEqualTo: 'Completed')
+          .get();
+
+      // Xử lý orders từ collection ordersWeb
+      for (final doc in snapWeb.docs) {
+        final data = (doc.data() as Map).cast<String, dynamic>();
+        final ts = data['timestamp'];
+        DateTime docDate;
+        if (ts is Timestamp) {
+          docDate = ts.toDate();
+        } else if (ts is String) {
+          docDate = DateTime.tryParse(ts) ?? DateTime(1970);
+        } else {
+          continue;
+        }
+        if (date != null &&
+            docDate.year == date.year &&
+            docDate.month == date.month &&
+            docDate.day == date.day) {
+          data['source'] = 'ordersWeb'; // Đánh dấu nguồn
+          orders.add(data);
+        }
       }
     }
 
@@ -164,6 +218,7 @@ class _RevenuePageState extends State<RevenuePage> {
                       final email = (o['email'] ?? '').toString();
                       final total = (o['totalAmount'] ?? '').toString();
                       final status = (o['statusOrder'] ?? '').toString();
+                      final source = (o['source'] ?? 'orders').toString(); // Nguồn order
                       final ts = o['timestamp'];
                       final dateStr = (ts is Timestamp)
                           ? DateFormat('dd/MM/yyyy').format(ts.toDate())
@@ -188,6 +243,27 @@ class _RevenuePageState extends State<RevenuePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (dataSource == 'all') ...[
+                                Row(
+                                  children: [
+                                    Icon(
+                                      source == 'ordersWeb' ? Icons.web : Icons.phone_android,
+                                      size: 16,
+                                      color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      source == 'ordersWeb' ? 'Web' : 'Mobile',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                              ],
                               _rowIconText(Icons.email, email),
                               const SizedBox(height: 6),
                               _rowIconText(
@@ -283,26 +359,93 @@ class _RevenuePageState extends State<RevenuePage> {
     );
   }
 
+  String _getDataSourceTitle() {
+    switch (dataSource) {
+      case 'orders':
+        return '(Mobile App)';
+      case 'ordersWeb':
+        return '(Web)';
+      case 'all':
+      default:
+        return '(Mobile & Web)';
+    }
+  }
+
+  String _getRevenueTitle() {
+    switch (dataSource) {
+      case 'orders':
+        return 'Total Revenue (Mobile App)';
+      case 'ordersWeb':
+        return 'Total Revenue (Web)';
+      case 'all':
+      default:
+        return 'Total Revenue (Mobile + Web)';
+    }
+  }
+
+  String _getChartTitle() {
+    switch (dataSource) {
+      case 'orders':
+        return 'Daily Revenue Overview (Mobile App)';
+      case 'ordersWeb':
+        return 'Daily Revenue Overview (Web)';
+      case 'all':
+      default:
+        return 'Daily Revenue Overview (Mobile & Web Combined)';
+    }
+  }
+
   Future<void> showOrdersForDay(String day) async {
     final date = DateTime(selectedYear, selectedMonth, int.tryParse(day) ?? 1);
-    final snap = await ordersCollection
-        .where('statusOrder', isEqualTo: 'Completed')
-        .get();
-
+    
+    // Lấy dữ liệu từ collection dựa trên dataSource được chọn
     final List<Map<String, dynamic>> orders = [];
-    for (final doc in snap.docs) {
-      final data = (doc.data() as Map).cast<String, dynamic>();
-      final ts = data['timestamp'];
-      DateTime d;
-      if (ts is Timestamp) {
-        d = ts.toDate();
-      } else if (ts is String) {
-        d = DateTime.tryParse(ts) ?? DateTime(1970);
-      } else {
-        continue;
+    
+    if (dataSource == 'all' || dataSource == 'orders') {
+      final snap = await ordersCollection
+          .where('statusOrder', isEqualTo: 'Completed')
+          .get();
+      
+      // Xử lý orders từ collection orders
+      for (final doc in snap.docs) {
+        final data = (doc.data() as Map).cast<String, dynamic>();
+        final ts = data['timestamp'];
+        DateTime d;
+        if (ts is Timestamp) {
+          d = ts.toDate();
+        } else if (ts is String) {
+          d = DateTime.tryParse(ts) ?? DateTime(1970);
+        } else {
+          continue;
+        }
+        if (d.year == date.year && d.month == date.month && d.day == date.day) {
+          data['source'] = 'orders'; // Đánh dấu nguồn
+          orders.add(data);
+        }
       }
-      if (d.year == date.year && d.month == date.month && d.day == date.day) {
-        orders.add(data);
+    }
+
+    if (dataSource == 'all' || dataSource == 'ordersWeb') {
+      final snapWeb = await ordersWebCollection
+          .where('statusOrder', isEqualTo: 'Completed')
+          .get();
+
+      // Xử lý orders từ collection ordersWeb
+      for (final doc in snapWeb.docs) {
+        final data = (doc.data() as Map).cast<String, dynamic>();
+        final ts = data['timestamp'];
+        DateTime d;
+        if (ts is Timestamp) {
+          d = ts.toDate();
+        } else if (ts is String) {
+          d = DateTime.tryParse(ts) ?? DateTime(1970);
+        } else {
+          continue;
+        }
+        if (d.year == date.year && d.month == date.month && d.day == date.day) {
+          data['source'] = 'ordersWeb'; // Đánh dấu nguồn
+          orders.add(data);
+        }
       }
     }
 
@@ -337,6 +480,7 @@ class _RevenuePageState extends State<RevenuePage> {
                       final o = orders[idx];
                       final email = (o['email'] ?? '').toString();
                       final total = (o['totalAmount'] ?? '').toString();
+                      final source = (o['source'] ?? 'orders').toString(); // Nguồn order
                       final ts = o['timestamp'];
                       final dateStr = (ts is Timestamp)
                           ? DateFormat('dd/MM/yyyy').format(ts.toDate())
@@ -361,6 +505,27 @@ class _RevenuePageState extends State<RevenuePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (dataSource == 'all') ...[
+                                Row(
+                                  children: [
+                                    Icon(
+                                      source == 'ordersWeb' ? Icons.web : Icons.phone_android,
+                                      size: 16,
+                                      color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      source == 'ordersWeb' ? 'Web' : 'Mobile',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: source == 'ordersWeb' ? Colors.blue : Colors.green,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                              ],
                               _rowIconText(Icons.email, email),
                               const SizedBox(height: 6),
                               _rowIconText(
@@ -451,9 +616,9 @@ class _RevenuePageState extends State<RevenuePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Revenue Pet Shop',
-          style: TextStyle(
+        title: Text(
+          'Revenue Analytics ${_getDataSourceTitle()}',
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24,
             color: Colors.black87,
@@ -493,9 +658,9 @@ class _RevenuePageState extends State<RevenuePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Total Revenue',
-                            style: TextStyle(
+                          Text(
+                            _getRevenueTitle(),
+                            style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 16,
                             ),
@@ -531,6 +696,33 @@ class _RevenuePageState extends State<RevenuePage> {
               // Bộ lọc thống kê
               Row(
                 children: [
+                  const Text('Nguồn dữ liệu:',
+                      style: TextStyle(fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: dataSource,
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('Tất cả')),
+                      DropdownMenuItem(value: 'orders', child: Text('Mobile App')),
+                      DropdownMenuItem(value: 'ordersWeb', child: Text('Web')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        dataSource = value;
+                        // Reset dữ liệu khi thay đổi nguồn
+                        dailyRevenue = {};
+                        rangeDays = [];
+                      });
+                      // Fetch lại dữ liệu với nguồn mới
+                      if (statisticType == 'month') {
+                        fetchRevenueData(selectedMonth, year: selectedYear);
+                      } else if (selectedRange != null) {
+                        fetchRevenueData(selectedMonth, year: selectedYear, range: selectedRange);
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 16),
                   const Text('Năm:',
                       style: TextStyle(fontWeight: FontWeight.w500)),
                   const SizedBox(width: 8),
@@ -710,9 +902,9 @@ class _RevenuePageState extends State<RevenuePage> {
               const SizedBox(height: 10),
 
               // Chart Title
-              const Text(
-                'Daily Revenue Overview',
-                style: TextStyle(
+              Text(
+                _getChartTitle(),
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF2D3748),

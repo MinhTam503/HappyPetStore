@@ -515,88 +515,77 @@ class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       height: maxExtent,
       color: secondaryColor,
-      padding: const EdgeInsets.only(left: 15, top: 5, bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(
-                  groceryCategory.length,
+      padding: const EdgeInsets.only(top: 5, bottom: 10),
+      child: Center(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              groceryCategory.length,
                   (index) => Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: GestureDetector(
-                      onTap: () {
-                        onCategoryTap(groceryCategory[index]["name"]);
-                      },
-                      child: Container(
-                        width: 90,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 5),
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                width:
-                                    category == groceryCategory[index]['name']
-                                        ? 2
-                                        : 1),
+                padding: const EdgeInsets.only(right: 10),
+                child: GestureDetector(
+                  onTap: () => onCategoryTap(groceryCategory[index]["name"]),
+                  child: Container(
+                    width: 90,
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        width: category == groceryCategory[index]['name'] ? 2 : 1,
+                      ),
+                      color: category == groceryCategory[index]['name']
+                          ? primaryColor
+                          : secondaryColor,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
                             color: category == groceryCategory[index]['name']
                                 ? primaryColor
-                                : secondaryColor),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              height: 40,
-                              width: 40,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color:
-                                    category == groceryCategory[index]['name']
-                                        ? primaryColor
-                                        : secondaryColor,
-                                image: DecorationImage(
-                                  fit: BoxFit.scaleDown,
-                                  image: NetworkImage(
-                                      groceryCategory[index]['imageUrl']),
-                                ),
+                                : secondaryColor,
+                            image: DecorationImage(
+                              fit: BoxFit.scaleDown,
+                              image: NetworkImage(
+                                groceryCategory[index]['imageUrl'],
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Flexible(
-                              child: Text(
-                                groceryCategory[index]['name'],
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight:
-                                      category == groceryCategory[index]['name']
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Text(
+                          groceryCategory[index]['name'],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: category == groceryCategory[index]['name']
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
+
 
   @override
   double get maxExtent => 90;
