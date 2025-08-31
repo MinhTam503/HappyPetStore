@@ -8,7 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:pet_shop/utils/list_city.dart';
 import 'package:pet_shop/view/mobile/orderSuccess.dart';
 import '../../../bloc/model/cart_model.dart';
-import '../../../services/apriori/apriori_algorithm.dart';
+import '../../../bloc/apriori/apriori_bloc.dart';
+import '../../../bloc/apriori/apriori_event.dart';
+import '../../../bloc/apriori/apriori_state.dart';
 import '../../../auth/payment/keys.dart';
 import '../../../utils/contants.dart';
 import '../../../widgets/cart_item.dart';
@@ -80,15 +82,44 @@ class _CartScreenState extends State<CartScreen> {
     setState(() {});
   }
 
-  void onOrderSuccess(String selectedBreed) async {
-    final suggestions =
-        await AprioriAlgorithm().getSuggestedPets(selectedBreed);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrderSuccess(suggestions: suggestions),
-      ),
-    );
+  void onOrderSuccessWithSuggestions(List<CartModel> cartItems) async {
+    // Extract breeds from cart items for improved suggestions
+    List<String> breeds = cartItems
+        .map((item) => item.grocery["breed"] as String?)
+        .where((breed) => breed != null && breed.isNotEmpty)
+        .cast<String>()
+        .toSet() // Remove duplicates
+        .toList();
+
+    print('🌱 FP-Growth analysis: Found ${breeds.length} unique breeds: $breeds');
+
+    // Use Apriori BLoC for breed analysis
+    context.read<AprioriBloc>().add(GetSuggestionsFromMultipleBreeds(breeds));
+
+    // Listen to BLoC state and navigate when loaded
+    final aprioriBloc = context.read<AprioriBloc>();
+    
+    aprioriBloc.stream.listen((state) {
+      if (state is AprioriLoaded) {
+        // Convert to old format for compatibility
+        final suggestions = state.suggestions.map((pet) => pet.toMap()).toList();
+        
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderSuccess(suggestions: suggestions),
+          ),
+        );
+      } else if (state is AprioriError || state is AprioriEmpty) {
+        // Fallback to empty suggestions
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderSuccess(suggestions: []),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> addNewAddress() async {
@@ -297,30 +328,11 @@ class _CartScreenState extends State<CartScreen> {
       await saveOrderToFirestore(email, cartItems, isPaid: true);
       context.read<CartBloc>().add(ClearCart(email));
 
-      // Chuẩn bị suggestions cho OrderSuccess
-      List<Map<String, dynamic>> suggestions = [];
-      try {
-        if (cartItems.isNotEmpty) {
-          final firstPet = cartItems.first.grocery;
-          print("Processing breed: ${firstPet["breed"]}");
-          if (firstPet["breed"] != null) {
-            suggestions =
-                await AprioriAlgorithm().getSuggestedPets(firstPet["breed"]);
-            print("Found ${suggestions.length} suggestions");
-          }
-        }
-      } catch (e) {
-        print("Error getting suggestions: $e");
-      }
-
-      // Chuyển đến trang thành công
+      // Chuẩn bị suggestions cho OrderSuccess với improved algorithm
       if (!context.mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OrderSuccess(suggestions: suggestions),
-        ),
-      );
+      
+      // Use new multi-breed analysis instead of single breed
+      onOrderSuccessWithSuggestions(cartItems);
 
       setState(() {
         intentPaymentData = null;
@@ -425,14 +437,15 @@ class _CartScreenState extends State<CartScreen> {
 
       if (petDoc.exists) {
         final breed = petDoc.data()?['breed'];
-        print("Getting suggestions for breed from Firestore: $breed");
+        print("Getting Apriori suggestions for breed from Firestore: $breed");
         if (breed != null) {
-          final suggestions = await AprioriAlgorithm().getSuggestedPets(breed);
-          print("Got ${suggestions.length} suggestions");
-          for (var suggestion in suggestions) {
-            print("Suggestion: ${suggestion['breed']} - ${suggestion['name']}");
-          }
-          return suggestions;
+          // Use Apriori BLoC instead of FP-Growth
+          context.read<AprioriBloc>().add(GetSuggestionsFromSingleBreed(breed));
+          
+          // For now, return empty list - suggestions will be handled by BLoC
+          // This method should be refactored to use BLoC properly
+          print("Triggered Apriori BLoC analysis for breed: $breed");
+          return [];
         }
       }
       print(
@@ -679,14 +692,10 @@ class _CartScreenState extends State<CartScreen> {
                                     final breed = petDoc.data()?['breed'];
                                     print("Found breed from Firestore: $breed");
                                     if (breed != null) {
-                                      suggestions = await AprioriAlgorithm()
-                                          .getSuggestedPets(breed);
-                                      print(
-                                          "Got ${suggestions.length} suggestions");
-                                      suggestions.forEach((pet) {
-                                        print(
-                                            "Suggestion: ${pet['breed']} - ${pet['name']}");
-                                      });
+                                      // Use Apriori BLoC for analysis
+                                      context.read<AprioriBloc>().add(GetSuggestionsFromSingleBreed(breed));
+                                      print("Triggered Apriori BLoC analysis for breed: $breed");
+                                      // Note: suggestions will be handled by BLoC listener in the widget
                                     }
                                   } else {
                                     print(

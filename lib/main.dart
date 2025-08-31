@@ -24,11 +24,16 @@ import 'package:url_strategy/url_strategy.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'bloc/cartBloc/cart_bloc.dart';
 import 'firebase_options.dart';
+import 'core/di/service_locator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Use path URL strategy on web to remove the `#` from routes.
   if (kIsWeb) setPathUrlStrategy();
+  
+  // Setup dependency injection
+  serviceLocator.setup();
+  
   try {
     await dotenv.load();
   } catch (e) {
@@ -69,6 +74,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => CartBloc()),
         BlocProvider(create: (_) => FavBloc()),
         BlocProvider(create: (_) => CartBlocWeb()),
+        BlocProvider(create: (_) => serviceLocator.createAprioriBloc()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
