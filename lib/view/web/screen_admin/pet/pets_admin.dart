@@ -114,7 +114,8 @@ class _PetsState extends State<PetsAdmin> {
 
   Future<void> callTrainAPI() async {
     try {
-      final uri = Uri.parse('http://localhost:5000/train');
+      // final uri = Uri.parse('http://localhost:5000/train');
+        final uri = Uri.parse('https://train-pet-image.onrender.com/train');
       final response = await http.post(uri);
       if (response.statusCode == 200) {
         debugPrint('Train thành công!');

@@ -168,6 +168,64 @@ class PaymentService {
     }
   }
 
+  /// Tạo Stripe Checkout Session (cho web)
+  static Future<Map<String, dynamic>?> createCheckoutSession({
+    required double amount,
+    String currency = 'usd',
+    required Map<String, dynamic> customerInfo,
+    required List<Map<String, dynamic>> items,
+    required String successUrl,
+    required String cancelUrl,
+  }) async {
+    try {
+      print('🔗 Creating Stripe Checkout session: $amount $currency');
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/payment/create-checkout-session'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'amount': (amount * 100).round(), // Convert to cents
+          'currency': currency,
+          'customer_info': customerInfo,
+          'items': items,
+          'success_url': successUrl,
+          'cancel_url': cancelUrl,
+          'metadata': {
+            'source': 'flutter_web_checkout',
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        }),
+      ).timeout(_timeout);
+
+      print('📡 Checkout Session Response: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        print('✅ Checkout session created successfully');
+        print('🔗 Checkout URL: ${result['checkout_url']}');
+        return result;
+      } else {
+        print('❌ Error creating checkout session: ${response.statusCode}');
+        print('📄 Response body: ${response.body}');
+        
+        try {
+          final errorData = jsonDecode(response.body);
+          final errorMessage = errorData['error'] ?? 'Unknown error';
+          print('🔍 Detailed error: $errorMessage');
+        } catch (e) {
+          print('🔍 Raw error: ${response.body}');
+        }
+        
+        return null;
+      }
+    } catch (e) {
+      print('❌ Exception creating checkout session: $e');
+      return null;
+    }
+  }
+
   /// Lấy URL hiện tại đang sử dụng (cho debugging)
   static String getCurrentBaseUrl() => _baseUrl;
 }

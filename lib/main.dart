@@ -14,8 +14,10 @@ import 'package:pet_shop/providers/theme_provider.dart';
 import 'package:pet_shop/view/mobile/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/view/web/screen_admin/home/home_page_admin.dart';
-import 'package:pet_shop/view/web_user/screens/cart_screen_web.dart';
+import 'package:pet_shop/view/web_user/screens/cart_screen_web_new.dart';
 import 'package:pet_shop/view/web_user/screens/home_page_web_user.dart';
+import 'package:pet_shop/view/web_user/screens/payment_success_screen.dart';
+import 'package:pet_shop/view/web/web_app_wrapper.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_strategy/url_strategy.dart';
@@ -37,13 +39,11 @@ void main() async {
   // Initialize Stripe for both web and mobile
   try {
     if (PublishableKey.isNotEmpty) {
+      // Initialize Stripe on both web and mobile platforms
       Stripe.publishableKey = PublishableKey;
-      
-      // Only call applySettings on mobile platforms, skip for web
       if (!kIsWeb) {
         await Stripe.instance.applySettings();
       }
-      
       debugPrint('✅ Stripe initialized with publishable key: ${PublishableKey.substring(0, 20)}...');
     } else {
       debugPrint('❌ Stripe publishable key is empty; skipping Stripe initialization.');
@@ -88,9 +88,24 @@ class MyApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
+            onGenerateRoute: (settings) {
+              // Handle payment success URL with query parameters
+              if (settings.name != null && settings.name!.startsWith('/payment-success')) {
+                final uri = Uri.parse(settings.name!);
+                final sessionId = uri.queryParameters['session_id'];
+                return MaterialPageRoute(
+                  builder: (context) => PaymentSuccessScreen(sessionId: sessionId),
+                  settings: settings,
+                );
+              }
+              
+              // Default routes
+              return null;
+            },
             routes: {
-              '/': (context) => kIsWeb
-                  ? const HomePageAdmin()
+              '/': (context) {
+                return kIsWeb
+                  ? const WebAppWrapper()
                   : StreamBuilder<User?>(
                       stream: FirebaseAuth.instance.authStateChanges(),
                       builder: (context, snapshot) {
@@ -103,10 +118,20 @@ class MyApp extends StatelessWidget {
                           return const LoginOrRegister();
                         }
                       },
-                    ),
+                    );
+              },
               '/home': (context) => HomePageWebUser(),
               '/cart': (context) => CartScreenWeb(),
               '/debug': (context) => const DebugConnectionScreen(),
+              '/payment-success': (context) {
+                // Parse session_id from URL
+                String? sessionId;
+                if (kIsWeb) {
+                  final uri = Uri.parse(WidgetsBinding.instance.window.defaultRouteName);
+                  sessionId = uri.queryParameters['session_id'];
+                }
+                return PaymentSuccessScreen(sessionId: sessionId);
+              },
             },
           );
         },
