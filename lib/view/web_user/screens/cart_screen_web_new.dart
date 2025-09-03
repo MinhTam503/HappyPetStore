@@ -39,9 +39,10 @@ class _CartScreenWebState extends State<CartScreenWeb> {
     String? sessionId,
   }) async {
     try {
-      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+      // Use 'ordersWeb' collection for web orders
+      final orderRef = FirebaseFirestore.instance.collection('ordersWeb').doc();
       
-      // Process items to get full pet data
+      // Process items to get full pet data like mobile version
       List<Map<String, dynamic>> processedItems = [];
       for (var item in items) {
         final petDoc = await FirebaseFirestore.instance
@@ -51,17 +52,23 @@ class _CartScreenWebState extends State<CartScreenWeb> {
             
         Map<String, dynamic> petData = {};
         if (petDoc.exists) {
-          petData = petDoc.data()!;
-          petData['productId'] = petDoc.id;
-          petData['id'] = petDoc.id;
-          petData['price'] = petDoc.get('weight');
-          petData['quantity'] = item['quantity'] ?? 1;
+          final docData = petDoc.data()!;
+          petData = {
+            'productId': petDoc.id,
+            'name': docData['name'] ?? 'Unknown Pet',
+            'breed': docData['breed'] ?? '',
+            'imageUrl': docData['imageUrl'] ?? '',
+            'price': docData['weight']?.toString() ?? '0', // Use weight as price like mobile
+            'quantity': item['quantity'] ?? 1,
+          };
         } else {
           // Fallback if pet not found
           petData = {
             'productId': item['productId'],
             'name': item['name'] ?? 'Unknown Pet',
-            'price': item['price'] ?? 0,
+            'breed': item['breed'] ?? '',
+            'imageUrl': item['imageUrl'] ?? '',
+            'price': item['price']?.toString() ?? '0',
             'quantity': item['quantity'] ?? 1,
           };
         }
@@ -71,22 +78,26 @@ class _CartScreenWebState extends State<CartScreenWeb> {
       final orderData = {
         "orderId": orderRef.id,
         "email": customerEmail,
-        "customerName": customerName,
+        "fullName": customerName, // Changed from customerName to fullName to match format
         "phone": customerPhone,
-        "address": customerAddress,
+        "address": customerAddress, // Changed from customerAddress to address
         "totalAmount": totalAmount,
-        "statusPayment": sessionId != null ? "Payment Completed" : "COD",
-        "statusOrder": "Pending",
+        "statusPayment": "Pending Payment", // Always pending - payment success will update
+        "statusOrder": "Pending", // Always pending - payment success will update
         "timestamp": FieldValue.serverTimestamp(),
-        "paymentMethod": "stripe",
-        "stripeSessionId": sessionId,
+        "paymentMethod": "stripe_web", // Consistent payment method
+        "tempOrderId": sessionId, // Store temp ID for payment success to find
+        "stripeSessionId": null, // Will be updated by payment success screen
+        "backendOrderId": "web_order_${DateTime.now().millisecondsSinceEpoch}", // Add backend order ID
         "items": processedItems,
+        "source": "web_checkout", // Add source identifier
       };
 
       await orderRef.set(orderData);
       
       if (kDebugMode) {
-        print('✅ Order saved to Firestore: ${orderRef.id}');
+        print('✅ Order saved to ordersWeb collection: ${orderRef.id}');
+        print('✅ Backend Order ID: web_demo_${DateTime.now().millisecondsSinceEpoch}');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -180,8 +191,22 @@ class _CartScreenWebState extends State<CartScreenWeb> {
       print('💳 Total: \$${total.toStringAsFixed(2)}');
     }
 
-    // Thanh toán qua Stripe Payment Screen
+    // Generate temp order ID and customer email before payment
+    final tempOrderId = "temp_${DateTime.now().millisecondsSinceEpoch}";
     final customerEmail = info.email.isNotEmpty ? info.email : 'guest@petshop.com';
+    
+    // Save order to Firestore BEFORE payment
+    await _saveOrderToFirestore(
+      customerEmail: customerEmail,
+      customerName: info.fullName,
+      customerPhone: info.phone,
+      customerAddress: info.address,
+      items: items,
+      totalAmount: total,
+      sessionId: tempOrderId, // Use temp ID that payment success can search for
+    );
+
+    // Thanh toán qua Stripe Payment Screen
     final ok = await _payWithStripePaymentScreen(
       totalAmount: total,
       customerName: info.fullName,
@@ -204,15 +229,22 @@ class _CartScreenWebState extends State<CartScreenWeb> {
       print('✅ Payment successful!');
     }
 
-    // Save order to Firestore
-    await _saveOrderToFirestore(
-      customerEmail: customerEmail,
-      customerName: info.fullName,
-      customerPhone: info.phone,
-      customerAddress: info.address,
-      items: items,
-      totalAmount: total,
-    );
+    // Update pet status to sold (like mobile version)
+    for (var item in items) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('Pets')
+            .doc(item['productId'])
+            .update({
+          "status": "sold",
+          "isAvailable": false,
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Failed to update pet status for ${item['productId']}: $e');
+        }
+      }
+    }
 
     // Clear cart + báo thành công
     context.read<CartBlocWeb>().add(ClearCart('web'));

@@ -3,9 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
-import 'package:pet_shop/auth/payment/keys.dart';
+import 'package:pet_shop/auth/stripe_helper.dart';
 import 'package:pet_shop/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/debug_connection.dart';
@@ -27,37 +26,29 @@ import 'core/di/service_locator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   // Use path URL strategy on web to remove the `#` from routes.
   if (kIsWeb) setPathUrlStrategy();
   
-  try {
-    await dotenv.load();
-  } catch (e) {
-    // Non-fatal: if .env is missing on web or failed to load, continue with defaults.
-    debugPrint('dotenv.load() failed (non-blocking): $e');
-  }  
-  
-  // Initialize Stripe for both web and mobile
-  try {
-    if (PublishableKey.isNotEmpty) {
-      // Initialize Stripe on both web and mobile platforms
-      Stripe.publishableKey = PublishableKey;
-      if (!kIsWeb) {
-        await Stripe.instance.applySettings();
-      }
-      debugPrint('✅ Stripe initialized with publishable key: ${PublishableKey.substring(0, 20)}...');
-    } else {
-      debugPrint('❌ Stripe publishable key is empty; skipping Stripe initialization.');
-    }
-  } catch (e, st) {
-    // Non-fatal: log and continue so the app can run even if Stripe init fails.
-    debugPrint('❌ Stripe initialization failed: $e\n$st');
-  }
-
-  // Initialize Firebase FIRST
+  // Initialize Firebase FIRST to avoid performance issues
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  try {
+    await dotenv.load(fileName: ".env");
+    debugPrint('✅ Environment variables loaded successfully');
+  } catch (e) {
+    // Non-fatal: if .env is missing on web or failed to load, continue with defaults.
+    debugPrint('⚠️ dotenv.load() failed (non-blocking): $e');
+    debugPrint('💡 App will continue with hardcoded fallback values');
+  }  
+  
+  // Initialize Stripe using helper
+  final stripeInitialized = await StripeHelper.initialize();
+  if (!stripeInitialized) {
+    debugPrint('⚠️ Stripe initialization failed, payment features may not work');
+  }
   
   // Setup dependency injection AFTER Firebase is initialized
   serviceLocator.setup();

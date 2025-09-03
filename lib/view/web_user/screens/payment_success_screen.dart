@@ -55,37 +55,135 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
 
   Future<void> _saveSuccessfulOrder() async {
     try {
-      // Check if order already exists
-      final existingOrder = await FirebaseFirestore.instance
-          .collection('orders')
-          .where('stripeSessionId', isEqualTo: widget.sessionId)
+      if (kDebugMode) {
+        print('💳 Looking for pending order to update with session: ${widget.sessionId}');
+      }
+      
+      // Strategy 1: Find by timestamp first, then filter by tempOrderId  
+      final recentOrders = await FirebaseFirestore.instance
+          .collection('ordersWeb')
+          .orderBy('timestamp', descending: true)
+          .limit(30)
           .get();
-          
-      if (existingOrder.docs.isEmpty) {
-        // Create a basic order record for successful payment
-        final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+      
+      DocumentSnapshot? orderToUpdate;
+      
+      // Look for orders with tempOrderId starting with "temp_"
+      for (final doc in recentOrders.docs) {
+        final data = doc.data();
+        final tempId = data['tempOrderId']?.toString();
         
+        if (tempId != null && tempId.startsWith('temp_')) {
+          // Check if this is a recent order (within 2 hours)
+          final timestamp = data['timestamp'] as Timestamp?;
+          if (timestamp != null) {
+            final orderTime = timestamp.toDate();
+            final timeDiff = DateTime.now().difference(orderTime).inHours;
+            
+            if (timeDiff <= 2 && data['statusPayment'] == 'Pending Payment') {
+              orderToUpdate = doc;
+              if (kDebugMode) {
+                print('🔍 Found pending order by tempOrderId: ${doc.id}');
+                print('🔍 TempOrderId: $tempId');
+                print('🔍 Customer: ${data['fullName']}');
+              }
+              break;
+            }
+          }
+        }
+      }
+      
+      // Strategy 2: Fallback - find recent pending orders
+      if (orderToUpdate == null) {
+        if (kDebugMode) {
+          print('⚠️ No order found by tempOrderId, trying timestamp strategy...');
+        }
+        
+        final allRecentOrders = await FirebaseFirestore.instance
+            .collection('ordersWeb')
+            .orderBy('timestamp', descending: true)
+            .limit(20)
+            .get();
+        
+        for (final doc in allRecentOrders.docs) {
+          final data = doc.data();
+          final timestamp = data['timestamp'] as Timestamp?;
+          
+          if (timestamp != null) {
+            final orderTime = timestamp.toDate();
+            final timeDiff = DateTime.now().difference(orderTime).inMinutes;
+            
+            if (timeDiff <= 30 && // Within 30 minutes
+                data['statusPayment'] == 'Pending Payment' && 
+                data['tempOrderId'] != null) {
+              orderToUpdate = doc;
+              if (kDebugMode) {
+                print('🔍 Found pending order by timestamp: ${doc.id} (${timeDiff} minutes ago)');
+              }
+              break;
+            }
+          }
+        }
+      }
+          
+      if (orderToUpdate != null) {
+        // Update the pending order with session ID
+        await orderToUpdate.reference.update({
+          "stripeSessionId": widget.sessionId,
+          "statusPayment": "Payment Completed",
+          "statusOrder": "Completed",
+          "paymentConfirmedAt": FieldValue.serverTimestamp(),
+          "tempOrderId": FieldValue.delete(), // Remove temp field
+        });
+        
+        if (kDebugMode) {
+          print('✅ Updated pending order with session ID: ${orderToUpdate.id}');
+          final data = orderToUpdate.data() as Map<String, dynamic>?;
+          print('✅ Order customer: ${data?['fullName'] ?? 'Unknown'}');
+          print('✅ Order total: \$${data?['totalAmount'] ?? 0}');
+          print('✅ Items count: ${(data?['items'] as List?)?.length ?? 0}');
+        }
+      } else {
+        if (kDebugMode) {
+          print('❌ NO PENDING ORDERS FOUND - This should not happen!');
+          print('❌ Available orders in collection:');
+          
+          // Debug: List recent orders
+          final debugOrders = await FirebaseFirestore.instance
+              .collection('ordersWeb')
+              .orderBy('timestamp', descending: true)
+              .limit(5)
+              .get();
+              
+          for (final doc in debugOrders.docs) {
+            final data = doc.data();
+            print('📋 Order ${doc.id}: status=${data['statusPayment']}, tempId=${data['tempOrderId']}');
+          }
+        }
+        
+        // This should NOT happen anymore, but keep as safeguard
+        if (kDebugMode) {
+          print('⚠️ Creating minimal fallback order (this indicates a bug)');
+        }
+        
+        final orderRef = FirebaseFirestore.instance.collection('ordersWeb').doc();
         await orderRef.set({
           "orderId": orderRef.id,
           "stripeSessionId": widget.sessionId,
           "statusPayment": "Payment Completed",
-          "statusOrder": "Pending",
+          "statusOrder": "Completed",
           "timestamp": FieldValue.serverTimestamp(),
-          "paymentMethod": "stripe",
-          "source": "web_checkout",
+          "paymentMethod": "stripe_web",
+          "source": "web_checkout_fallback",
         });
         
         if (kDebugMode) {
-          print('✅ Success order record saved: ${orderRef.id}');
-        }
-      } else {
-        if (kDebugMode) {
-          print('✅ Order already exists for session: ${widget.sessionId}');
+          print('✅ Created fallback order: ${orderRef.id}');
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error saving success order: $e');
+        print('❌ Error updating order payment status: $e');
       }
     }
   }
