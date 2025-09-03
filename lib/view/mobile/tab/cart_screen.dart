@@ -115,7 +115,7 @@ class _CartScreenState extends State<CartScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => OrderSuccess(suggestions: []),
+            builder: (_) => const OrderSuccess(suggestions: []),
           ),
         );
       }
@@ -370,6 +370,22 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<Map<String, dynamic>?> makeIntentForPayment(amount, currency) async {
     try {
+      // Debug: Check if keys are available (safe substring)
+      final pubKeyPreview = PublishableKey.length > 20 
+          ? "${PublishableKey.substring(0, 20)}..." 
+          : PublishableKey.isNotEmpty ? "$PublishableKey (short)" : "EMPTY!";
+      final secKeyPreview = SecretKey.length > 20 
+          ? "${SecretKey.substring(0, 20)}..." 
+          : SecretKey.isNotEmpty ? "$SecretKey (short)" : "EMPTY!";
+      
+      print("🔐 PublishableKey: $pubKeyPreview");
+      print("🔐 SecretKey: $secKeyPreview");
+      
+      if (SecretKey.isEmpty) {
+        print("❌ ERROR: SecretKey is empty!");
+        return null;
+      }
+
       Map<String, dynamic>? paymentInfo = {
         "amount": (amount * 100).round().toString(),
         "currency": currency,
@@ -386,13 +402,14 @@ class _CartScreenState extends State<CartScreen> {
       );
 
       if (response.statusCode != 200) {
-        print("Stripe API Error: ${response.body}");
+        print("❌ Stripe API Error: ${response.body}");
         return null;
       }
 
+      print("✅ Payment intent created successfully");
       return jsonDecode(response.body);
     } catch (error) {
-      print("Stripe Error: $error");
+      print("❌ Stripe Error: $error");
       return null;
     }
   }

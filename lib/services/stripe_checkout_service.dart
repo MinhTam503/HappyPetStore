@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:pet_shop/services/payment_service.dart';
-import 'dart:html' as html;
+
+// Conditional imports cho web/mobile compatibility
+import 'stripe_checkout_stub.dart'
+    if (dart.library.html) 'stripe_checkout_web.dart'
+    if (dart.library.io) 'stripe_checkout_mobile.dart';
 
 class StripeCheckoutService {
   
@@ -41,8 +45,8 @@ class StripeCheckoutService {
           'imageUrl': item['imageUrl'],
           'quantity': item['quantity'] ?? 1,
         }).toList(),
-        successUrl: '${html.window.location.origin}/payment-success',
-        cancelUrl: '${html.window.location.origin}/payment-cancel',
+        successUrl: '${StripeWebUtils.getOrigin()}/payment-success',
+        cancelUrl: '${StripeWebUtils.getOrigin()}/payment-cancel',
       );
 
       if (checkoutData == null || checkoutData['checkout_url'] == null) {
@@ -63,27 +67,25 @@ class StripeCheckoutService {
   }
 
   static void redirectToCheckout(String checkoutUrl) {
-    if (kIsWeb) {
-      html.window.location.href = checkoutUrl;
-    }
+    StripeWebUtils.redirectToUrl(checkoutUrl);
   }
 
   static bool isPaymentSuccessUrl() {
     if (!kIsWeb) return false;
-    final pathname = html.window.location.pathname;
-    return pathname != null && pathname.contains('/payment-success');
+    final pathname = StripeWebUtils.getCurrentPathname();
+    return pathname.contains('/payment-success');
   }
 
   static bool isPaymentCancelUrl() {
     if (!kIsWeb) return false;
-    final pathname = html.window.location.pathname;
-    return pathname != null && pathname.contains('/payment-cancel');
+    final pathname = StripeWebUtils.getCurrentPathname();
+    return pathname.contains('/payment-cancel');
   }
 
   static Map<String, String> getUrlParameters() {
     if (!kIsWeb) return {};
     
-    final uri = Uri.parse(html.window.location.href);
+    final uri = Uri.parse(StripeWebUtils.getCurrentHref());
     return uri.queryParameters;
   }
 }

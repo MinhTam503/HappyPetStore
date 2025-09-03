@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 import 'services/payment_service.dart';
+
+// Conditional imports cho web/mobile compatibility
+import 'debug_connection_stub.dart'
+    if (dart.library.html) 'debug_connection_web.dart'
+    if (dart.library.io) 'debug_connection_mobile.dart';
 
 /// Debug utility để test kết nối backend
 class DebugConnectionScreen extends StatefulWidget {
@@ -28,7 +33,7 @@ class _DebugConnectionScreenState extends State<DebugConnectionScreen> {
     });
 
     _addLog('🔧 Testing PaymentService connection...');
-    _addLog('🌐 Browser info: ${html.window.navigator.userAgent}');
+    _addLog('🌐 Platform info: ${PlatformInfo.getBrowserInfo()}');
     
     // Test basic health check
     _addLog('📍 Step 1: Basic health check');
@@ -49,11 +54,11 @@ class _DebugConnectionScreenState extends State<DebugConnectionScreen> {
     _addLog('\n📍 Step 3: Current configuration');
     _addLog('Current base URL: ${PaymentService.getCurrentBaseUrl()}');
     
-    // Browser security info
-    _addLog('\n📍 Step 4: Browser security info');
-    _addLog('Protocol: ${html.window.location.protocol}');
-    _addLog('Host: ${html.window.location.host}');
-    _addLog('Is HTTPS: ${html.window.location.protocol == 'https:'}');
+    // Platform security info
+    _addLog('\n📍 Step 4: Platform security info');
+    _addLog('Protocol: ${PlatformInfo.getProtocol()}');
+    _addLog('Host: ${PlatformInfo.getHost()}');
+    _addLog('Is HTTPS: ${PlatformInfo.isHttps()}');
 
     setState(() {
       _isLoading = false;

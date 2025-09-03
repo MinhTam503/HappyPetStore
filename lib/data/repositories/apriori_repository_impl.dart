@@ -3,7 +3,8 @@ import '../../domain/entities/breed_entities.dart';
 import '../../domain/repositories/apriori_repository.dart';
 
 class AprioriRepositoryImpl implements AprioriRepository {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Lazy initialization to ensure Firebase is initialized first
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
   @override
   Future<List<BreedTransaction>> getBreedTransactions() async {

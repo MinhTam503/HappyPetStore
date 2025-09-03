@@ -176,7 +176,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
-                        childAspectRatio: 0.903,
+                        childAspectRatio: 0.60,
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       itemBuilder: (context, index) {

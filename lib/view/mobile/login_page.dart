@@ -72,13 +72,6 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
-      // Đảm bảo loading dialog được tắt (đóng dialog trên root navigator)
-      if (mounted) {
-        try {
-          Navigator.of(context, rootNavigator: true).pop();
-        } catch (_) {}
-      }
-
       if (userCredential.user != null) {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection("users")
@@ -87,15 +80,37 @@ class _LoginPageState extends State<LoginPage> {
 
         if (userDoc.exists) {
           String role = userDoc['role'];
+          
+          // Đóng loading dialog trước khi navigate
+          if (mounted) {
+            try {
+              Navigator.of(context, rootNavigator: true).pop();
+            } catch (_) {}
+          }
+          
           if (kIsWeb) {
             // Nếu đang trên web, mở trang admin
             if (role == 'admin') {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomePageAdmin()),
-              );
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomePageAdmin()),
+                );
+              }
             } else {
               // Nếu không phải admin, mở trang người dùng
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BottomNavigator(),
+                  ),
+                );
+              }
+            }
+          } else {
+            // Nếu đang trên di động, mở trang người dùng
+            if (mounted) {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -103,20 +118,21 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               );
             }
-          } else {
-            // Nếu đang trên di động, mở trang người dùng
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const BottomNavigator(),
-              ),
-            );
           }
         } else {
+          // Đóng loading dialog trước khi hiện thông báo lỗi
+          if (mounted) {
+            try {
+              Navigator.of(context, rootNavigator: true).pop();
+            } catch (_) {}
+          }
+          
           // Nếu không tìm thấy tài liệu người dùng
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Tài khoản không tồn tại")),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Tài khoản không tồn tại")),
+            );
+          }
         }
       }
     } on FirebaseAuthException catch (e) {

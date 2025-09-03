@@ -13,7 +13,6 @@ import 'package:pet_shop/providers/locale_provider.dart';
 import 'package:pet_shop/providers/theme_provider.dart';
 import 'package:pet_shop/view/mobile/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:pet_shop/view/web/screen_admin/home/home_page_admin.dart';
 import 'package:pet_shop/view/web_user/screens/cart_screen_web_new.dart';
 import 'package:pet_shop/view/web_user/screens/home_page_web_user.dart';
 import 'package:pet_shop/view/web_user/screens/payment_success_screen.dart';
@@ -30,9 +29,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Use path URL strategy on web to remove the `#` from routes.
   if (kIsWeb) setPathUrlStrategy();
-  
-  // Setup dependency injection
-  serviceLocator.setup();
   
   try {
     await dotenv.load();
@@ -58,9 +54,14 @@ void main() async {
     debugPrint('❌ Stripe initialization failed: $e\n$st');
   }
 
+  // Initialize Firebase FIRST
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Setup dependency injection AFTER Firebase is initialized
+  serviceLocator.setup();
+  
   runApp(MyApp());
 }
 
