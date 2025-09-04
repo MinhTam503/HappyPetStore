@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pet_shop/data/datasources/local/apriori/apriori_algorithm.dart';
 import 'package:pet_shop/domain/entities/breed_entities.dart';
 import 'package:pet_shop/domain/usecases/apriori_usecase.dart';
 import 'package:pet_shop/domain/repositories/apriori_repository.dart';
-import 'package:pet_shop/services/apriori/apriori_algorithm.dart';
+
 
 // Fake repository với dữ liệu test phong phú
 class RichTestAprioriRepository implements AprioriRepository {
@@ -82,14 +83,14 @@ void main() {
 
       // Old algorithm chỉ lấy breed đầu tiên
       final firstBreed = cartItems.first['breed'] as String;
-      print('\\n❌ OLD ALGORITHM LIMITATION:');
+      print('\\n OLD ALGORITHM LIMITATION:');
       print('   Only analyzes first breed: $firstBreed');
       print('   Ignores: Persian Cat, Beagle');
 
       // Giả lập kết quả của old algorithm (chỉ dựa trên Golden Retriever)
       final oldResult = await oldAlgorithm.getSuggestedPets(firstBreed);
       
-      print('\\n📊 OLD ALGORITHM RESULTS:');
+      print('\\n OLD ALGORITHM RESULTS:');
       print('   Suggestions based on single breed ($firstBreed): ${oldResult.length}');
       for (var pet in oldResult) {
         print('   - ${pet['name']} (${pet['breed']})');

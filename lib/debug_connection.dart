@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'services/payment_service.dart';
+import 'package:pet_shop/data/datasources/remote/payment_service.dart';
+
 
 // Conditional imports cho web/mobile compatibility
 import 'debug_connection_stub.dart'

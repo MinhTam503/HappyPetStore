@@ -5,22 +5,22 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
-import 'package:pet_shop/bloc/cart_bloc_web/cart_bloc_web.dart';
-import 'package:pet_shop/bloc/favBloc/fav_bloc.dart';
+import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
+import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/debug_connection.dart';
-import 'package:pet_shop/providers/locale_provider.dart';
-import 'package:pet_shop/providers/theme_provider.dart';
-import 'package:pet_shop/view/mobile/bottom_navigator.dart';
+import 'package:pet_shop/core/providers/locale_provider.dart';
+import 'package:pet_shop/core/providers/theme_provider.dart';
+import 'package:pet_shop/presentation/pages/mobile/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:pet_shop/view/web_user/screens/cart_screen_web_new.dart';
-import 'package:pet_shop/view/web_user/screens/home_page_web_user.dart';
-import 'package:pet_shop/view/web_user/screens/payment_success_screen.dart';
-import 'package:pet_shop/view/web/web_app_wrapper.dart';
+import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
+import 'package:pet_shop/presentation/pages/web_user/screens/home_page_web_user.dart';
+import 'package:pet_shop/presentation/pages/web_user/screens/payment_success_screen.dart';
+import 'package:pet_shop/presentation/pages/web/web_app_wrapper.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_strategy/url_strategy.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'bloc/cartBloc/cart_bloc.dart';
+import 'presentation/bloc/cartBloc/cart_bloc.dart';
 import 'firebase_options.dart';
 import 'core/di/service_locator.dart';
 
@@ -111,12 +111,33 @@ class MyApp extends StatelessWidget {
                   : StreamBuilder<User?>(
                       stream: FirebaseAuth.instance.authStateChanges(),
                       builder: (context, snapshot) {
+                        // Show loading during connection state waiting
                         if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Scaffold(
+                            body: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(color: Colors.pink),
+                                  SizedBox(height: 16),
+                                  Text('Đang kiểm tra trạng thái đăng nhập...'),
+                                ],
+                              ),
+                            ),
+                          );
                         }
+                        
+                        // User is authenticated
                         if (snapshot.hasData) {
+                          if (kDebugMode) {
+                            debugPrint('🔐 User authenticated, navigating to BottomNavigator');
+                          }
                           return const BottomNavigator();
                         } else {
+                          // User is not authenticated
+                          if (kDebugMode) {
+                            debugPrint('🚪 User not authenticated, showing LoginOrRegister');
+                          }
                           return const LoginOrRegister();
                         }
                       },

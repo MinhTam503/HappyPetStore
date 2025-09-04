@@ -1,7 +1,7 @@
 import '../../../data/repositories/apriori_repository_impl.dart';
 import '../../../domain/repositories/apriori_repository.dart';
 import '../../../domain/usecases/apriori_usecase.dart';
-import '../../../bloc/apriori/apriori_bloc.dart';
+import '../../../presentation/bloc/apriori/apriori_bloc.dart';
 
 class ServiceLocator {
   static final ServiceLocator _instance = ServiceLocator._internal();
