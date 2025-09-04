@@ -48,7 +48,8 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
-      debugPrint('🔐 Firebase signIn completed, user: ${userCredential.user?.uid}');
+      debugPrint(
+          '🔐 Firebase signIn completed, user: ${userCredential.user?.uid}');
 
       if (userCredential.user != null) {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
@@ -60,21 +61,22 @@ class _LoginPageState extends State<LoginPage> {
 
         if (userDoc.exists) {
           String role = userDoc['role'];
-          
+
           debugPrint('👤 User role: $role');
-          
+
           // Đóng dialog ngay lập tức bất kể web hay mobile
           await DialogHelper.hideLoadingDialog(context);
-          
+
           debugPrint('✅ Dialog closed successfully');
-          
+
           if (kIsWeb) {
             // Nếu đang trên web, navigate manually
             if (role == 'admin') {
               if (mounted) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const HomePageAdmin()),
+                  MaterialPageRoute(
+                      builder: (context) => const HomePageAdmin()),
                 );
               }
             } else {
@@ -91,24 +93,27 @@ class _LoginPageState extends State<LoginPage> {
           } else {
             // Nếu đang trên di động, để authStateChanges handle navigation
             if (mounted) {
-              debugPrint('✅ Login successful, dialog closed, letting authStateChanges handle navigation');
-              debugPrint('🔄 Current user: ${authService.value.currentUser?.uid}');
-              
+              debugPrint(
+                  '✅ Login successful, dialog closed, letting authStateChanges handle navigation');
+              debugPrint(
+                  '🔄 Current user: ${authService.value.currentUser?.uid}');
+
               // Thêm một delay nhỏ để đảm bảo auth state được persist
               await Future.delayed(const Duration(milliseconds: 100));
-              
+
               // Double check user is still authenticated
               if (authService.value.currentUser != null) {
                 debugPrint('🔒 User still authenticated after delay');
               } else {
-                debugPrint('⚠️ User not authenticated after delay - this is the problem!');
+                debugPrint(
+                    '⚠️ User not authenticated after delay - this is the problem!');
               }
             }
           }
         } else {
           // Đóng loading dialog trước khi hiện thông báo lỗi
           await DialogHelper.hideLoadingDialog(context);
-          
+
           // Nếu không tìm thấy tài liệu người dùng
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -120,9 +125,10 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       // Đảm bảo loading dialog được tắt
       await DialogHelper.hideLoadingDialog(context);
-      
-      if (mounted && e.message ==
-          "The supplied auth credential is incorrect, malformed or has expired.") {
+
+      if (mounted &&
+          e.message ==
+              "The supplied auth credential is incorrect, malformed or has expired.") {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Thông tin không chính xác"),
@@ -132,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       // Đảm bảo loading dialog được tắt
       await DialogHelper.hideLoadingDialog(context);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Lỗi không xác định: $e")),
@@ -140,6 +146,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
+
   void sendEmailRestPassWord() async {
     final email = _emailController.text.trim();
 
@@ -160,33 +167,78 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // Kiểm tra email có tồn tại trên Firestore không
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection("users")
-        .where("email", isEqualTo: email)
-        .get();
+    // Show loading dialog
+    DialogHelper.showLoadingDialog(context, message: "Đang gửi email...");
 
-    if (querySnapshot.docs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email không tồn tại trong hệ thống!")),
-      );
-      return;
-    }
-
-    // Gửi email reset mật khẩu
     try {
+      debugPrint('🔄 Checking if email exists in Firestore: $email');
+
+      // Kiểm tra email có tồn tại trên Firestore không
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection("users")
+          .where("email", isEqualTo: email)
+          .get();
+
+      debugPrint(
+          '📧 Email query result: ${querySnapshot.docs.length} documents found');
+
+      if (querySnapshot.docs.isEmpty) {
+        await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text("Email không tồn tại trong hệ thống!")),
+          );
+        }
+        return;
+      }
+
+      debugPrint('✅ Email exists, sending password reset...');
+
+      // Gửi email reset mật khẩu
       await authService.value.resetPassword(email: email);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Đã gửi email đặt lại mật khẩu!")),
-      );
+
+      await DialogHelper.hideLoadingDialog(context);
+
+      debugPrint('✅ Password reset email sent successfully');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                "Đã gửi email đặt lại mật khẩu! Vui lòng kiểm tra hộp thư."),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi khi gửi email: $e")),
-      );
+      await DialogHelper.hideLoadingDialog(context);
+
+      debugPrint('❌ Error sending password reset: $e');
+
+      if (mounted) {
+        String errorMessage = "Lỗi khi gửi email: ";
+
+        // Handle specific Firebase errors
+        if (e.toString().contains('user-not-found')) {
+          errorMessage = "Không tìm thấy tài khoản với email này!";
+        } else if (e.toString().contains('invalid-email')) {
+          errorMessage = "Email không hợp lệ!";
+        } else if (e.toString().contains('too-many-requests')) {
+          errorMessage = "Quá nhiều yêu cầu! Vui lòng thử lại sau.";
+        } else {
+          errorMessage += e.toString();
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -282,17 +334,20 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(
                       height: 5,
                     ),
-                     Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         GestureDetector(
-                          onTap:(){
+                          onTap: () {
+                            debugPrint('🔄 Forgot password tapped');
                             sendEmailRestPassWord();
                           },
                           child: const Text(
-                            "Quên mật khẩu",
+                            "Quên mật khẩu?",
                             style: TextStyle(
-                                color: Colors.red, fontWeight: FontWeight.bold),
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],

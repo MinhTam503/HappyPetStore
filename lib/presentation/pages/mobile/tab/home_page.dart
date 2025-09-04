@@ -1,20 +1,13 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as path;
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/all_pet.dart';
 import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
 import 'package:pet_shop/presentation/widgets/pet_items.dart';
-import 'package:pet_shop/presentation/widgets/my_search_bar.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
@@ -31,10 +24,7 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> petItems = [];
   List<Map<String, dynamic>> groceryCategory = [];
   List<Map<String, dynamic>> top5BestSell = [];
-  bool _isLoading = true;
   String userName = "Người dùng";
-  List<Map<String, dynamic>> groceryItems = [];
-  List<Map<String, dynamic>> filterItems = [];
 
   @override
   void initState() {
@@ -55,7 +45,7 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         userName = userInfo['displayName']?.isNotEmpty == true
             ? userInfo['displayName']
-            : "Tam\n";
+            : "Bạn";
       });
     }
   }
@@ -67,9 +57,6 @@ class _HomePageState extends State<HomePage> {
       await filterProductByCategory(category);
     }
     if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   Future<void> fetchCategory() async {
@@ -86,9 +73,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> filterProductByCategory(String selectedCategory) async {
-    setState(() {
-      _isLoading = true;
-    });
     try {
       QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
           .instance
@@ -102,30 +86,6 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       print(e.toString());
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> addOrders() async {
-    // Đọc file JSON
-    final String response =
-        await rootBundle.loadString('assets/orders_100.json');
-    final List<dynamic> orders = json.decode(response);
-
-    // Tham chiếu đến collection 'orders'
-    CollectionReference ordersCollection =
-        FirebaseFirestore.instance.collection('orders');
-
-    for (var order in orders) {
-      String idOrder = order['orderId']; // Lấy idOrder từ dữ liệu
-      await ordersCollection
-          .doc(idOrder)
-          .set(order); // Sử dụng set để tạo document với idOrder
-      print('Đã thêm đơn hàng với ID: $idOrder');
     }
   }
 
@@ -201,75 +161,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void searchFilterItems(String query) {
-    if (query.isEmpty) {
-      setState(() {
-        filterItems = groceryItems; // show all items if query is empty
-      });
-    } else {
-      setState(() {
-        filterItems = groceryItems.where((item) {
-          return item['name']
-              .toString()
-              .toLowerCase()
-              .contains(query.toLowerCase());
-        }).toList(); //filter items based of query
-      });
-    }
-  }
-
-  Future<void> searchByImage(File imageFile) async {
-    try {
-      // final uri = Uri.parse('http://10.0.2.2:5000/search');
-      final uri = Uri.parse('https://train-pet-image.onrender.com/search');
-      var request = http.MultipartRequest('POST', uri);
-      request.files
-          .add(await http.MultipartFile.fromPath('file', imageFile.path));
-      var response = await request.send();
-      if (response.statusCode == 200) {
-        final respStr = await response.stream.bytesToString();
-        final data = jsonDecode(respStr);
-        if (data['similar_images'] != null &&
-            data['similar_images'].isNotEmpty) {
-          // Lấy danh sách tên file
-          List<String> fileNames = (data['similar_images'] as List)
-              .map((img) => path.basename(img['image_path'] as String))
-              .toList();
-          // Lọc danh sách thú cưng có imageUrl chứa tên file
-          final pets = groceryItems
-              .where((item) => fileNames.any((fileName) =>
-                  (item['imageUrl'] as String).contains(fileName)))
-              .toList();
-          setState(() {
-            filterItems = pets;
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Không tìm thấy ảnh tương tự!')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi server: ${response.statusCode}')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final cardW = (screenW * 0.45).clamp(150.0, 220.0);
     final imageH = cardW * 3 / 4;
-
-// Tổng thực tế ~ imageH + 6 (gap) + 20 (name) + 6 (gap) + 34 (pill)
-// + 8 (gap) + 36 (button) + 10 (padding) ≈ imageH + 120
-// Thêm buffer cho font/máy: + 16
-    final listH = imageH + 120; // <- tăng từ công thức cũ
+    final listH = imageH + 120;
 
     return Scaffold(
       backgroundColor: secondaryColor,
@@ -278,7 +175,7 @@ class _HomePageState extends State<HomePage> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 child: Row(
                   children: [
                     Text.rich(
@@ -286,20 +183,19 @@ class _HomePageState extends State<HomePage> {
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 23),
                           children: [
-                            const TextSpan(text: "Hello, "),
+                            const TextSpan(text: "Xin chào, "),
                             TextSpan(
                               text: "$userName\n",
                               style: const TextStyle(color: primaryColor),
                             ),
                             const TextSpan(
-                              text: "What do you need",
+                              text: "Chào bạn đến với Happy Pets Shop!",
                               style: TextStyle(
                                   fontSize: 17, color: Colors.black38),
                             )
                           ]),
                     ),
                     const Spacer(),
-                    // const CartIcon(),
                   ],
                 ),
               ),
@@ -308,9 +204,9 @@ class _HomePageState extends State<HomePage> {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 child: Text(
-                  "Quality you can taste, freshness you can trust",
+                  "Hãy tìm người bạn đồng hành hoàn hảo cho gia đình bạn",
                   style: TextStyle(
-                    fontSize: 30,
+                    fontSize: 28,
                     color: Colors.black,
                     height: 1.2,
                     fontWeight: FontWeight.bold,
@@ -318,17 +214,8 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: MySearchBar(
-                  onSearch: searchFilterItems,
-                  onImageSearch: searchByImage,
-                ),
-              ),
-            ),
             const SliverToBoxAdapter(
-              child: SizedBox(height: 25),
+              child: SizedBox(height: 10),
             ),
             // Sticky Category
             SliverPersistentHeader(
@@ -364,7 +251,7 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                       child: const Text(
-                        "See All",
+                        "Xem tất cả",
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -384,21 +271,21 @@ class _HomePageState extends State<HomePage> {
                       child: Center(child: CircularProgressIndicator()),
                     ),
                   )
-                : // Trong build() của HomePage, ngay trước SliverToBoxAdapter list ngang:
-                SliverToBoxAdapter(
+                : SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(right: 10.0),
                       child: SizedBox(
-                        height: listH, // 👈 chiều cao động theo cardW
+                        height: listH,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
-                          itemExtent: cardW, // 👈 bề rộng động theo màn hình
+                          itemExtent: cardW,
                           itemCount: top5BestSell.length,
                           itemBuilder: (context, index) {
                             return Padding(
                               padding: const EdgeInsets.only(
                                   left: 15, top: 15, bottom: 15),
-                              child: GestureDetector(
+                              child: PetItems(
+                                pet: top5BestSell[index],
                                 onTap: () {
                                   Navigator.push(
                                       context,
@@ -407,7 +294,6 @@ class _HomePageState extends State<HomePage> {
                                             grocery: top5BestSell[index]),
                                       ));
                                 },
-                                child: PetItems(pet: top5BestSell[index]),
                               ),
                             );
                           },
@@ -438,7 +324,7 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                       child: const Text(
-                        "See All",
+                        "Xem tất cả",
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -457,7 +343,7 @@ class _HomePageState extends State<HomePage> {
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 30),
                         child: Text(
-                          "No product available in this category",
+                          "Không có thú cưng nào trong danh mục này",
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.w500),
                         ),
@@ -490,8 +376,7 @@ class _HomePageState extends State<HomePage> {
                         maxCrossAxisExtent: 220,
                         mainAxisSpacing: 10,
                         crossAxisSpacing: 10,
-                        childAspectRatio:
-                            0.78, // có thể tinh chỉnh theo thiết kế
+                        childAspectRatio: 0.78,
                       ),
                     ),
                   ),
@@ -586,7 +471,6 @@ class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
     );
   }
-
 
   @override
   double get maxExtent => 90;

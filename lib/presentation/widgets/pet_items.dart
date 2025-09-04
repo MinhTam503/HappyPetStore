@@ -12,7 +12,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PetItems extends StatefulWidget {
   final Map<String, dynamic> pet;
-  const PetItems({super.key, required this.pet});
+  final VoidCallback? onTap;
+  const PetItems({super.key, required this.pet, this.onTap});
 
   @override
   State<PetItems> createState() => _PetItemsState();
@@ -50,7 +51,7 @@ class _PetItemsState extends State<PetItems> {
             borderRadius: BorderRadius.circular(16),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: () {}, // có thể mở chi tiết ở ngoài
+              onTap: widget.onTap, // Sử dụng callback từ parent
               child: LayoutBuilder(
                 builder: (context, c) {
                   final double w =

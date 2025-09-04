@@ -133,10 +133,24 @@ class MyApp extends StatelessWidget {
                         
                         // User is authenticated
                         if (snapshot.hasData) {
+                          final user = snapshot.data!;
+                          
                           if (kDebugMode) {
-                            debugPrint('✅ User authenticated, navigating to BottomNavigator');
+                            debugPrint('✅ User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
                           }
-                          return const BottomNavigator();
+                          
+                          // Check if email is verified
+                          if (user.emailVerified) {
+                            if (kDebugMode) {
+                              debugPrint('✅ Email verified, navigating to BottomNavigator');
+                            }
+                            return const BottomNavigator();
+                          } else {
+                            if (kDebugMode) {
+                              debugPrint('❌ Email not verified, showing LoginOrRegister');
+                            }
+                            return const LoginOrRegister();
+                          }
                         } else {
                           // User is not authenticated
                           if (kDebugMode) {
