@@ -36,7 +36,7 @@ class StripeHelper {
       
       // Only initialize Flutter Stripe on mobile platforms
       if (kDebugMode) {
-        print('🔧 Initializing Stripe for mobile platform...');
+        print(' Initializing Stripe for mobile platform...');
       }
       Stripe.publishableKey = publishableKey;
       
@@ -47,7 +47,7 @@ class StripeHelper {
         }
       } catch (e) {
         if (kDebugMode) {
-          print('⚠️ Stripe mobile settings failed, continuing anyway: $e');
+          print(' Stripe mobile settings failed, continuing anyway: $e');
         }
         // Continue execution - this is not fatal
       }

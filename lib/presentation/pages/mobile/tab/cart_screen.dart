@@ -104,7 +104,7 @@ class _CartScreenState extends State<CartScreen> {
     aprioriBloc.stream.listen((state) {
       if (state is AprioriLoaded) {
         // Convert to old format for compatibility
-        final suggestions = state.suggestions.map((pet) => pet!.toMap()).toList();
+        final suggestions = state.suggestions.map((pet) => pet.toMap()).toList();
         
         Navigator.push(
           context,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/cart_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/home_page.dart' show HomePage;
@@ -22,6 +23,18 @@ class _HomePageState extends State<BottomNavigator> {
     const CartScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Gently close any remaining loading dialogs when navigating to home
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (DialogHelper.isDialogShowing) {
+        debugPrint('🏠 BottomNavigator: Found lingering dialog, closing it');
+        DialogHelper.forceCloseIfShowing();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

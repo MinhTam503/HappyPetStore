@@ -1,8 +1,8 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/auth/auth_service.dart';
-import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 
 import 'package:pet_shop/presentation/pages/mobile/change_password_page.dart';
@@ -186,14 +186,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 TextButton(
                                   onPressed: () {
+                                    // Đóng dialog trước
+                                    Navigator.pop(context);
+                                    
+                                    debugPrint('🚪 User clicked logout, calling signOut()');
+                                    
+                                    // Chỉ signOut và để authStateChanges handle navigation
                                     authService.value.signOut();
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const LoginOrRegister(),
-                                      ),
-                                    );
+                                    
+                                    debugPrint('✅ signOut() completed, authStateChanges should handle navigation');
+                                    
+                                    // Không cần Navigator.pushReplacement - StreamBuilder sẽ tự động chuyển
                                   },
                                   child: const Text("Ok"),
                                 ),

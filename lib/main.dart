@@ -111,6 +111,10 @@ class MyApp extends StatelessWidget {
                   : StreamBuilder<User?>(
                       stream: FirebaseAuth.instance.authStateChanges(),
                       builder: (context, snapshot) {
+                        if (kDebugMode) {
+                          debugPrint('🔄 AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
+                        }
+                        
                         // Show loading during connection state waiting
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Scaffold(
@@ -130,13 +134,13 @@ class MyApp extends StatelessWidget {
                         // User is authenticated
                         if (snapshot.hasData) {
                           if (kDebugMode) {
-                            debugPrint('🔐 User authenticated, navigating to BottomNavigator');
+                            debugPrint('✅ User authenticated, navigating to BottomNavigator');
                           }
                           return const BottomNavigator();
                         } else {
                           // User is not authenticated
                           if (kDebugMode) {
-                            debugPrint('🚪 User not authenticated, showing LoginOrRegister');
+                            debugPrint('❌ User not authenticated, showing LoginOrRegister');
                           }
                           return const LoginOrRegister();
                         }

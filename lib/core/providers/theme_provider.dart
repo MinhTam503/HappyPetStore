@@ -17,12 +17,12 @@ class ThemeProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _isDarkMode = prefs.getBool(_themeKey) ?? false;
       if (kDebugMode) {
-        print('🎨 Theme loaded: ${_isDarkMode ? 'Dark' : 'Light'}');
+        print(' Theme loaded: ${_isDarkMode ? 'Dark' : 'Light'}');
       }
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to load theme from SharedPreferences: $e');
+        print(' Failed to load theme from SharedPreferences: $e');
       }
       // Fallback to light theme if SharedPreferences fails
       _isDarkMode = false;
@@ -36,11 +36,11 @@ class ThemeProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_themeKey, _isDarkMode);
       if (kDebugMode) {
-        print('🎨 Theme toggled to: ${_isDarkMode ? 'Dark' : 'Light'}');
+        print(' Theme toggled to: ${_isDarkMode ? 'Dark' : 'Light'}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to save theme to SharedPreferences: $e');
+        print(' Failed to save theme to SharedPreferences: $e');
       }
     }
     notifyListeners();

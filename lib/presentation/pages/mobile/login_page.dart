@@ -23,8 +23,14 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
-
   final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void Login(BuildContext context) async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -42,20 +48,28 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
+      debugPrint('🔐 Firebase signIn completed, user: ${userCredential.user?.uid}');
+
       if (userCredential.user != null) {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection("users")
             .doc(userCredential.user!.uid)
             .get();
 
+        debugPrint('📄 User document exists: ${userDoc.exists}');
+
         if (userDoc.exists) {
           String role = userDoc['role'];
           
-          // Đóng loading dialog trước khi navigate
+          debugPrint('👤 User role: $role');
+          
+          // Đóng dialog ngay lập tức bất kể web hay mobile
           await DialogHelper.hideLoadingDialog(context);
           
+          debugPrint('✅ Dialog closed successfully');
+          
           if (kIsWeb) {
-            // Nếu đang trên web, mở trang admin
+            // Nếu đang trên web, navigate manually
             if (role == 'admin') {
               if (mounted) {
                 Navigator.pushReplacement(
@@ -75,11 +89,20 @@ class _LoginPageState extends State<LoginPage> {
               }
             }
           } else {
-            // Nếu đang trên di động, để StreamBuilder tự động navigate
-            // Không cần pushReplacement vì main.dart đã handle bằng authStateChanges
+            // Nếu đang trên di động, để authStateChanges handle navigation
             if (mounted) {
-              // Chỉ đóng dialog, để authStateChanges tự động chuyển trang
-              debugPrint('✅ Login successful, letting authStateChanges handle navigation');
+              debugPrint('✅ Login successful, dialog closed, letting authStateChanges handle navigation');
+              debugPrint('🔄 Current user: ${authService.value.currentUser?.uid}');
+              
+              // Thêm một delay nhỏ để đảm bảo auth state được persist
+              await Future.delayed(const Duration(milliseconds: 100));
+              
+              // Double check user is still authenticated
+              if (authService.value.currentUser != null) {
+                debugPrint('🔒 User still authenticated after delay');
+              } else {
+                debugPrint('⚠️ User not authenticated after delay - this is the problem!');
+              }
             }
           }
         } else {
