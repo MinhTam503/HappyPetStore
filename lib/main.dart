@@ -37,27 +37,31 @@ void main() async {
   
   try {
     await dotenv.load(fileName: ".env");
-    debugPrint('✅ Environment variables loaded successfully');
+    if (kDebugMode) {
+      debugPrint(' Environment variables loaded successfully');
+    }
   } catch (e) {
     // Non-fatal: if .env is missing on web or failed to load, continue with defaults.
-    debugPrint('⚠️ dotenv.load() failed (non-blocking): $e');
-    debugPrint('💡 App will continue with hardcoded fallback values');
+    if (kDebugMode) {
+      debugPrint(' dotenv.load() failed (non-blocking): $e');
+      debugPrint(' App will continue with hardcoded fallback values');
+    }
   }  
   
   // Initialize Stripe using helper
   final stripeInitialized = await StripeHelper.initialize();
-  if (!stripeInitialized) {
-    debugPrint('⚠️ Stripe initialization failed, payment features may not work');
+  if (!stripeInitialized && kDebugMode) {
+    debugPrint('Stripe initialization failed, payment features may not work');
   }
   
   // Setup dependency injection AFTER Firebase is initialized
   serviceLocator.setup();
   
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -118,8 +122,8 @@ class MyApp extends StatelessWidget {
                       },
                     );
               },
-              '/home': (context) => HomePageWebUser(),
-              '/cart': (context) => CartScreenWeb(),
+              '/home': (context) => const HomePageWebUser(),
+              '/cart': (context) => const CartScreenWeb(),
               '/debug': (context) => const DebugConnectionScreen(),
               '/payment-success': (context) {
                 // Parse session_id from URL

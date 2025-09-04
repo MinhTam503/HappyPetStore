@@ -37,6 +37,12 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        // Suppress third-party library warnings
+        freeCompilerArgs += [
+            "-Xno-param-assertions",
+            "-Xno-call-assertions",
+            "-Xno-receiver-assertions"
+        ]
     }
 
     defaultConfig {
@@ -51,6 +57,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Suppress third-party library warnings in debug builds
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.

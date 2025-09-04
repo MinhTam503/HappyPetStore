@@ -54,13 +54,13 @@ class StripeCheckoutService {
       }
 
       if (kDebugMode) {
-        print('✅ Checkout session created: ${checkoutData['checkout_url']}');
+        print('Checkout session created: ${checkoutData['checkout_url']}');
       }
 
       return checkoutData['checkout_url'];
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to create checkout session: $e');
+        print(' Failed to create checkout session: $e');
       }
       rethrow;
     }

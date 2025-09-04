@@ -31,25 +31,25 @@ class PaymentService {
       
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
-        print('✅ Payment intent created successfully');
+        print(' Payment intent created successfully');
         return result;
       } else {
-        print('❌ Error creating payment intent: ${response.statusCode}');
-        print('📄 Response body: ${response.body}');
+        print(' Error creating payment intent: ${response.statusCode}');
+        print(' Response body: ${response.body}');
         
         // Try to parse error message from response
         try {
           final errorData = jsonDecode(response.body);
           final errorMessage = errorData['error'] ?? 'Unknown error';
-          print('🔍 Detailed error: $errorMessage');
+          print(' Detailed error: $errorMessage');
         } catch (e) {
-          print('🔍 Raw error: ${response.body}');
+          print(' Raw error: ${response.body}');
         }
         
         return null;
       }
     } catch (e) {
-      print('❌ Exception creating payment intent: $e');
+      print(' Exception creating payment intent: $e');
       return null;
     }
   }
@@ -136,7 +136,7 @@ class PaymentService {
   /// Kiểm tra trạng thái backend
   static Future<bool> isBackendHealthy() async {
     try {
-      print('🔍 Checking backend health...');
+      print(' Checking backend health...');
       
       final response = await http.get(
         Uri.parse('$_baseUrl/status'),
@@ -146,24 +146,24 @@ class PaymentService {
         },
       ).timeout(const Duration(seconds: 10));
 
-      print('📡 Response status: ${response.statusCode}');
+      print(' Response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        print('✅ Backend health check successful!');
+        print('Backend health check successful!');
         try {
           final data = jsonDecode(response.body);
-          print('📄 Backend info: ${data['status']} - ${data['mode']}');
+          print(' Backend info: ${data['status']} - ${data['mode']}');
         } catch (e) {
-          print('📄 Response body: ${response.body}');
+          print(' Response body: ${response.body}');
         }
         return true;
       } else {
-        print('⚠️ Unexpected status code: ${response.statusCode}');
-        print('📄 Response: ${response.body}');
+        print(' Unexpected status code: ${response.statusCode}');
+        print(' Response: ${response.body}');
         return false;
       }
     } catch (e) {
-      print('❌ Health check failed: $e');
+      print(' Health check failed: $e');
       return false;
     }
   }
@@ -178,7 +178,7 @@ class PaymentService {
     required String cancelUrl,
   }) async {
     try {
-      print('🔗 Creating Stripe Checkout session: $amount $currency');
+      print(' Creating Stripe Checkout session: $amount $currency');
       
       final response = await http.post(
         Uri.parse('$_baseUrl/payment/create-checkout-session'),
@@ -203,25 +203,25 @@ class PaymentService {
       
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
-        print('✅ Checkout session created successfully');
-        print('🔗 Checkout URL: ${result['checkout_url']}');
+        print(' Checkout session created successfully');
+        print(' Checkout URL: ${result['checkout_url']}');
         return result;
       } else {
-        print('❌ Error creating checkout session: ${response.statusCode}');
-        print('📄 Response body: ${response.body}');
+        print(' Error creating checkout session: ${response.statusCode}');
+        print(' Response body: ${response.body}');
         
         try {
           final errorData = jsonDecode(response.body);
           final errorMessage = errorData['error'] ?? 'Unknown error';
-          print('🔍 Detailed error: $errorMessage');
+          print(' Detailed error: $errorMessage');
         } catch (e) {
-          print('🔍 Raw error: ${response.body}');
+          print(' Raw error: ${response.body}');
         }
         
         return null;
       }
     } catch (e) {
-      print('❌ Exception creating checkout session: $e');
+      print(' Exception creating checkout session: $e');
       return null;
     }
   }

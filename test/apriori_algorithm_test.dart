@@ -211,7 +211,7 @@ void main() {
       expect(multiBreeds.length, 3);
       expect(singleBreeds.length, 1);
       
-      print('✅ Algorithm successfully processes both single and multiple breeds');
+      print(' Algorithm successfully processes both single and multiple breeds');
       print('Multi-breed input: $multiBreeds');
       print('Single-breed input: $singleBreeds');
     });

@@ -72,9 +72,9 @@
       order_id: orderId,
       order_status: orderStatus
     }).then(function(response) {
-      console.log("✅ Email sent", response.status, response.text);
+      console.log("Email sent", response.status, response.text);
     }, function(error) {
-      console.error("❌ Failed to send email", error);
+      console.error(" Failed to send email", error);
     });
   };
 </script>

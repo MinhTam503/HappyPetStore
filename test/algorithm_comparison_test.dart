@@ -116,14 +116,14 @@ void main() {
           .toSet()
           .toList();
 
-      print('\\n✅ NEW ALGORITHM IMPROVEMENT:');
+      print('\\n NEW ALGORITHM IMPROVEMENT:');
       print('   Analyzes ALL breeds: $uniqueBreeds');
       print('   Considers associations between multiple breeds');
 
       // Act - New algorithm processes all breeds
       final newResult = await newAlgorithm.getSuggestedPetsFromMultipleBreeds(uniqueBreeds);
       
-      print('\\n📊 NEW ALGORITHM RESULTS:');
+      print('\\n NEW ALGORITHM RESULTS:');
       print('   Suggestions based on multiple breeds: ${newResult.length}');
       for (var pet in newResult) {
         print('   - ${pet.name} (${pet.breed}) - Confidence: ${pet.confidence.toStringAsFixed(2)}');
@@ -154,7 +154,7 @@ void main() {
 
       // OLD Algorithm simulation
       final firstBreedOnly = largeCartItems.first['breed'] as String;
-      print('\\n❌ OLD ALGORITHM:');
+      print('\\n OLD ALGORITHM:');
       print('   Input: $firstBreedOnly (ONLY!)');
       print('   Lost information: Persian Cat, Beagle, Labrador, Border Collie');
       print('   Result: Suggestions based on 1/5 breeds = 20% of available data');
@@ -165,21 +165,21 @@ void main() {
           .toSet()
           .toList();
       
-      print('\\n✅ NEW ALGORITHM:');
+      print('\\n NEW ALGORITHM:');
       print('   Input: $allBreeds (ALL!)');
       print('   Uses: 100% of available breed data');
       print('   Analyzes breed associations across entire purchase pattern');
 
       final newResult = await newAlgorithm.getSuggestedPetsFromMultipleBreeds(allBreeds);
       
-      print('\\n📈 IMPROVEMENT SUMMARY:');
+      print('\\n IMPROVEMENT SUMMARY:');
       print('   - Data utilization: 20% → 100% (+400%)');
       print('   - Breed analysis: Single → Multi-breed');
       print('   - Association patterns: None → Cross-breed associations');
       print('   - Suggestions quality: Basic → Advanced with confidence scores');
       print('   - Customer satisfaction: Lower → Higher (more relevant suggestions)');
       
-      print('\\n🎯 NEW ALGORITHM SUGGESTIONS:');
+      print('\\n NEW ALGORITHM SUGGESTIONS:');
       for (var pet in newResult) {
         print('   ${pet.name} (${pet.breed}) - Confidence: ${(pet.confidence * 100).toStringAsFixed(1)}%');
       }
@@ -192,7 +192,7 @@ void main() {
       final transactions = await repository.getBreedTransactions();
       
       print('\\n=== BREED ASSOCIATIONS ANALYSIS ===');
-      print('📊 Training data: ${transactions.length} orders');
+      print(' Training data: ${transactions.length} orders');
       
       // Analyze associations
       final associations = newAlgorithm.analyzeBreedAssociations(transactions);

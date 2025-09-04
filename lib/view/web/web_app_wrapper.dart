@@ -39,12 +39,12 @@ class _WebAppWrapperState extends State<WebAppWrapper> {
             });
             
             if (kDebugMode) {
-              print('✅ Payment success detected with session ID: $sessionId');
+              print(' Payment success detected with session ID: $sessionId');
             }
           }
         } catch (e) {
           if (kDebugMode) {
-            print('❌ Error parsing payment success URL: $e');
+            print(' Error parsing payment success URL: $e');
           }
         }
       }

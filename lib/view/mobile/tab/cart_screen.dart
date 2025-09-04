@@ -402,14 +402,14 @@ class _CartScreenState extends State<CartScreen> {
       );
 
       if (response.statusCode != 200) {
-        print("❌ Stripe API Error: ${response.body}");
+        print(" Stripe API Error: ${response.body}");
         return null;
       }
 
-      print("✅ Payment intent created successfully");
+      print(" Payment intent created successfully");
       return jsonDecode(response.body);
     } catch (error) {
-      print("❌ Stripe Error: $error");
+      print(" Stripe Error: $error");
       return null;
     }
   }

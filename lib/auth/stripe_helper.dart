@@ -9,7 +9,7 @@ class StripeHelper {
   static Future<bool> initialize() async {
     if (_initialized) {
       if (kDebugMode) {
-        print('✅ Stripe already initialized, skipping...');
+        print('Stripe already initialized, skipping...');
       }
       return true;
     }
@@ -18,7 +18,7 @@ class StripeHelper {
       final publishableKey = PublishableKey;
       if (publishableKey.isEmpty) {
         if (kDebugMode) {
-          print('❌ Stripe publishable key is empty; skipping initialization.');
+          print(' Stripe publishable key is empty; skipping initialization.');
         }
         return false;
       }
@@ -27,20 +27,23 @@ class StripeHelper {
       // Web payments will use Stripe.js directly in payment screens
       if (kIsWeb) {
         if (kDebugMode) {
-          print('✅ Web platform detected - Stripe.js will be used for payments');
-          print('✅ Publishable key available: ${publishableKey.substring(0, 20)}...');
+          print(' Web platform detected - Stripe.js will be used for payments');
+          print(' Publishable key available: ${publishableKey.substring(0, 20)}...');
         }
         _initialized = true;
         return true;
       }
       
       // Only initialize Flutter Stripe on mobile platforms
+      if (kDebugMode) {
+        print('🔧 Initializing Stripe for mobile platform...');
+      }
       Stripe.publishableKey = publishableKey;
       
       try {
         await Stripe.instance.applySettings();
         if (kDebugMode) {
-          print('✅ Stripe mobile settings applied successfully');
+          print('Stripe mobile settings applied successfully');
         }
       } catch (e) {
         if (kDebugMode) {
@@ -51,13 +54,13 @@ class StripeHelper {
       
       _initialized = true;
       if (kDebugMode) {
-        print('✅ Stripe mobile initialized successfully with key: ${publishableKey.substring(0, 20)}...');
+        print(' Stripe mobile initialized successfully with key: ${publishableKey.substring(0, 20)}...');
       }
       return true;
       
     } catch (e, stackTrace) {
       if (kDebugMode) {
-        print('❌ Stripe initialization failed: $e');
+        print(' Stripe initialization failed: $e');
         print('Stack trace: $stackTrace');
       }
       return false;

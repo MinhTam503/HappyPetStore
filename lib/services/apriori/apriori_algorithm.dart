@@ -9,7 +9,7 @@ class AprioriAlgorithm {
           .where("statusOrder", isEqualTo: "Completed")
           .get();
 
-      print("✅ Found ${ordersSnapshot.docs.length} completed orders");
+      print("Found ${ordersSnapshot.docs.length} completed orders");
 
       Set<String> neededProductIds = {};
       for (var doc in ordersSnapshot.docs) {
@@ -22,11 +22,11 @@ class AprioriAlgorithm {
       }
 
       if (neededProductIds.isEmpty) {
-        print("⚠️ No product IDs found in orders");
+        print(" No product IDs found in orders");
         return [];
       }
 
-      print("📦 Fetching breed info for ${neededProductIds.length} pets");
+      print(" Fetching breed info for ${neededProductIds.length} pets");
 
       // Tách ID thành nhiều phần nếu vượt quá giới hạn
       final chunks = <List<String>>[];
@@ -50,7 +50,7 @@ class AprioriAlgorithm {
         }
       }
 
-      print("🐶 Found breed info for ${productIdToBreed.length} pets");
+      print(" Found breed info for ${productIdToBreed.length} pets");
 
       List<List<String>> breedTransactions = [];
       for (var doc in ordersSnapshot.docs) {
@@ -69,10 +69,10 @@ class AprioriAlgorithm {
         }
       }
 
-      print("📊 Generated ${breedTransactions.length} breed transactions");
+      print(" Generated ${breedTransactions.length} breed transactions");
       return breedTransactions;
     } catch (e) {
-      print("❌ Error in getAllBreedTransactions: $e");
+      print(" Error in getAllBreedTransactions: $e");
       return [];
     }
   }
@@ -127,11 +127,11 @@ class AprioriAlgorithm {
 
   Future<List<Map<String, dynamic>>> getSuggestedPets(String selectedBreed) async {
     try {
-      print("🔎 Getting suggestions for breed: $selectedBreed");
+      print(" Getting suggestions for breed: $selectedBreed");
 
       final transactions = await getAllBreedTransactions();
       if (transactions.isEmpty) {
-        print("⚠️ No transactions available");
+        print(" No transactions available");
         return [];
       }
 
@@ -142,11 +142,11 @@ class AprioriAlgorithm {
       final suggestedBreeds = suggestBreeds(selectedBreed, pairCounts);
 
       if (suggestedBreeds.isEmpty) {
-        print("❗ No breeds found related to $selectedBreed");
+        print(" No breeds found related to $selectedBreed");
         return [];
       }
 
-      print("💡 Suggested breeds for $selectedBreed: $suggestedBreeds");
+      print(" Suggested breeds for $selectedBreed: $suggestedBreeds");
 
       final petsSnapshot = await FirebaseFirestore.instance
           .collection("Pets")
@@ -161,10 +161,10 @@ class AprioriAlgorithm {
       })
           .toList();
 
-      print("✅ Found ${suggestions.length} suggested pets");
+      print(" Found ${suggestions.length} suggested pets");
       return suggestions;
     } catch (e) {
-      print("❌ Error in getSuggestedPets: $e");
+      print(" Error in getSuggestedPets: $e");
       return [];
     }
   }

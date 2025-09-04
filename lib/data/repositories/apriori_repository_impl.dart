@@ -16,7 +16,7 @@ class AprioriRepositoryImpl implements AprioriRepository {
           .where("statusOrder", isEqualTo: "Completed")
           .get();
 
-      print("✅ Found ${ordersSnapshot.docs.length} completed orders");
+      print("Found ${ordersSnapshot.docs.length} completed orders");
 
       // Lấy tất cả product IDs từ orders
       Set<String> neededProductIds = {};
@@ -30,16 +30,16 @@ class AprioriRepositoryImpl implements AprioriRepository {
       }
 
       if (neededProductIds.isEmpty) {
-        print("⚠️ No product IDs found in orders");
+        print("No product IDs found in orders");
         return [];
       }
 
-      print("📦 Fetching breed info for ${neededProductIds.length} pets");
+      print(" Fetching breed info for ${neededProductIds.length} pets");
 
       // Lấy breed info từ Pets collection
       Map<String, String> productIdToBreed = await _getProductIdToBreedMapping(neededProductIds);
 
-      print("🐶 Found breed info for ${productIdToBreed.length} pets");
+      print(" Found breed info for ${productIdToBreed.length} pets");
 
       // Tạo breed transactions
       List<BreedTransaction> breedTransactions = [];
@@ -67,10 +67,10 @@ class AprioriRepositoryImpl implements AprioriRepository {
         }
       }
 
-      print("📊 Generated ${breedTransactions.length} breed transactions");
+      print("Generated ${breedTransactions.length} breed transactions");
       return breedTransactions;
     } catch (e) {
-      print("❌ Error in getBreedTransactions: $e");
+      print(" Error in getBreedTransactions: $e");
       return [];
     }
   }
@@ -100,7 +100,7 @@ class AprioriRepositoryImpl implements AprioriRepository {
           }
         }
       } catch (e) {
-        print("⚠️ Error fetching chunk: $e");
+        print(" Error fetching chunk: $e");
       }
     }
 
@@ -112,7 +112,7 @@ class AprioriRepositoryImpl implements AprioriRepository {
     try {
       if (breeds.isEmpty) return [];
 
-      print("🔎 Fetching pets for breeds: $breeds");
+      print("Fetching pets for breeds: $breeds");
 
       // Giới hạn số lượng breeds để tránh vượt quá giới hạn Firestore
       final limitedBreeds = breeds.take(10).toList();
@@ -130,10 +130,10 @@ class AprioriRepositoryImpl implements AprioriRepository {
               })
           .toList();
 
-      print("✅ Found ${pets.length} pets for suggested breeds");
+      print("Found ${pets.length} pets for suggested breeds");
       return pets;
     } catch (e) {
-      print("❌ Error in getPetsByBreeds: $e");
+      print("Error in getPetsByBreeds: $e");
       return [];
     }
   }
@@ -150,7 +150,7 @@ class AprioriRepositoryImpl implements AprioriRepository {
             'ttl': DateTime.now().add(Duration(hours: 24)).millisecondsSinceEpoch,
           });
     } catch (e) {
-      print("⚠️ Error saving analysis cache: $e");
+      print("Error saving analysis cache: $e");
     }
   }
 
@@ -173,7 +173,7 @@ class AprioriRepositoryImpl implements AprioriRepository {
       
       return data;
     } catch (e) {
-      print("⚠️ Error getting analysis cache: $e");
+      print("Error getting analysis cache: $e");
       return null;
     }
   }

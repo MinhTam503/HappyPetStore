@@ -96,12 +96,12 @@ class _CartScreenWebState extends State<CartScreenWeb> {
       await orderRef.set(orderData);
       
       if (kDebugMode) {
-        print('✅ Order saved to ordersWeb collection: ${orderRef.id}');
-        print('✅ Backend Order ID: web_demo_${DateTime.now().millisecondsSinceEpoch}');
+        print(' Order saved to ordersWeb collection: ${orderRef.id}');
+        print(' Backend Order ID: web_demo_${DateTime.now().millisecondsSinceEpoch}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error saving order: $e');
+        print(' Error saving order: $e');
       }
     }
   }
@@ -117,8 +117,8 @@ class _CartScreenWebState extends State<CartScreenWeb> {
   }) async {
     try {
       if (kDebugMode) {
-        print('💳 Navigating to Stripe Payment Screen...');
-        print('💳 Total: \$${totalAmount.toStringAsFixed(2)}');
+        print(' Navigating to Stripe Payment Screen...');
+        print(' Total: \$${totalAmount.toStringAsFixed(2)}');
       }
 
       // Navigate to Stripe Payment Screen
@@ -141,7 +141,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
       final errorMsg = "Lỗi thanh toán: $e";
       _showErrorDialog(errorMsg);
       if (kDebugMode) {
-        print('❌ Payment error: $e');
+        print(' Payment error: $e');
       }
       return false;
     }
@@ -166,7 +166,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
   // ---------------------- CHECKOUT FLOW ----------------------
   Future<void> _startCheckout(List<Map<String, dynamic>> items) async {
     if (kDebugMode) {
-      print('💳 Starting checkout process...');
+      print(' Starting checkout process...');
     }
     
     final total = _total(items);
@@ -180,15 +180,15 @@ class _CartScreenWebState extends State<CartScreenWeb> {
 
     if (info == null) {
       if (kDebugMode) {
-        print('❌ User cancelled checkout');
+        print(' User cancelled checkout');
       }
       return; // user cancel
     }
 
     if (kDebugMode) {
-      print('💳 Starting payment process...');
-      print('💳 Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
-      print('💳 Total: \$${total.toStringAsFixed(2)}');
+      print(' Starting payment process...');
+      print(' Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
+      print(' Total: \$${total.toStringAsFixed(2)}');
     }
 
     // Generate temp order ID and customer email before payment
@@ -218,7 +218,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
     
     if (!ok) {
       if (kDebugMode) {
-        print('❌ Payment failed');
+        print(' Payment failed');
       }
       return;
     }
@@ -226,7 +226,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
     if (!mounted) return;
 
     if (kDebugMode) {
-      print('✅ Payment successful!');
+      print(' Payment successful!');
     }
 
     // Update pet status to sold (like mobile version)
@@ -241,7 +241,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
         });
       } catch (e) {
         if (kDebugMode) {
-          print('⚠️ Failed to update pet status for ${item['productId']}: $e');
+          print(' Failed to update pet status for ${item['productId']}: $e');
         }
       }
     }

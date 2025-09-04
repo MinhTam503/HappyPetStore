@@ -32,30 +32,30 @@ class _DebugConnectionScreenState extends State<DebugConnectionScreen> {
       _output = 'Starting connection test...\n';
     });
 
-    _addLog('🔧 Testing PaymentService connection...');
-    _addLog('🌐 Platform info: ${PlatformInfo.getBrowserInfo()}');
+    _addLog(' Testing PaymentService connection...');
+    _addLog(' Platform info: ${PlatformInfo.getBrowserInfo()}');
     
     // Test basic health check
-    _addLog('📍 Step 1: Basic health check');
+    _addLog(' Step 1: Basic health check');
     bool healthy = await PaymentService.isBackendHealthy();
-    _addLog('Health check result: ${healthy ? '✅ PASS' : '❌ FAIL'}');
+    _addLog('Health check result: ${healthy ? 'PASS' : ' FAIL'}');
 
     // Test payment intent creation
-    _addLog('\n📍 Step 2: Payment Intent Test');
+    _addLog('\n Step 2: Payment Intent Test');
     final paymentResult = await PaymentService.createPaymentIntent(amount: 10.0);
     if (paymentResult != null) {
-      _addLog('✅ Payment intent created successfully');
+      _addLog(' Payment intent created successfully');
       _addLog('   Client secret: ${paymentResult['client_secret']?.substring(0, 50)}...');
     } else {
-      _addLog('❌ Payment intent creation failed');
+      _addLog(' Payment intent creation failed');
     }
 
     // Test current base URL
-    _addLog('\n📍 Step 3: Current configuration');
+    _addLog('\n Step 3: Current configuration');
     _addLog('Current base URL: ${PaymentService.getCurrentBaseUrl()}');
     
     // Platform security info
-    _addLog('\n📍 Step 4: Platform security info');
+    _addLog('\n Step 4: Platform security info');
     _addLog('Protocol: ${PlatformInfo.getProtocol()}');
     _addLog('Host: ${PlatformInfo.getHost()}');
     _addLog('Is HTTPS: ${PlatformInfo.isHttps()}');

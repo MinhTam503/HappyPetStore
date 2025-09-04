@@ -44,7 +44,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
     _animationController.forward();
 
     if (kDebugMode) {
-      print('✅ Payment Success Screen loaded with session ID: ${widget.sessionId}');
+      print(' Payment Success Screen loaded with session ID: ${widget.sessionId}');
     }
     
     // Save order info if session ID is available
@@ -56,7 +56,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
   Future<void> _saveSuccessfulOrder() async {
     try {
       if (kDebugMode) {
-        print('💳 Looking for pending order to update with session: ${widget.sessionId}');
+        print(' Looking for pending order to update with session: ${widget.sessionId}');
       }
       
       // Strategy 1: Find by timestamp first, then filter by tempOrderId  
@@ -83,9 +83,9 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
             if (timeDiff <= 2 && data['statusPayment'] == 'Pending Payment') {
               orderToUpdate = doc;
               if (kDebugMode) {
-                print('🔍 Found pending order by tempOrderId: ${doc.id}');
-                print('🔍 TempOrderId: $tempId');
-                print('🔍 Customer: ${data['fullName']}');
+                print(' Found pending order by tempOrderId: ${doc.id}');
+                print(' TempOrderId: $tempId');
+                print('Customer: ${data['fullName']}');
               }
               break;
             }
@@ -96,7 +96,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
       // Strategy 2: Fallback - find recent pending orders
       if (orderToUpdate == null) {
         if (kDebugMode) {
-          print('⚠️ No order found by tempOrderId, trying timestamp strategy...');
+          print(' No order found by tempOrderId, trying timestamp strategy...');
         }
         
         final allRecentOrders = await FirebaseFirestore.instance
@@ -118,7 +118,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                 data['tempOrderId'] != null) {
               orderToUpdate = doc;
               if (kDebugMode) {
-                print('🔍 Found pending order by timestamp: ${doc.id} (${timeDiff} minutes ago)');
+                print(' Found pending order by timestamp: ${doc.id} (${timeDiff} minutes ago)');
               }
               break;
             }
@@ -137,16 +137,16 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
         });
         
         if (kDebugMode) {
-          print('✅ Updated pending order with session ID: ${orderToUpdate.id}');
+          print('Updated pending order with session ID: ${orderToUpdate.id}');
           final data = orderToUpdate.data() as Map<String, dynamic>?;
-          print('✅ Order customer: ${data?['fullName'] ?? 'Unknown'}');
-          print('✅ Order total: \$${data?['totalAmount'] ?? 0}');
-          print('✅ Items count: ${(data?['items'] as List?)?.length ?? 0}');
+          print(' Order customer: ${data?['fullName'] ?? 'Unknown'}');
+          print(' Order total: \$${data?['totalAmount'] ?? 0}');
+          print(' Items count: ${(data?['items'] as List?)?.length ?? 0}');
         }
       } else {
         if (kDebugMode) {
-          print('❌ NO PENDING ORDERS FOUND - This should not happen!');
-          print('❌ Available orders in collection:');
+          print(' NO PENDING ORDERS FOUND - This should not happen!');
+          print(' Available orders in collection:');
           
           // Debug: List recent orders
           final debugOrders = await FirebaseFirestore.instance
@@ -157,13 +157,13 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
               
           for (final doc in debugOrders.docs) {
             final data = doc.data();
-            print('📋 Order ${doc.id}: status=${data['statusPayment']}, tempId=${data['tempOrderId']}');
+            print(' Order ${doc.id}: status=${data['statusPayment']}, tempId=${data['tempOrderId']}');
           }
         }
         
         // This should NOT happen anymore, but keep as safeguard
         if (kDebugMode) {
-          print('⚠️ Creating minimal fallback order (this indicates a bug)');
+          print(' Creating minimal fallback order (this indicates a bug)');
         }
         
         final orderRef = FirebaseFirestore.instance.collection('ordersWeb').doc();
@@ -178,12 +178,12 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
         });
         
         if (kDebugMode) {
-          print('✅ Created fallback order: ${orderRef.id}');
+          print(' Created fallback order: ${orderRef.id}');
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error updating order payment status: $e');
+        print(' Error updating order payment status: $e');
       }
     }
   }
