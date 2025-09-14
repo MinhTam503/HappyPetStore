@@ -23,18 +23,19 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'presentation/bloc/cartBloc/cart_bloc.dart';
 import 'firebase_options.dart';
 import 'core/di/service_locator.dart';
+import 'core/service_locator.dart' as chatbot_sl;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Use path URL strategy on web to remove the `#` from routes.
   if (kIsWeb) setPathUrlStrategy();
-  
+
   // Initialize Firebase FIRST to avoid performance issues
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   try {
     await dotenv.load(fileName: ".env");
     if (kDebugMode) {
@@ -46,17 +47,20 @@ void main() async {
       debugPrint(' dotenv.load() failed (non-blocking): $e');
       debugPrint(' App will continue with hardcoded fallback values');
     }
-  }  
-  
+  }
+
   // Initialize Stripe using helper
   final stripeInitialized = await StripeHelper.initialize();
   if (!stripeInitialized && kDebugMode) {
     debugPrint('Stripe initialization failed, payment features may not work');
   }
-  
+
   // Setup dependency injection AFTER Firebase is initialized
   serviceLocator.setup();
-  
+
+  // Initialize ChatBot dependencies
+  await chatbot_sl.setupServiceLocator();
+
   runApp(const MyApp());
 }
 
@@ -81,7 +85,8 @@ class MyApp extends StatelessWidget {
             initialRoute: '/',
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
-            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            themeMode:
+                themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             locale: localeProvider.locale,
             supportedLocales: LocaleProvider.supportedLocales,
             localizationsDelegates: const [
@@ -92,74 +97,84 @@ class MyApp extends StatelessWidget {
             ],
             onGenerateRoute: (settings) {
               // Handle payment success URL with query parameters
-              if (settings.name != null && settings.name!.startsWith('/payment-success')) {
+              if (settings.name != null &&
+                  settings.name!.startsWith('/payment-success')) {
                 final uri = Uri.parse(settings.name!);
                 final sessionId = uri.queryParameters['session_id'];
                 return MaterialPageRoute(
-                  builder: (context) => PaymentSuccessScreen(sessionId: sessionId),
+                  builder: (context) =>
+                      PaymentSuccessScreen(sessionId: sessionId),
                   settings: settings,
                 );
               }
-              
+
               // Default routes
               return null;
             },
             routes: {
               '/': (context) {
                 return kIsWeb
-                  ? const WebAppWrapper()
-                  : StreamBuilder<User?>(
-                      stream: FirebaseAuth.instance.authStateChanges(),
-                      builder: (context, snapshot) {
-                        if (kDebugMode) {
-                          debugPrint('🔄 AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
-                        }
-                        
-                        // Show loading during connection state waiting
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Scaffold(
-                            body: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  CircularProgressIndicator(color: Colors.pink),
-                                  SizedBox(height: 16),
-                                  Text('Đang kiểm tra trạng thái đăng nhập...'),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                        
-                        // User is authenticated
-                        if (snapshot.hasData) {
-                          final user = snapshot.data!;
-                          
+                    ? const WebAppWrapper()
+                    : StreamBuilder<User?>(
+                        stream: FirebaseAuth.instance.authStateChanges(),
+                        builder: (context, snapshot) {
                           if (kDebugMode) {
-                            debugPrint('✅ User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
+                            debugPrint(
+                                ' AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
                           }
-                          
-                          // Check if email is verified
-                          if (user.emailVerified) {
+
+                          // Show loading during connection state waiting
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Scaffold(
+                              body: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(
+                                        color: Colors.pink),
+                                    SizedBox(height: 16),
+                                    Text(
+                                        'Đang kiểm tra trạng thái đăng nhập...'),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          // User is authenticated
+                          if (snapshot.hasData) {
+                            final user = snapshot.data!;
+
                             if (kDebugMode) {
-                              debugPrint('✅ Email verified, navigating to BottomNavigator');
+                              debugPrint(
+                                  'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
                             }
-                            return const BottomNavigator();
+
+                            // Check if email is verified
+                            if (user.emailVerified) {
+                              if (kDebugMode) {
+                                debugPrint(
+                                    ' Email verified, navigating to BottomNavigator');
+                              }
+                              return const BottomNavigator();
+                            } else {
+                              if (kDebugMode) {
+                                debugPrint(
+                                    ' Email not verified, showing LoginOrRegister');
+                              }
+                              return const LoginOrRegister();
+                            }
                           } else {
+                            // User is not authenticated
                             if (kDebugMode) {
-                              debugPrint('❌ Email not verified, showing LoginOrRegister');
+                              debugPrint(
+                                  ' User not authenticated, showing LoginOrRegister');
                             }
                             return const LoginOrRegister();
                           }
-                        } else {
-                          // User is not authenticated
-                          if (kDebugMode) {
-                            debugPrint('❌ User not authenticated, showing LoginOrRegister');
-                          }
-                          return const LoginOrRegister();
-                        }
-                      },
-                    );
+                        },
+                      );
               },
               '/home': (context) => const HomePageWebUser(),
               '/cart': (context) => const CartScreenWeb(),
@@ -168,7 +183,8 @@ class MyApp extends StatelessWidget {
                 // Parse session_id from URL
                 String? sessionId;
                 if (kIsWeb) {
-                  final uri = Uri.parse(WidgetsBinding.instance.window.defaultRouteName);
+                  final uri = Uri.parse(
+                      WidgetsBinding.instance.window.defaultRouteName);
                   sessionId = uri.queryParameters['session_id'];
                 }
                 return PaymentSuccessScreen(sessionId: sessionId);
