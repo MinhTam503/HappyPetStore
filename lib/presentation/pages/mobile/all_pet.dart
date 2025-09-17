@@ -1,15 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
 import 'package:pet_shop/presentation/widgets/my_search_bar.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'dart:convert';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 import '../../bloc/favBloc/fav_bloc.dart';
 import '../../bloc/favBloc/fav_event.dart';
@@ -25,7 +26,6 @@ class _AllPetState extends State<AllPet> {
   String category = '';
   List<Map<String, dynamic>> groceryItems = [];
   List<Map<String, dynamic>> filterItems = [];
-  bool _isLoading = true;
   String selectedCategoryFilter = 'All';
   String priceSortOrder = 'none'; // 'asc', 'desc', 'none'
 
@@ -33,31 +33,35 @@ class _AllPetState extends State<AllPet> {
   void initState() {
     super.initState();
     fetchAllProduct();
-    final userEmail = FirebaseAuth.instance.currentUser?.email;
-    if (userEmail != null) {
-      context.read<FavBloc>().add(LoadFav(userEmail));
+    _loadUserFavorites();
+  }
+
+  void _loadUserFavorites() async {
+    UserManager userManager = UserManager();
+    final userIdentifier = await userManager.getUserIdentifier();
+    if (userIdentifier != null) {
+      context.read<FavBloc>().add(LoadFav(userIdentifier));
     }
   }
 
   Future<void> fetchAllProduct() async {
-    setState(() {
-      _isLoading = true;
-    });
 
     try {
+      // Ensure overlay is shown after first frame so Overlay.of(context) is available
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) DialogHelper.showLoadingDialog(context, message: 'Đang tải dữ liệu...');
+      });
       QuerySnapshot<Map<String, dynamic>> snapshot =
           await FirebaseFirestore.instance.collection("Pets").get();
 
       setState(() {
         groceryItems = snapshot.docs.map((docs) => docs.data()).toList();
-
         filterItems = groceryItems;
-        _isLoading = false;
       });
     } catch (e) {
       print(e.toString());
     } finally {
-      _isLoading = false;
+      if (mounted) DialogHelper.hideLoadingDialog(context);
     }
   }
 
@@ -82,6 +86,7 @@ class _AllPetState extends State<AllPet> {
 
   Future<void> searchByImage(File imageFile) async {
     try {
+      DialogHelper.showLoadingDialog(context, message: 'Đang tìm ảnh tương tự...');
       // final uri = Uri.parse('http://10.0.2.2:5000/search');
       final uri = Uri.parse('https://train-pet-image.onrender.com/search');
       var request = http.MultipartRequest('POST', uri);
@@ -112,13 +117,15 @@ class _AllPetState extends State<AllPet> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi server: ${response.statusCode}')),
+          SnackBar(content: Text('Lỗi server: ${response.statusCode}')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: $e')),
       );
+    } finally {
+      DialogHelper.hideLoadingDialog(context);
     }
   }
 
@@ -133,12 +140,23 @@ class _AllPetState extends State<AllPet> {
           .toList();
     }
     // Sắp xếp theo giá
-    if (priceSortOrder == 'asc') {
-      filtered.sort((a, b) => double.parse(a['weight'].toString())
-          .compareTo(double.parse(b['weight'].toString())));
-    } else if (priceSortOrder == 'desc') {
-      filtered.sort((a, b) => double.parse(b['weight'].toString())
-          .compareTo(double.parse(a['weight'].toString())));
+    if (priceSortOrder == 'asc' || priceSortOrder == 'desc') {
+      num parsePrice(Map<String, dynamic> item) {
+        final raw = item['price'];
+        if (raw == null) return 0;
+        if (raw is num) return raw;
+        if (raw is String) {
+          final cleaned = raw.replaceAll(RegExp(r'[^0-9]'), '');
+          return num.tryParse(cleaned) ?? 0;
+        }
+        return 0;
+      }
+
+      filtered.sort((a, b) {
+        final pa = parsePrice(a);
+        final pb = parsePrice(b);
+        return priceSortOrder == 'asc' ? pa.compareTo(pb) : pb.compareTo(pa);
+      });
     }
     setState(() {
       filterItems = filtered;
@@ -200,77 +218,74 @@ class _AllPetState extends State<AllPet> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1200),
-                  child: SingleChildScrollView(
-                    padding: pagePad,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Search
-                        MySearchBar(
-                          onSearch: searchFilterItems,
-                          onImageSearch: searchByImage,
-                        ),
-                        SizedBox(height: gap),
-
-                        // Filter bar (tự wrap)
-                        _FilterBar(
-                          selectedCategory: selectedCategoryFilter,
-                          onCategoryChanged: (v) {
-                            setState(() {
-                              selectedCategoryFilter = v;
-                              filterAndSortItems();
-                            });
-                          },
-                          priceSortOrder: priceSortOrder,
-                          onPriceOrderChanged: (v) {
-                            setState(() {
-                              priceSortOrder = v;
-                              filterAndSortItems();
-                            });
-                          },
-                        ),
-                        SizedBox(height: gap),
-
-                        // Grid responsive
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: filterItems.length,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: cross,
-                            crossAxisSpacing: gap,
-                            mainAxisSpacing: gap,
-                            childAspectRatio: aspect,
-                          ),
-                          itemBuilder: (context, index) {
-                            final pet = filterItems[index];
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        DetailPet(grocery: pet),
-                                  ),
-                                );
-                              },
-                              child: PetItemsAll(pet: pet),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: SingleChildScrollView(
+              padding: pagePad,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Search
+                  MySearchBar(
+                    onSearch: searchFilterItems,
+                    onImageSearch: searchByImage,
                   ),
-                ),
+                  SizedBox(height: gap),
+
+                  // Filter bar (tự wrap)
+                  _FilterBar(
+                    selectedCategory: selectedCategoryFilter,
+                    onCategoryChanged: (v) {
+                      setState(() {
+                        selectedCategoryFilter = v;
+                        filterAndSortItems();
+                      });
+                    },
+                    priceSortOrder: priceSortOrder,
+                    onPriceOrderChanged: (v) {
+                      setState(() {
+                        priceSortOrder = v;
+                        filterAndSortItems();
+                      });
+                    },
+                  ),
+                  SizedBox(height: gap),
+
+                  // Grid responsive
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filterItems.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: cross,
+                      crossAxisSpacing: gap,
+                      mainAxisSpacing: gap,
+                      childAspectRatio: aspect,
+                    ),
+                    itemBuilder: (context, index) {
+                      final pet = filterItems[index];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailPet(grocery: pet),
+                            ),
+                          );
+                        },
+                        child: PetItemsAll(pet: pet),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -282,7 +297,6 @@ class _FilterBar extends StatelessWidget {
   final ValueChanged<String> onPriceOrderChanged;
 
   const _FilterBar({
-    super.key,
     required this.selectedCategory,
     required this.onCategoryChanged,
     required this.priceSortOrder,
@@ -336,7 +350,7 @@ class _FilterBar extends StatelessWidget {
 class _LabeledBox extends StatelessWidget {
   final String label;
   final Widget child;
-  const _LabeledBox({super.key, required this.label, required this.child});
+  const _LabeledBox({required this.label, required this.child});
 
   @override
   Widget build(BuildContext context) {

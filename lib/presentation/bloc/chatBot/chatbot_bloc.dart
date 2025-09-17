@@ -69,13 +69,16 @@ class ChatBotBloc extends Bloc<ChatBotEvent, ChatBotState> {
       // Send message to chatbot
       final response = await sendMessageUseCase(event.userId, event.message);
 
-      // Add bot response
+      // Add bot response with all data from API
       final botMessage = ChatBotMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString() + '_bot',
         text: response.reply,
         isUser: false,
         timestamp: DateTime.now(),
         userId: event.userId,
+        pets: response.pets,
+        quickReplies: response.quickReplies,
+        actions: response.actions,
       );
 
       final finalMessages = [...updatedMessages, botMessage];
@@ -87,10 +90,25 @@ class ChatBotBloc extends Bloc<ChatBotEvent, ChatBotState> {
         currentMessages = (state as ChatBotLoaded).messages;
       }
       
-      emit(ChatBotError(
-        message: 'Failed to send message: ${e.toString()}',
-        messages: currentMessages,
-      ));
+      // Handle specific error messages
+      String errorMessage = 'Failed to send message';
+      if (e.toString().contains('Đã có lỗi xảy ra, vui lòng thử lại sau')) {
+        errorMessage = 'Đã có lỗi xảy ra, vui lòng thử lại sau';
+      } else if (e.toString().contains('Network error')) {
+        errorMessage = 'Lỗi kết nối mạng, vui lòng kiểm tra và thử lại';
+      }
+      
+      // Add error message as bot response
+      final errorBotMessage = ChatBotMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString() + '_error',
+        text: errorMessage,
+        isUser: false,
+        timestamp: DateTime.now(),
+        userId: event.userId,
+      );
+      
+      final errorMessages = [...currentMessages, errorBotMessage];
+      emit(ChatBotLoaded(messages: errorMessages, isTyping: false));
     }
   }
 

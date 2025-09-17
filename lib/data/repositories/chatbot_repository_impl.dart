@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/data/datasources/chatbot_remote_datasource.dart';
 import 'package:pet_shop/data/models/chatbot_model.dart';
 import 'package:pet_shop/domain/entities/chatbot_entity.dart';
@@ -22,6 +23,23 @@ class ChatBotRepositoryImpl implements ChatBotRepository {
       // Send message to remote chatbot service
       final response = await remoteDataSource.sendMessage(userId, message);
       
+      // Enrich pets with missing imageUrl from Firestore
+      final enrichedPets = await _enrichPetsWithImageUrl(response.pets);
+      final enrichedResponse = ChatBotResponseModel(
+        success: response.success,
+        status: response.status,
+        timestamp: response.timestamp,
+        requestId: response.requestId,
+        message: response.message,
+        messageType: response.messageType,
+        pets: enrichedPets,
+        totalFound: response.totalFound,
+        filtersApplied: response.filtersApplied,
+        pagination: response.pagination,
+        quickReplies: response.quickReplies,
+        actions: response.actions,
+      );
+      
       // Save user message to local storage
       final userMessage = ChatBotMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -32,21 +50,69 @@ class ChatBotRepositoryImpl implements ChatBotRepository {
       );
       await saveChatBotMessage(userMessage);
       
-      // Save bot response to local storage
+      // Save bot response with pets and quick replies to local storage
       final botMessage = ChatBotMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString() + '_bot',
-        text: response.reply,
+        text: enrichedResponse.message,
         isUser: false,
         timestamp: DateTime.now(),
         userId: userId,
+        pets: enrichedResponse.pets.isNotEmpty ? enrichedResponse.pets : null,
+        quickReplies: enrichedResponse.quickReplies.isNotEmpty ? enrichedResponse.quickReplies : null,
+        actions: enrichedResponse.actions.isNotEmpty ? enrichedResponse.actions : null,
       );
       await saveChatBotMessage(botMessage);
       
-      return response.toEntity();
+      return enrichedResponse.toEntity();
     } catch (e) {
       print('ChatBot Repository Error: $e');
       rethrow;
     }
+  }
+
+  Future<List<ChatBotPet>> _enrichPetsWithImageUrl(List<ChatBotPet> pets) async {
+    final enrichedPets = <ChatBotPet>[];
+    
+    for (final pet in pets) {
+      if (pet.imageUrl.isEmpty) {
+        try {
+          // Fetch pet data from Firestore
+          final doc = await FirebaseFirestore.instance
+              .collection('Pets')
+              .doc(pet.id)
+              .get();
+          
+          if (doc.exists) {
+            final data = doc.data()!;
+            final enrichedPet = ChatBotPetModel(
+              id: pet.id,
+              name: data['name'] ?? pet.name,
+              breed: data['breed'] ?? pet.breed,
+              category: data['category'] ?? pet.category,
+              age: data['age']?.toString() ?? pet.age,
+              sex: data['sex'] ?? pet.sex,
+              weight: data['weight']?.toString() ?? pet.weight,
+              price: data['price'] ?? pet.price,
+              imageUrl: data['imageUrl'] ?? '',
+              about: data['about'] ?? pet.about,
+              healthStatus: data['health_status'] ?? pet.healthStatus,
+              vaccination: data['vaccination'] ?? pet.vaccination,
+              location: data['location'] ?? pet.location,
+            );
+            enrichedPets.add(enrichedPet);
+          } else {
+            enrichedPets.add(pet);
+          }
+        } catch (e) {
+          print('Error fetching pet ${pet.id} from Firestore: $e');
+          enrichedPets.add(pet);
+        }
+      } else {
+        enrichedPets.add(pet);
+      }
+    }
+    
+    return enrichedPets;
   }
 
   @override

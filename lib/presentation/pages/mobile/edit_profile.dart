@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/list_city.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 
 
@@ -21,7 +22,7 @@ class _EditProfileState extends State<EditProfile> {
   Map<String, dynamic>? user;
   final TextEditingController displayNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  String? email = FirebaseAuth.instance.currentUser?.email;
+  String? userIdentifier;
   String imageUrl = "";
   List<String> addresses = [];
 
@@ -30,6 +31,12 @@ class _EditProfileState extends State<EditProfile> {
   @override
   void initState() {
     super.initState();
+    _initializeUser();
+  }
+
+  void _initializeUser() async {
+    UserManager userManager = UserManager();
+    userIdentifier = await userManager.getUserIdentifier();
     fetchUserData();
   }
 
@@ -184,13 +191,13 @@ class _EditProfileState extends State<EditProfile> {
                     if (selectedDistrict != null &&
                         selectedProvince != null &&
                         detail.trim().isNotEmpty &&
-                        email != null) {
+                        userIdentifier != null) {
                       final newAddress =
                           '$detail, $selectedDistrict, $selectedProvince';
 
                       final userQuery = await FirebaseFirestore.instance
                           .collection('users')
-                          .where('email', isEqualTo: email)
+                          .where(FieldPath.documentId, isEqualTo: userIdentifier)
                           .limit(1)
                           .get();
                       if (userQuery.docs.isEmpty) return;

@@ -1,13 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/all_pet.dart';
 import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
-import 'package:pet_shop/presentation/widgets/pet_items.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
+import 'package:pet_shop/presentation/widgets/popular_pet_items.dart';
+import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
+import 'package:pet_shop/presentation/bloc/popularBloc/popular_event.dart';
+import 'package:pet_shop/presentation/bloc/popularBloc/popular_state.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
@@ -31,10 +34,16 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     fetchData();
     fetchUserInfo();
-    getTop5BestSellingBreeds();
-    final userEmail = FirebaseAuth.instance.currentUser?.email;
-    if (userEmail != null) {
-      context.read<FavBloc>().add(LoadFav(userEmail));
+  // Popular breeds
+  context.read<PopularBloc>().add(const LoadPopularBreeds());
+    _loadUserFavorites();
+  }
+
+  void _loadUserFavorites() async {
+    UserManager userManager = UserManager();
+    final userIdentifier = await userManager.getUserIdentifier();
+    if (userIdentifier != null) {
+      context.read<FavBloc>().add(LoadFav(userIdentifier));
     }
   }
 
@@ -89,77 +98,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> getTop5BestSellingBreeds() async {
-    Map<String, int> breedSales = {};
-    Set<String> neededProductIds = {};
-
-    try {
-      // Lấy tất cả orders hoàn thành
-      final ordersSnapshot = await FirebaseFirestore.instance
-          .collection("orders")
-          .where("statusOrder", isEqualTo: "Completed")
-          .get();
-
-      // Thu thập tất cả productIds
-      for (var orderDoc in ordersSnapshot.docs) {
-        final orderData = orderDoc.data();
-        final items = List<Map<String, dynamic>>.from(orderData["items"]);
-
-        for (var item in items) {
-          neededProductIds.add(item["productId"]);
-        }
-      }
-
-      // Lấy tất cả thú cưng theo danh sách productId
-      final petsSnapshot = await FirebaseFirestore.instance
-          .collection("Pets")
-          .where(FieldPath.documentId, whereIn: neededProductIds.toList())
-          .get();
-
-      Map<String, String> productIdToBreed = {
-        for (var doc in petsSnapshot.docs) doc.id: doc.data()["breed"]
-      };
-
-      // Tính tổng số lượng theo breed
-      for (var orderDoc in ordersSnapshot.docs) {
-        final orderData = orderDoc.data();
-        final items = List<Map<String, dynamic>>.from(orderData["items"]);
-
-        for (var item in items) {
-          final String productId = item["productId"];
-          final int quantity = item["quantity"];
-          final String? breed = productIdToBreed[productId];
-
-          if (breed != null) {
-            breedSales[breed] = (breedSales[breed] ?? 0) + quantity;
-          }
-        }
-      }
-
-      // Lấy top 5 giống phổ biến
-      final sortedBreeds = breedSales.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      final top5Breeds = sortedBreeds.take(5).map((e) => e.key).toList();
-
-      // Lấy thú cưng tương ứng với top 5 giống
-      final topPetsSnapshot = await FirebaseFirestore.instance
-          .collection("Pets")
-          .where("breed", whereIn: top5Breeds)
-          .get();
-
-      if (!mounted) return;
-      setState(() {
-        top5BestSell = topPetsSnapshot.docs.map((doc) => doc.data()).toList();
-      });
-      print("Top 5 giống bán chạy nhất:");
-      for (var pet in top5BestSell) {
-        print("Tên: ${pet['name']}, Giống: ${pet['breed']}");
-      }
-      print("Lấy top 5 giống phổ biến thành công");
-    } catch (e) {
-      print("Lỗi khi lấy top giống phổ biến: $e");
-    }
-  }
+  // Popular Breeds logic moved into PopularBloc
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +114,8 @@ class _HomePageState extends State<HomePage> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 child: Row(
                   children: [
                     Text.rich(
@@ -264,14 +204,40 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            top5BestSell.isEmpty
-                ? const SliverToBoxAdapter(
+            BlocBuilder<PopularBloc, PopularState>(
+              builder: (context, popState) {
+                if (popState is PopularLoading || popState is PopularInitial) {
+                  return const SliverToBoxAdapter(
                     child: SizedBox(
                       height: 200,
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                  )
-                : SliverToBoxAdapter(
+                  );
+                }
+                if (popState is PopularError) {
+                  return SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: Text(
+                          popState.message,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                if (popState is PopularLoaded) {
+                  final pets = popState.pets;
+                  if (pets.isEmpty) {
+                    return const SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 200,
+                        child: Center(child: Text('Chưa có dữ liệu phổ biến')),
+                      ),
+                    );
+                  }
+                  return SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(right: 10.0),
                       child: SizedBox(
@@ -279,28 +245,35 @@ class _HomePageState extends State<HomePage> {
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemExtent: cardW,
-                          itemCount: top5BestSell.length,
+                          itemCount: pets.length,
                           itemBuilder: (context, index) {
+                            final pet = pets[index];
                             return Padding(
                               padding: const EdgeInsets.only(
                                   left: 15, top: 15, bottom: 15),
-                              child: PetItems(
-                                pet: top5BestSell[index],
+                              child: GestureDetector(
                                 onTap: () {
                                   Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => DetailPet(
-                                            grocery: top5BestSell[index]),
-                                      ));
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => DetailPet(
+                                        grocery: pet,
+                                      ),
+                                    ),
+                                  );
                                 },
+                                child: PopularPetItems(pet: pet),
                               ),
                             );
                           },
                         ),
                       ),
                     ),
-                  ),
+                  );
+                }
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              },
+            ),
 
             // Tất cả thú cưng
             SliverToBoxAdapter(
@@ -401,7 +374,8 @@ class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       height: maxExtent,
       color: secondaryColor,
@@ -413,17 +387,19 @@ class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
             mainAxisSize: MainAxisSize.min,
             children: List.generate(
               groceryCategory.length,
-                  (index) => Padding(
+              (index) => Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: GestureDetector(
                   onTap: () => onCategoryTap(groceryCategory[index]["name"]),
                   child: Container(
                     width: 90,
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        width: category == groceryCategory[index]['name'] ? 2 : 1,
+                        width:
+                            category == groceryCategory[index]['name'] ? 2 : 1,
                       ),
                       color: category == groceryCategory[index]['name']
                           ? primaryColor
@@ -454,9 +430,10 @@ class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontWeight: category == groceryCategory[index]['name']
-                                ? FontWeight.bold
-                                : FontWeight.w500,
+                            fontWeight:
+                                category == groceryCategory[index]['name']
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
                             fontSize: 12,
                           ),
                         ),

@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 import '../detail_pet.dart';
 
@@ -17,22 +18,27 @@ class FavoriteScreen extends StatefulWidget {
 }
 
 class _FavoriteScreenState extends State<FavoriteScreen> {
-  late String? userEmail;
+  late String? userIdentifier;
 
   @override
   void initState() {
     super.initState();
-    userEmail = FirebaseAuth.instance.currentUser?.email;
-    if (userEmail != null) {
-      context.read<FavBloc>().add(LoadFav(userEmail!));
+    _initializeUser();
+  }
+
+  void _initializeUser() async {
+    UserManager userManager = UserManager();
+    userIdentifier = await userManager.getUserIdentifier();
+    if (userIdentifier != null) {
+      context.read<FavBloc>().add(LoadFav(userIdentifier!));
     }
   }
 
   int _computeCrossAxisCount(double width) {
-    if (width < 500) return 1;       // phone
-    if (width < 800) return 2;       // small tablet
-    if (width < 1200) return 3;      // large tablet / small desktop
-    return 4;                        // desktop
+    if (width < 500) return 1; // phone
+    if (width < 800) return 2; // small tablet
+    if (width < 1200) return 3; // large tablet / small desktop
+    return 4; // desktop
     // Tùy dự án, bạn có thể tinh chỉnh breakpoints này.
   }
 
@@ -72,7 +78,8 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.favorite_border, size: 56, color: Colors.black26),
+                      Icon(Icons.favorite_border,
+                          size: 56, color: Colors.black26),
                       const SizedBox(height: 10),
                       Text(
                         "No Favorite yet",
@@ -83,7 +90,8 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                       const SizedBox(height: 4),
                       Text(
                         "Hãy thêm vài thú cưng vào danh sách yêu thích nhé!",
-                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.black54),
                       ),
                     ],
                   ),
@@ -94,7 +102,8 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;
                   final crossAxisCount = _computeCrossAxisCount(width);
-                  final aspect = _computeChildAspectRatio(crossAxisCount, width);
+                  final aspect =
+                      _computeChildAspectRatio(crossAxisCount, width);
 
                   return GridView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -115,16 +124,21 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                             .doc(productId)
                             .get(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
                             return const _FavoriteSkeleton();
                           }
-                          if (!snapshot.hasData || !(snapshot.data?.exists ?? false)) {
-                            return const _ErrorCard(message: 'Error loading favorites');
+                          if (!snapshot.hasData ||
+                              !(snapshot.data?.exists ?? false)) {
+                            return const _ErrorCard(
+                                message: 'Error loading favorites');
                           }
 
-                          final itemData = snapshot.data!.data() as Map<String, dynamic>?;
+                          final itemData =
+                              snapshot.data!.data() as Map<String, dynamic>?;
                           if (itemData == null) {
-                            return const _ErrorCard(message: 'No data available for this favorite');
+                            return const _ErrorCard(
+                                message: 'No data available for this favorite');
                           }
 
                           return _FavoriteCard(
@@ -133,16 +147,20 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => DetailPet(grocery: itemData),
+                                  builder: (context) =>
+                                      DetailPet(grocery: itemData),
                                 ),
                               );
                             },
                             onDelete: () {
-                              if (userEmail != null) {
-                                context.read<FavBloc>().add(RemoveFromFav(userEmail!, productId));
+                              if (userIdentifier != null) {
+                                context
+                                    .read<FavBloc>()
+                                    .add(RemoveFromFav(userIdentifier!, productId));
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Đã có lỗi xảy ra")),
+                                  const SnackBar(
+                                      content: Text("Đã có lỗi xảy ra")),
                                 );
                               }
                             },
@@ -179,7 +197,7 @@ class _FavoriteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = (data["name"] ?? "").toString();
-    final weight = data["weight"];
+    final price = data["price"];
     final imageUrl = (data["imageUrl"] ?? "").toString();
 
     return Material(
@@ -214,19 +232,21 @@ class _FavoriteCard extends StatelessWidget {
                         aspectRatio: 1, // vuông
                         child: imageUrl.isNotEmpty
                             ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey.shade200,
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.broken_image_outlined),
-                          ),
-                        )
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: Colors.grey.shade200,
+                                  alignment: Alignment.center,
+                                  child:
+                                      const Icon(Icons.broken_image_outlined),
+                                ),
+                              )
                             : Container(
-                          color: Colors.grey.shade200,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.image_not_supported_outlined),
-                        ),
+                                color: Colors.grey.shade200,
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                    Icons.image_not_supported_outlined),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -247,8 +267,7 @@ class _FavoriteCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            // Dùng weight như giá/khối lượng tuỳ bạn đặt field
-                            "\$ ${weight ?? '--'}",
+                            CurrencyHelper.formatVND(price),
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey.shade800,

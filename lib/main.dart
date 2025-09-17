@@ -10,6 +10,7 @@ import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/debug_connection.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 import 'package:pet_shop/core/providers/theme_provider.dart';
+import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/pages/mobile/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
@@ -24,6 +25,7 @@ import 'presentation/bloc/cartBloc/cart_bloc.dart';
 import 'firebase_options.dart';
 import 'core/di/service_locator.dart';
 import 'core/service_locator.dart' as chatbot_sl;
+import 'core/services/user_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +63,9 @@ void main() async {
   // Initialize ChatBot dependencies
   await chatbot_sl.setupServiceLocator();
 
+  // Initialize UserManager for centralized user state management
+  await userManager.initialize();
+
   runApp(const MyApp());
 }
 
@@ -74,6 +79,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => CartBloc()),
         BlocProvider(create: (_) => FavBloc()),
         BlocProvider(create: (_) => CartBlocWeb()),
+        BlocProvider(create: (_) => PopularBloc()),
         BlocProvider(create: (_) => serviceLocator.createAprioriBloc()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),

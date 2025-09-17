@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 
 import '../../components/empty_state.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import '../../model/pet_model.dart';
 
 import 'components/pet_card.dart';
@@ -23,7 +24,6 @@ class PetsAdmin extends StatefulWidget {
 
 class _PetsState extends State<PetsAdmin> {
   Uint8List? _imageBytes;
-  String? _fileName;
 
   final CollectionReference petsCollection =
       FirebaseFirestore.instance.collection('Pets');
@@ -81,8 +81,7 @@ class _PetsState extends State<PetsAdmin> {
     if (result != null) {
       setState(() {
         _imageBytes = result.files.first.bytes;
-        final ext = result.files.first.extension;
-        _fileName = "uploaded_image.${ext ?? 'jpg'}";
+  // filename not used; only upload image bytes
       });
     }
   }
@@ -106,7 +105,7 @@ class _PetsState extends State<PetsAdmin> {
       'breed': pet.breed,
       'about': pet.about,
       'sex': pet.gender,
-      'weight': pet.weight,
+      'price': pet.price ?? pet.weight,
     });
     callTrainAPI();
     setState(() => isLoading = false);
@@ -146,7 +145,7 @@ class _PetsState extends State<PetsAdmin> {
       'breed': pet.breed,
       'about': pet.about,
       'sex': pet.gender,
-      'weight': pet.weight,
+      'price': pet.price ?? pet.weight,
     });
     setState(() => isLoading = false);
   }
@@ -410,7 +409,7 @@ class _PetsState extends State<PetsAdmin> {
     final ageController = TextEditingController(text: pet?.age);
     final aboutController = TextEditingController(text: pet?.about);
     final genderController = TextEditingController(text: pet?.gender);
-    final weightController = TextEditingController(text: pet?.weight);
+  final weightController = TextEditingController(text: pet?.price?.toString() ?? pet?.weight ?? '');
 
     String pickedCategory = pet?.category ?? 'Dogs';
 
@@ -655,7 +654,8 @@ class _PetsState extends State<PetsAdmin> {
                       breed: selectedBreed ?? '',
                       about: aboutController.text,
                       gender: genderController.text,
-                      weight: weightController.text,
+                      weight: pet?.weight ?? '',
+                      price: weightController.text,
                     );
 
                     if (pet == null) {
@@ -735,7 +735,7 @@ class _PetsState extends State<PetsAdmin> {
                     const SizedBox(height: 16),
                     _infoRow(Icons.category, 'Category', pet.category),
                     _infoRow(Icons.pets, 'Breed', pet.breed),
-                    _infoRow(Icons.price_change, 'Price', '\$ ${pet.weight}'),
+                    _infoRow(Icons.price_change, 'Price', CurrencyHelper.formatVND(pet.price ?? pet.weight)),
                     _infoRow(Icons.cake, 'Age', '${pet.age} years'),
                     _infoRow(Icons.male, 'Gender', pet.gender),
                     _infoRow(

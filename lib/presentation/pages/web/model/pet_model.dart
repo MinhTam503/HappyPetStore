@@ -12,6 +12,7 @@ class Pet {
 
   final String gender;
   final String weight;
+  final dynamic price; // could be number or string in Firestore
 
   Pet({
     required this.id,
@@ -25,6 +26,7 @@ class Pet {
 
     required this.gender,
     required this.weight,
+    required this.price,
   });
 
   factory Pet.fromDocument(DocumentSnapshot doc) {
@@ -40,6 +42,7 @@ class Pet {
       about: data['about'] ?? '',
       gender: data['sex'] ?? '',
       weight: data['weight'] ?? '',
+      price: data['price'],
     );
   }
 }

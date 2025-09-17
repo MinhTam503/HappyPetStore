@@ -1,3 +1,4 @@
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -74,7 +75,10 @@ class PetCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('\$${pet.weight}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+          Text(CurrencyHelper.formatVND(pet.price ?? pet.weight),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold)),
                 ],
               ),
             ),

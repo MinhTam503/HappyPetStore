@@ -1,12 +1,14 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:provider/provider.dart';
 
 import '../bloc/model/cart_model.dart';
+
 class CartItem extends StatelessWidget {
   final CartModel cart;
 
@@ -15,7 +17,7 @@ class CartItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 13,left: 10,right: 10),
+      margin: const EdgeInsets.only(bottom: 13, left: 10, right: 10),
       child: Stack(
         children: [
           Row(
@@ -68,7 +70,7 @@ class CartItem extends StatelessWidget {
                                     color: Colors.black),
                               ),
                               Text(
-                                cart.grocery['price'],
+                                CurrencyHelper.formatVND(cart.grocery['price']),
                                 style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -77,7 +79,6 @@ class CartItem extends StatelessWidget {
                             ],
                           ),
                         ),
-
                       ],
                     ),
                   )
@@ -89,15 +90,17 @@ class CartItem extends StatelessWidget {
               right: 10,
               bottom: 40,
               child: GestureDetector(
-                onTap: () {
-                  String? userEmail = FirebaseAuth.instance.currentUser?.email;
-                  if (userEmail == null) {
+                onTap: () async {
+                  UserManager userManager = UserManager();
+                  String? userIdentifier = await userManager.getUserIdentifier();
+                  if (userIdentifier == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Something is wrong")),
+                      const SnackBar(content: Text("Please login to continue")),
                     );
                     return;
                   }
-                  context.read<CartBloc>().add(RemoveFromCart(userEmail, cart.grocery['productId']));
+                  context.read<CartBloc>().add(
+                      RemoveFromCart(userIdentifier, cart.grocery['productId']));
                 },
                 child: const Icon(
                   Icons.cancel_rounded,

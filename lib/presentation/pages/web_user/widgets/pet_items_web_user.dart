@@ -1,6 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
@@ -10,6 +9,7 @@ import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:provider/provider.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 class PetItemsWebUser extends StatefulWidget {
   final Map<String, dynamic> pet;
@@ -90,7 +90,7 @@ class _PetItemsState extends State<PetItemsWebUser> {
                       letterSpacing: -1),
                 ),
                 Text(
-                  "${widget.pet['weight']}",
+                  CurrencyHelper.formatVND(widget.pet['price']),
                   style: const TextStyle(
                       fontSize: 18,
                       color: Colors.black,
@@ -118,30 +118,30 @@ class _PetItemsState extends State<PetItemsWebUser> {
                       ),
                     ),
                     child: GestureDetector(
-                      onTap: () {
-                        String? userEmail =
-                            FirebaseAuth.instance.currentUser?.email;
-                        if (userEmail == null) {
+                      onTap: () async {
+                        UserManager userManager = UserManager();
+                        String? userIdentifier = await userManager.getUserIdentifier();
+                        if (userIdentifier == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Something is wrong")),
+                            const SnackBar(content: Text("Please login to continue")),
                           );
                           return;
                         }
                         if (!isFavorite) {
                           context.read<FavBloc>().add(
                                 AddToFav(
-                                  userEmail,
+                                  userIdentifier,
                                   {
                                     'productId': widget.pet['id'],
                                     'name': widget.pet['name'],
                                     'imageUrl': widget.pet['imageUrl'],
-                                    'price': widget.pet['weight'],
+                                    'price': widget.pet['price'],
                                   },
                                 ),
                               );
                         } else {
                           context.read<FavBloc>().add(RemoveFromFav(
-                                userEmail,
+                                userIdentifier,
                                 widget.pet['id'],
                               ));
                         }
@@ -184,24 +184,24 @@ class _PetItemsState extends State<PetItemsWebUser> {
                           }
                         },
                         child: GestureDetector(
-                          onTap: () {
-                            String? userEmail =
-                                FirebaseAuth.instance.currentUser?.email;
-                            if (userEmail == null) {
+                          onTap: () async {
+                            UserManager userManager = UserManager();
+                            String? userIdentifier = await userManager.getUserIdentifier();
+                            if (userIdentifier == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                    content: Text("Something is wrong")),
+                                    content: Text("Please login to continue")),
                               );
                               return;
                             }
                             context.read<CartBloc>().add(
                                   AddToCart(
-                                    userEmail,
+                                    userIdentifier,
                                     {
                                       'productId': widget.pet['id'],
                                       'name': widget.pet['name'],
                                       'imageUrl': widget.pet['imageUrl'],
-                                      'price': widget.pet['weight'],
+                                      'price': widget.pet['price'],
                                     },
                                   ),
                                 );

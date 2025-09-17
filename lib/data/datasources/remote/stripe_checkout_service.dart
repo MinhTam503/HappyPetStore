@@ -41,7 +41,7 @@ class StripeCheckoutService {
           'productId': (item['productId'] ?? item['id'])?.toString(),
           'name': item['name'],
           'breed': item['breed'],
-          'price': item['price'] ?? item['weight'],
+          'price': item['price'],
           'imageUrl': item['imageUrl'],
           'quantity': item['quantity'] ?? 1,
         }).toList(),

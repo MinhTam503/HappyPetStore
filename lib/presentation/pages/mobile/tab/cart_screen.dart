@@ -5,11 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:http/http.dart' as http;
-import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/payment/keys.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/presentation/pages/mobile/orderSuccess.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 import '../../../bloc/model/cart_model.dart';
 import '../../../bloc/apriori/apriori_bloc.dart';
 import '../../../bloc/apriori/apriori_event.dart';
@@ -31,7 +32,8 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   Map<String, dynamic>? intentPaymentData;
-  String? email = FirebaseAuth.instance.currentUser?.email;
+  final UserManager userManager = UserManager();
+  String? userIdentifier;
 
   // Thêm biến cho phương thức thanh toán và địa chỉ
   String paymentMethod = 'paypal';
@@ -42,29 +44,41 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
-    if (email != null) {
-      context.read<CartBloc>().add(LoadCart(email!));
+    _initializeUser();
+  }
+
+  Future<void> _initializeUser() async {
+    userIdentifier = await userManager.getUserIdentifier();
+    if (userIdentifier != null) {
+      context.read<CartBloc>().add(LoadCart(userIdentifier!));
       fetchAddresses();
       fetchUserInfo();
     }
   }
 
   Future<void> fetchAddresses() async {
-    if (email == null) return;
-    final userQuery = await FirebaseFirestore.instance
+    if (userIdentifier == null) return;
+
+    // Try to get user info from current user first
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    // Use UID to query user document
+    final userDoc = await FirebaseFirestore.instance
         .collection('users')
-        .where('email', isEqualTo: email)
-        .limit(1)
+        .doc(currentUser.uid)
         .get();
-    if (userQuery.docs.isEmpty) {
+
+    if (!userDoc.exists) {
       setState(() {
         addresses = [];
         selectedAddress = null;
       });
       return;
     }
-    final userDoc = userQuery.docs.first.data();
-    var addr = userDoc['address'];
+
+    final userData = userDoc.data()!;
+    var addr = userData['address'];
     if (addr == null || (addr is String && addr.isEmpty)) {
       setState(() {
         addresses = [];
@@ -79,8 +93,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> fetchUserInfo() async {
-    if (email == null) return;
-    userInfo = await authService.value.getInfoUserFromEmail(email!);
+    if (userIdentifier == null) return;
+    userInfo = await userManager.getCurrentUserInfo();
     setState(() {});
   }
 
@@ -93,19 +107,21 @@ class _CartScreenState extends State<CartScreen> {
         .toSet() // Remove duplicates
         .toList();
 
-    print('🌱 FP-Growth analysis: Found ${breeds.length} unique breeds: $breeds');
+    print(
+        '🌱 FP-Growth analysis: Found ${breeds.length} unique breeds: $breeds');
 
     // Use Apriori BLoC for breed analysis
     context.read<AprioriBloc>().add(GetSuggestionsFromMultipleBreeds(breeds));
 
     // Listen to BLoC state and navigate when loaded
     final aprioriBloc = context.read<AprioriBloc>();
-    
+
     aprioriBloc.stream.listen((state) {
       if (state is AprioriLoaded) {
         // Convert to old format for compatibility
-        final suggestions = state.suggestions.map((pet) => pet.toMap()).toList();
-        
+        final suggestions =
+            state.suggestions.map((pet) => pet.toMap()).toList();
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -199,18 +215,22 @@ class _CartScreenState extends State<CartScreen> {
                     if (selectedProvince != null &&
                         selectedDistrict != null &&
                         detail.trim().isNotEmpty &&
-                        email != null) {
+                        userIdentifier != null) {
                       final newAddress =
                           '$detail, $selectedDistrict, $selectedProvince';
-                      final userQuery = await FirebaseFirestore.instance
+
+                      final currentUser = FirebaseAuth.instance.currentUser;
+                      if (currentUser == null) return;
+
+                      final userRef = FirebaseFirestore.instance
                           .collection('users')
-                          .where('email', isEqualTo: email)
-                          .limit(1)
-                          .get();
-                      if (userQuery.docs.isEmpty) return;
-                      final userRef = userQuery.docs.first.reference;
-                      final userDoc = userQuery.docs.first.data();
-                      var addr = userDoc['address'];
+                          .doc(currentUser.uid);
+                      final userDoc = await userRef.get();
+
+                      if (!userDoc.exists) return;
+
+                      final userData = userDoc.data()!;
+                      var addr = userData['address'];
                       if (addr == null || (addr is String && addr.isEmpty)) {
                         await userRef.update({
                           'address': [newAddress]
@@ -251,13 +271,14 @@ class _CartScreenState extends State<CartScreen> {
     return carts.fold(
       0.0,
       (sum, item) {
-        final weight = double.tryParse(item.grocery["price"].toString()) ?? 0.0;
-        return sum + (item.quantity * weight);
+        final price = double.tryParse(item.grocery["price"].toString()) ?? 0.0;
+        return sum + (item.quantity * price);
       },
     );
   }
 
-  Future<void> saveOrderToFirestore(String email, List<CartModel> cartItems,
+  Future<void> saveOrderToFirestore(
+      String userIdentifier, List<CartModel> cartItems,
       {bool isPaid = true}) async {
     final totalAmount = _calculateTotal(cartItems);
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
@@ -275,7 +296,9 @@ class _CartScreenState extends State<CartScreen> {
         petData['productId'] = petDoc.id;
         petData['id'] = petDoc.id; // Thêm id
         petData['breed'] = petDoc.get('breed'); // Đảm bảo lưu breed
-        petData['price'] = petDoc.get('weight');
+        petData['price'] = petDoc.data().toString().contains('price')
+            ? petDoc.get('price')
+            : petDoc.get('weight');
         petData['quantity'] = item.quantity;
         print("Saving pet data with breed: ${petData['breed']}");
       } else {
@@ -292,7 +315,7 @@ class _CartScreenState extends State<CartScreen> {
 
     final orderData = {
       "orderId": orderRef.id,
-      "email": email,
+      "userIdentifier": userIdentifier, // Changed from email to userIdentifier
       "phone": userInfo != null ? userInfo!["phone"] ?? "" : "",
       "totalAmount": totalAmount,
       "statusPayment": isPaid
@@ -308,7 +331,8 @@ class _CartScreenState extends State<CartScreen> {
     await orderRef.set(orderData);
   }
 
-  Future<void> showPaymentSheet(String email, List<CartModel> cartItems) async {
+  Future<void> showPaymentSheet(
+      String userIdentifier, List<CartModel> cartItems) async {
     try {
       await Stripe.instance.presentPaymentSheet();
 
@@ -327,12 +351,12 @@ class _CartScreenState extends State<CartScreen> {
         }
       }
 
-      await saveOrderToFirestore(email, cartItems, isPaid: true);
-      context.read<CartBloc>().add(ClearCart(email));
+      await saveOrderToFirestore(userIdentifier, cartItems, isPaid: true);
+      context.read<CartBloc>().add(ClearCart(userIdentifier));
 
       // Chuẩn bị suggestions cho OrderSuccess với improved algorithm
       if (!context.mounted) return;
-      
+
       // Use new multi-breed analysis instead of single breed
       onOrderSuccessWithSuggestions(cartItems);
 
@@ -373,16 +397,20 @@ class _CartScreenState extends State<CartScreen> {
   Future<Map<String, dynamic>?> makeIntentForPayment(amount, currency) async {
     try {
       // Debug: Check if keys are available (safe substring)
-      final pubKeyPreview = PublishableKey.length > 20 
-          ? "${PublishableKey.substring(0, 20)}..." 
-          : PublishableKey.isNotEmpty ? "$PublishableKey (short)" : "EMPTY!";
-      final secKeyPreview = SecretKey.length > 20 
-          ? "${SecretKey.substring(0, 20)}..." 
-          : SecretKey.isNotEmpty ? "$SecretKey (short)" : "EMPTY!";
-      
+      final pubKeyPreview = PublishableKey.length > 20
+          ? "${PublishableKey.substring(0, 20)}..."
+          : PublishableKey.isNotEmpty
+              ? "$PublishableKey (short)"
+              : "EMPTY!";
+      final secKeyPreview = SecretKey.length > 20
+          ? "${SecretKey.substring(0, 20)}..."
+          : SecretKey.isNotEmpty
+              ? "$SecretKey (short)"
+              : "EMPTY!";
+
       print("🔐 PublishableKey: $pubKeyPreview");
       print("🔐 SecretKey: $secKeyPreview");
-      
+
       if (SecretKey.isEmpty) {
         print("❌ ERROR: SecretKey is empty!");
         return null;
@@ -416,7 +444,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  void paymentInit(double amount, String currency, String email,
+  void paymentInit(double amount, String currency, String userIdentifier,
       List<CartModel> carts) async {
     try {
       intentPaymentData = await makeIntentForPayment(amount, currency);
@@ -431,7 +459,7 @@ class _CartScreenState extends State<CartScreen> {
         ),
       );
 
-      showPaymentSheet(email, carts);
+      showPaymentSheet(userIdentifier, carts);
     } catch (e, s) {
       print("Payment Init Error: $e\n$s");
     }
@@ -460,7 +488,7 @@ class _CartScreenState extends State<CartScreen> {
         if (breed != null) {
           // Use Apriori BLoC instead of FP-Growth
           context.read<AprioriBloc>().add(GetSuggestionsFromSingleBreed(breed));
-          
+
           // For now, return empty list - suggestions will be handled by BLoC
           // This method should be refactored to use BLoC properly
           print("Triggered Apriori BLoC analysis for breed: $breed");
@@ -490,6 +518,7 @@ class _CartScreenState extends State<CartScreen> {
       return null;
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -519,7 +548,14 @@ class _CartScreenState extends State<CartScreen> {
               }
               List<CartModel> carts = cartItems.map((item) {
                 return CartModel(
-                  grocery: item,
+                  grocery: {
+                    ...item,
+                    'price':
+                        item["price"]?.toString() ?? '0', // Convert to String
+                    'productId': item["productId"]?.toString() ?? '',
+                    'name': item["name"]?.toString() ?? '',
+                    'imageUrl': item["imageUrl"]?.toString() ?? '',
+                  },
                   quantity: item["quantity"] ?? 1,
                 );
               }).toList();
@@ -634,7 +670,7 @@ class _CartScreenState extends State<CartScreen> {
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black)),
                             Text(
-                              "\$${totalPrice.toStringAsFixed(2)}",
+                              CurrencyHelper.formatVND(totalPrice),
                               style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -676,22 +712,23 @@ class _CartScreenState extends State<CartScreen> {
                                 );
                                 return;
                               }
-                              final userEmail = email;
-                              if (userEmail == null) return;
+                              final currentUserIdentifier = userIdentifier;
+                              if (currentUserIdentifier == null) return;
 
                               if (paymentMethod == 'paypal') {
                                 print("Starting PayPal payment...");
-                                paymentInit(
-                                    totalPrice, "usd", userEmail, carts);
+                                paymentInit(totalPrice, "usd",
+                                    currentUserIdentifier, carts);
                               } else {
                                 print("Starting COD payment process...");
-                                await saveOrderToFirestore(userEmail, carts,
+                                await saveOrderToFirestore(
+                                    currentUserIdentifier, carts,
                                     isPaid: false);
 
                                 // Xóa giỏ hàng
                                 context
                                     .read<CartBloc>()
-                                    .add(ClearCart(userEmail));
+                                    .add(ClearCart(currentUserIdentifier));
                                 print("Cart cleared");
 
                                 // Lấy thông tin breed từ Firestore
@@ -712,8 +749,10 @@ class _CartScreenState extends State<CartScreen> {
                                     print("Found breed from Firestore: $breed");
                                     if (breed != null) {
                                       // Use Apriori BLoC for analysis
-                                      context.read<AprioriBloc>().add(GetSuggestionsFromSingleBreed(breed));
-                                      print("Triggered Apriori BLoC analysis for breed: $breed");
+                                      context.read<AprioriBloc>().add(
+                                          GetSuggestionsFromSingleBreed(breed));
+                                      print(
+                                          "Triggered Apriori BLoC analysis for breed: $breed");
                                       // Note: suggestions will be handled by BLoC listener in the widget
                                     }
                                   } else {

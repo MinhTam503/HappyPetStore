@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
@@ -709,9 +710,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                   title: Text(name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis),
-                                  subtitle: Text('Qty: $qty • Price: \$$price'),
+                                  subtitle: Text('Qty: $qty • Price: ${CurrencyHelper.formatVND(price)}'),
                                   trailing: Text(
-                                    '\$${_safeMul(price, qty)}',
+                                    CurrencyHelper.formatVND(_safeMul(price, qty)),
                                     style: const TextStyle(
                                         color: primaryColor,
                                         fontWeight: FontWeight.w600),

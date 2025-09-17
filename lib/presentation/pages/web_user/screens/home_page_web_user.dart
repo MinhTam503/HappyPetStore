@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
 import 'package:pet_shop/presentation/pages/web_user/widgets/all_pet_item_web.dart';
 import 'package:pet_shop/presentation/widgets/my_search_bar.dart';
 import 'dart:io';
@@ -29,7 +27,6 @@ class _AllPetState extends State<HomePageWebUser> {
   void initState() {
     super.initState();
     fetchAllProduct();
-    final userEmail = FirebaseAuth.instance.currentUser?.email;
   }
 
   Future<void> fetchAllProduct() async {
@@ -135,11 +132,11 @@ class _AllPetState extends State<HomePageWebUser> {
     }
     // Sắp xếp theo giá
     if (priceSortOrder == 'asc') {
-      filtered.sort((a, b) => double.parse(a['weight'].toString())
-          .compareTo(double.parse(b['weight'].toString())));
+    filtered.sort((a, b) => double.parse((a['price'] ?? 0).toString())
+      .compareTo(double.parse((b['price'] ?? 0).toString())));
     } else if (priceSortOrder == 'desc') {
-      filtered.sort((a, b) => double.parse(b['weight'].toString())
-          .compareTo(double.parse(a['weight'].toString())));
+    filtered.sort((a, b) => double.parse((b['price'] ?? 0).toString())
+      .compareTo(double.parse((a['price'] ?? 0).toString())));
     }
     setState(() {
       filterItems = filtered;

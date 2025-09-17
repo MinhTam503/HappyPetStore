@@ -1,14 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+// import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/StoreInfoScreen.dart';
-
 import '../../bloc/favBloc/fav_bloc.dart';
 import '../../bloc/favBloc/fav_event.dart';
 import '../../bloc/favBloc/fav_state.dart';
 import '../../widgets/pet_items_all.dart';
+// import 'package:pet_shop/core/utils/currency_helper.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
+import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
+import 'package:pet_shop/presentation/bloc/cartBloc/cart_state.dart';
 
 class DetailPet extends StatefulWidget {
   final Map<String, dynamic> grocery;
@@ -22,566 +27,375 @@ class DetailPet extends StatefulWidget {
 class _DetailPetState extends State<DetailPet> {
   bool isExpand = false;
   List<Map<String, dynamic>> petItems = [];
-  bool _isLoading = true;
+  final UserManager userManager = UserManager();
 
   @override
   void initState() {
     super.initState();
-    similarPets();
+    fetchPetData();
   }
 
-  Future<void> similarPets() async {
-    setState(() => _isLoading = true);
-
+  Future<void> fetchPetData() async {
     try {
-      final firestore = FirebaseFirestore.instance;
-
-      List<Map<String, dynamic>> extractPets(QuerySnapshot snapshot) {
-        return snapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .where((pet) => pet['name'] != widget.grocery['name'])
-            .toList();
-      }
-
-      final breedSnap = await firestore
-          .collection("Pets")
-          .where("breed", isEqualTo: widget.grocery['breed'])
-          .get();
-
-      final categorySnap = await firestore
-          .collection("Pets")
-          .where("category", isEqualTo: widget.grocery['category'])
-          .where("breed", isNotEqualTo: widget.grocery['breed'])
-          .get();
-
-      if (!mounted) return;
+      QuerySnapshot<Map<String, dynamic>> snapshot =
+          await FirebaseFirestore.instance.collection("Pets").get();
 
       setState(() {
-        petItems = extractPets(breedSnap)..addAll(extractPets(categorySnap));
+        petItems = snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
       });
     } catch (e) {
-      // chỉ log
-      // print("Lỗi khi lọc thú cưng: $e");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      print('Lỗi khi tải dữ liệu: $e');
     }
   }
 
-  // Tính số cột responsive cho “Sản phẩm tương tự”
-  int _cols(double width) {
-    if (width < 420) return 2;
-    if (width < 720) return 3;
-    if (width < 1024) return 4;
-    return 5;
+  Future<void> _addToCart() async {
+    try {
+      // Kiểm tra đăng nhập sử dụng UserManager (hỗ trợ tất cả phương thức đăng nhập)
+      final userIdentifier = await userManager.getUserIdentifier();
+      if (userIdentifier == null) {
+        _showMessage('Vui lòng đăng nhập để thêm vào giỏ hàng');
+        return;
+      }
+
+      // Kiểm tra thông tin người dùng đầy đủ cho checkout
+      final hasCompleteInfo = await userManager.hasCompleteUserInfo();
+      if (!hasCompleteInfo) {
+        _showMessage('Vui lòng cập nhật đầy đủ thông tin tài khoản');
+        return;
+      }
+
+      // Chuẩn bị dữ liệu giỏ hàng
+      final data = widget.grocery;
+      final cartItem = {
+        'productId': data['id'] ?? data['productId'] ?? '',
+        'name': data['name'] ?? '',
+        'imageUrl': data['imageUrl'] ?? '',
+        'price': data['price'] ?? 0,
+        'breed': data['breed'] ?? '',
+        'age': data['age'] ?? '',
+        'weight': data['weight'] ?? '',
+        'gender': data['sex'] ?? '',
+        'description': data['about'] ?? '',
+        'category': data['category'] ?? 'Pet',
+        'quantity': 1,
+        'addedAt': DateTime.now().millisecondsSinceEpoch,
+      };
+
+      // Thêm vào giỏ hàng sử dụng BLoC
+      context.read<CartBloc>().add(AddToCart(userIdentifier, cartItem));
+      // Không hiển thị message thủ công - để BlocListener xử lý
+    } catch (e) {
+      _showMessage('Có lỗi xảy ra: ${e.toString()}');
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final data = widget.grocery;
-    final imageUrl = (data["imageUrl"] ?? "").toString();
-    final name = (data["name"] ?? "").toString();
-    final breed = (data["breed"] ?? "").toString();
-    final sex = (data["sex"] ?? "").toString();
-    final age = (data["age"] ?? "").toString();
-    final weight = (data["weight"] ?? "").toString();
-    final about = (data["about"] ?? "No description.").toString();
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return BlocBuilder<FavBloc, FavState>(builder: (context, state) {
-      bool isFavorite = false;
-      if (state is FavLoaded) {
-        isFavorite = state.items.any((item) => item['productId'] == data['id']);
-      }
-
-      return Scaffold(
-        backgroundColor: secondaryColor,
-        body: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  AspectRatio(
-                    aspectRatio: 16 / 10,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          fit: BoxFit.cover,
-                          image: NetworkImage(imageUrl),
-                        ),
-                      ),
-                      child: Container(
-                        // gradient để chữ/nút nổi bật
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black38],
-                          ),
-                        ),
-                      ),
-                    ),
+    return Scaffold(
+      body: BlocListener<CartBloc, CartState>(
+        listener: (context, state) {
+          if (state is CartError) {
+            _showMessage('Lỗi giỏ hàng: ${state.message}');
+          }
+          // Loại bỏ việc hiển thị message thành công để tránh duplicate
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: screenHeight * 0.4,
+              pinned: true,
+              leading: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Container(
+                  height: 50,
+                  width: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(25),
                   ),
-                  // Back
-                  Positioned(
-                    top: 40,
-                    left: 12,
-                    child: _CircleButton(
-                      icon: Icons.arrow_back,
-                      onTap: () => Navigator.pop(context),
-                    ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.black,
                   ),
-                  // Favorite
-                  Positioned(
-                    top: 40,
-                    right: 12,
-                    child: _CircleButton(
-                      icon: isFavorite ? Icons.favorite : Icons.favorite_border,
-                      iconColor: isFavorite ? Colors.red : Colors.black87,
-                      onTap: () {
-                        String? userEmail =
-                            FirebaseAuth.instance.currentUser?.email;
-                        if (userEmail == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Something is wrong")),
-                          );
-                          return;
-                        }
-                        if (!isFavorite) {
-                          context.read<FavBloc>().add(
-                            AddToFav(
-                              userEmail,
-                              {
-                                'productId': data['id'],
-                                'name': data['name'],
-                                'imageUrl': data['imageUrl'],
-                                'price': data['weight'],
-                              },
-                            ),
-                          );
-                        } else {
-                          context
-                              .read<FavBloc>()
-                              .add(RemoveFromFav(userEmail, data['id']));
+                ),
+              ),
+              actions: [
+                BlocBuilder<FavBloc, FavState>(
+                  builder: (context, favState) {
+                    bool isFavorite = false;
+                    if (favState is FavLoaded) {
+                      isFavorite = favState.items
+                          .any((product) => product['id'] == data['id']);
+                    }
+                    return IconButton(
+                      onPressed: () async {
+                        UserManager userManager = UserManager();
+                        final userIdentifier = await userManager.getUserIdentifier();
+                        if (userIdentifier != null) {
+                          if (isFavorite) {
+                            context.read<FavBloc>().add(
+                                RemoveFromFav(userIdentifier, data['id'] ?? ''));
+                          } else {
+                            context
+                                .read<FavBloc>()
+                                .add(AddToFav(userIdentifier, data));
+                          }
                         }
                       },
-                    ),
-                  ),
-                  // Tên & breed đè lên ảnh (dưới)
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 12,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            shadows: [Shadow(blurRadius: 4, color: Colors.black38)],
-                          ),
+                      icon: Container(
+                        height: 50,
+                        width: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(25),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          breed,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                            shadows: [Shadow(blurRadius: 3, color: Colors.black26)],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // ----------------- Tên, giá -----------------
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "\$ $weight",
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
+                        child: Icon(
+                          isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: isFavorite ? Colors.red : Colors.black,
                         ),
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 8),
-
-              // ----------------- Info chips responsive -----------------
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _InfoChip(
-                      iconAsset: 'assets/images/calendar.png',
-                      label: "Age",
-                      value: "$age Years",
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: NetworkImage(data['imageUrl'] ?? ''),
+                      fit: BoxFit.cover,
                     ),
-                    _InfoChip(
-                      iconAsset: 'assets/images/bone.png',
-                      label: "Breed",
-                      value: breed,
-                    ),
-                    _InfoChip(
-                      iconAsset: 'assets/images/sex.png',
-                      label: "Gender",
-                      value: sex,
-                    ),
-                    _InfoChip(
-                      iconAsset: 'assets/images/weight.png',
-                      label: "Weight",
-                      value: "$weight Kg",
-                    ),
-                  ],
-                ),
-              ),
-
-              // ----------------- About -----------------
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-                child: Text(
-                  "About $name",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+            SliverToBoxAdapter(
+              child: Container(
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AnimatedCrossFade(
-                      crossFadeState: isExpand
-                          ? CrossFadeState.showSecond
-                          : CrossFadeState.showFirst,
-                      duration: const Duration(milliseconds: 200),
-                      firstChild: Text(
-                        about,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14, height: 1.4),
-                      ),
-                      secondChild: Text(
-                        about,
-                        style: const TextStyle(fontSize: 14, height: 1.4),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: () => setState(() => isExpand = !isExpand),
-                      child: const Text(
-                        "Xem thêm",
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ----------------- Store card -----------------
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => StoreInfoScreen()),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: primaryColor, width: 1.5),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        )
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
+                    // Tên và giá
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            image: DecorationImage(
-                              image: NetworkImage(
-                                "https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg",
-                              ),
-                              fit: BoxFit.cover,
+                        Expanded(
+                          child: Text(
+                            data['name'] ?? 'Không có tên',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Column(
+                        Text(
+                          CurrencyHelper.formatVND(data['price'] ?? 0),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Thông tin cơ bản
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              "Happy Pet",
+                              'Thông tin cơ bản',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Text(
-                              "Pet Owner",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
+                            const SizedBox(height: 12),
+                            _buildInfoRow(
+                                'Giống', data['breed'] ?? 'Không xác định'),
+                            _buildInfoRow(
+                                'Tuổi', data['age'] ?? 'Không xác định'),
+                            _buildInfoRow(
+                                'Cân nặng', data['weight'] ?? 'Không xác định'),
+                            _buildInfoRow(
+                                'Giới tính', data['sex'] ?? 'Không xác định'),
                           ],
                         ),
-                        const Spacer(),
-                        const Icon(Icons.send),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
+                    const SizedBox(height: 16),
 
-              // ----------------- Similar products -----------------
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                child: Text(
-                  "Sản phẩm tương tự",
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.black.withOpacity(0.8),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final cols = _cols(constraints.maxWidth);
-                  if (_isLoading) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: GridView.builder(
-
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: cols,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.9,
-                        ),
-                        itemCount: cols * 2,
-                        itemBuilder: (_, __) => _SkeletonCard(),
-                      ),
-                    );
-                  }
-
-                  if (petItems.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "Không có sản phẩm tương tự",
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    );
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: petItems.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: cols,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.60,
-                      ),
-                      itemBuilder: (context, index) {
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    DetailPet(grocery: petItems[index]),
+                    // Mô tả
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Mô tả',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
-                            );
-                          },
-                          child: PetItemsAll(pet: petItems[index]),
-                        );
-                      },
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              isExpand
+                                  ? (data['about'] ?? 'Không có mô tả')
+                                  : (data['about'] ?? 'Không có mô tả').length >
+                                          100
+                                      ? '${(data['about'] ?? 'Không có mô tả').substring(0, 100)}...'
+                                      : (data['about'] ?? 'Không có mô tả'),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            if ((data['about'] ?? '').length > 100)
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    isExpand = !isExpand;
+                                  });
+                                },
+                                child: Text(isExpand ? 'Thu gọn' : 'Xem thêm'),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                  );
-                },
-              ),
+                    const SizedBox(height: 16),
 
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-
-        // ----------------- CTA dưới cùng -----------------
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 56,
-            child: Material(
-              color: primaryColor,
-              child: InkWell(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã gửi yêu cầu liên hệ')),
-                  );
-                },
-                child: const Center(
-                  child: Text(
-                    "LIÊN HỆ",
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                    // Thông tin cửa hàng
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.store, color: primaryColor),
+                        title: const Text('Thông tin cửa hàng'),
+                        subtitle: const Text('Xem chi tiết về cửa hàng'),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StoreInfoScreen(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 24),
+
+                    // Sản phẩm tương tự
+                    const Text(
+                      'Sản phẩm tương tự',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: petItems.length > 3 ? 400 : 400,
+                      child: GridView.builder(
+                        scrollDirection: Axis.vertical,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.65,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                        ),
+                        itemCount: petItems.length > 6 ? 6 : petItems.length,
+                        itemBuilder: (context, index) {
+                          final item = petItems[index];
+                          if (item['id'] == data['id'])
+                            return const SizedBox.shrink();
+
+                          return PetItemsAll(
+                            pet: item,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 100), // Space for bottom button
+                  ],
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+      floatingActionButton: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: ElevatedButton(
+          onPressed: _addToCart,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 4,
+          ),
+          child: const Text(
+            'Thêm vào giỏ hàng',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      );
-    });
-  }
-}
-
-// ================= Widgets phụ (UI-only) =================
-
-class _CircleButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color? iconColor;
-
-  const _CircleButton({
-    required this.icon,
-    required this.onTap,
-    this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withOpacity(0.95),
-      shape: const CircleBorder(),
-      elevation: 3,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, size: 22, color: iconColor ?? Colors.black87),
-        ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
-}
 
-class _InfoChip extends StatelessWidget {
-  final String iconAsset;
-  final String label;
-  final String value;
-
-  const _InfoChip({
-    required this.iconAsset,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = Colors.white;
-    final border = Colors.black12;
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 150),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: border),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            )
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(iconAsset, width: 22, height: 22, fit: BoxFit.contain),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style:
-                      TextStyle(color: Colors.grey.shade700, fontSize: 12)),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SkeletonCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black12.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(14),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

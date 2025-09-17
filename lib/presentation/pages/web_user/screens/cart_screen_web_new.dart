@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -20,7 +21,7 @@ class CartScreenWeb extends StatefulWidget {
 
 class _CartScreenWebState extends State<CartScreenWeb> {
   double _priceOf(Map<String, dynamic> item) {
-    final raw = item['price'] ?? item['weight'] ?? 0;
+  final raw = item['price'] ?? 0;
     return double.tryParse(raw.toString()) ?? 0.0;
   }
 
@@ -58,7 +59,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
             'name': docData['name'] ?? 'Unknown Pet',
             'breed': docData['breed'] ?? '',
             'imageUrl': docData['imageUrl'] ?? '',
-            'price': docData['weight']?.toString() ?? '0', // Use weight as price like mobile
+            'price': (docData['price'] ?? docData['weight'])?.toString() ?? '0',
             'quantity': item['quantity'] ?? 1,
           };
         } else {
@@ -360,10 +361,8 @@ class _CartList extends StatelessWidget {
   final void Function(String productId) onRemove;
 
   String _priceText(dynamic raw) {
-    if (raw == null) return '--';
-    final n = double.tryParse(raw.toString());
-    if (n == null) return raw.toString();
-    return n == n.roundToDouble() ? n.toStringAsFixed(0) : n.toStringAsFixed(2);
+    // Use shared VND formatting
+    return CurrencyHelper.formatVND(raw);
   }
 
   @override
@@ -379,7 +378,7 @@ class _CartList extends StatelessWidget {
         final imageUrl = (it['imageUrl'] ??
             'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT5Ubj9xSnLv0WDBYaGnpjt6CQZ8wFe9OltBQ&s')
             .toString();
-        final priceStr = _priceText(it['price'] ?? it['weight']);
+  final priceStr = _priceText(it['price']);
 
         return _CartRowTile(
           id: id,
@@ -461,7 +460,7 @@ class _CartRowTile extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
-              "\$$priceText",
+              priceText,
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
           ),
@@ -510,7 +509,7 @@ class _SummaryPanel extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "\$${total.toStringAsFixed(2)}",
+                  CurrencyHelper.formatVND(total),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w800, color: primaryColor),
                 ),
@@ -681,7 +680,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                         ),
                       ),
                       Text(
-                        'Tổng thanh toán: \$${widget.total.toStringAsFixed(2)}',
+                        'Tổng thanh toán: ${CurrencyHelper.formatVND(widget.total)}',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -924,7 +923,7 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                         );
                       },
                       icon: const Icon(Icons.payment),
-                      label: Text('Thanh toán \$${widget.total.toStringAsFixed(2)}'),
+                      label: Text('Thanh toán ${CurrencyHelper.formatVND(widget.total)}'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.primaryColor,
                         foregroundColor: Colors.white,

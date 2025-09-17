@@ -4,6 +4,7 @@ import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 import 'package:pet_shop/data/datasources/remote/payment_service.dart';
 import 'package:pet_shop/data/datasources/remote/stripe_checkout_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 
 class StripePaymentScreen extends StatefulWidget {
   final double totalAmount;
@@ -205,7 +206,7 @@ class _StripePaymentScreenState extends State<StripePaymentScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Đơn hàng của bạn đã được thanh toán thành công!\nTổng tiền: \$${widget.totalAmount.toStringAsFixed(2)}",
+              "Đơn hàng của bạn đã được thanh toán thành công!\nTổng tiền: ${CurrencyHelper.formatVND(widget.totalAmount)}",
               textAlign: TextAlign.center,
             ),
           ],
@@ -276,7 +277,7 @@ class _StripePaymentScreenState extends State<StripePaymentScreen> {
                             const Divider(),
                             _buildInfoRow(
                               "Tổng tiền:",
-                              "\$${widget.totalAmount.toStringAsFixed(2)}",
+                              CurrencyHelper.formatVND(widget.totalAmount),
                               isTotal: true,
                             ),
                           ],
@@ -321,7 +322,7 @@ class _StripePaymentScreenState extends State<StripePaymentScreen> {
                               title: Text(item['name'] ?? 'Unknown Pet'),
                               subtitle: Text(item['breed'] ?? ''),
                               trailing: Text(
-                                '\$${(item['price'] ?? item['weight'] ?? 0).toString()}',
+                                CurrencyHelper.formatVND(item['price'] ?? 0),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),

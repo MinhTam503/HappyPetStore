@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -10,6 +9,8 @@ import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 class PetItemsAll extends StatefulWidget {
   final Map<String, dynamic> pet;
@@ -24,21 +25,14 @@ class _PetItemsAllState extends State<PetItemsAll> {
   String? lastCartMessage;
   bool _hover = false;
 
-  String _priceText(dynamic raw) {
-    // code gốc dùng 'weight' làm giá
-    if (raw == null) return '--';
-    final n = double.tryParse(raw.toString());
-    if (n == null) return raw.toString();
-    // Định dạng gọn, không cần intl
-    return n == n.roundToDouble() ? n.toStringAsFixed(0) : n.toStringAsFixed(2);
-  }
+  String _priceText(dynamic raw) => CurrencyHelper.formatVND(raw);
 
   @override
   Widget build(BuildContext context) {
     final name = widget.pet['name']?.toString() ?? '';
     final breed = widget.pet['breed']?.toString() ?? '';
     final imageUrl = widget.pet['imageUrl']?.toString() ?? '';
-    final priceStr = _priceText(widget.pet['weight']); // giữ logic cũ
+  final priceStr = _priceText(widget.pet['price']);
 
     return BlocBuilder<FavBloc, FavState>(
       builder: (context, state) {
@@ -104,37 +98,33 @@ class _PetItemsAllState extends State<PetItemsAll> {
                                 return const _ImageSkeleton();
                               },
                             ),
-
                             // Price pill (góc trái dưới)
                             Positioned(
-                              left: 8,
-                              bottom: 8,
+                              left: 2,
+                              bottom: 2,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.55),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: Colors.white.withOpacity(0.15)),
+                                  color: Colors.pink.shade400,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.pink.shade200.withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
                                 ),
                                 child: Row(
                                   children: [
-                                    const Text(
-                                      '\$',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
                                     Text(
                                       priceStr,
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                        letterSpacing: 0.2,
                                       ),
                                     ),
                                   ],
@@ -153,28 +143,28 @@ class _PetItemsAllState extends State<PetItemsAll> {
                                 foreground:
                                     isFavorite ? Colors.red : Colors.black87,
                                 background: Colors.white,
-                                onTap: () {
-                                  final email =
-                                      FirebaseAuth.instance.currentUser?.email;
-                                  if (email == null) {
+                                onTap: () async {
+                                  UserManager userManager = UserManager();
+                                  final userIdentifier = await userManager.getUserIdentifier();
+                                  if (userIdentifier == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
                                             content:
-                                                Text("Something is wrong")));
+                                                Text("Please login to continue")));
                                     return;
                                   }
                                   if (!isFavorite) {
                                     context
                                         .read<FavBloc>()
-                                        .add(AddToFav(email, {
+                                        .add(AddToFav(userIdentifier, {
                                           'productId': widget.pet['id'],
                                           'name': name,
                                           'imageUrl': imageUrl,
-                                          'price': widget.pet['weight'],
+                                          'price': widget.pet['price'],
                                         }));
                                   } else {
                                     context.read<FavBloc>().add(
-                                        RemoveFromFav(email, widget.pet['id']));
+                                        RemoveFromFav(userIdentifier, widget.pet['id']));
                                   }
                                 },
                               ),
@@ -221,7 +211,7 @@ class _PetItemsAllState extends State<PetItemsAll> {
                             ),
                           ),
                         ),
-                      Spacer(),
+                      const Spacer(),
                       // Hàng nút action (Add to cart)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(5, 6, 5, 8),
@@ -233,23 +223,23 @@ class _PetItemsAllState extends State<PetItemsAll> {
                                 child: _PrimaryButton(
                                   label: 'Thêm vào giỏ hàng',
                                   icon: Icons.shopping_cart_outlined,
-                                  onTap: () {
-                                    final email =
-                                        FirebaseAuth.instance.currentUser?.email;
-                                    if (email == null) {
+                                  onTap: () async {
+                                    UserManager userManager = UserManager();
+                                    final userIdentifier = await userManager.getUserIdentifier();
+                                    if (userIdentifier == null) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
                                               content:
-                                                  Text("Something is wrong")));
+                                                  Text("Please login to continue")));
                                       return;
                                     }
                                     context
                                         .read<CartBloc>()
-                                        .add(AddToCart(email, {
+                                        .add(AddToCart(userIdentifier, {
                                           'productId': widget.pet['id'],
                                           'name': name,
                                           'imageUrl': imageUrl,
-                                          'price': widget.pet['weight'],
+                                          'price': widget.pet['price'],
                                         }));
                                   },
                                   listenCart: (ctx, state) {
@@ -367,7 +357,7 @@ class _CircleIconButton extends StatelessWidget {
   }
 }
 
-/// Nút primary full-width “Thêm vào giỏ”
+
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final IconData icon;

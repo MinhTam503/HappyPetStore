@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
@@ -409,7 +410,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       itemBuilder: (context, index) {
                         final petData = petsData[index];
                         final name = petData['name'] ?? '';
-                        final price = petData['weight'] ?? '';
+                        final price = petData['price'] ?? petData['weight'] ?? '';
                         final qty = petData['quantity'] ?? 1;
                         final image = (petData['imageUrl'] ?? '') as String;
 
@@ -443,7 +444,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                 style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
-                            subtitle: Text("\$ $price  •  x$qty"),
+                            subtitle: Text("${CurrencyHelper.formatVND(price)}  •  x$qty"),
                           ),
                         );
                       },
@@ -482,7 +483,6 @@ class _FilterBar extends StatelessWidget {
     required this.orderSort,
     required this.onStatusChanged,
     required this.onSortChanged,
-    super.key,
   });
 
   @override
@@ -549,7 +549,6 @@ class _StatusIcon extends StatelessWidget {
     required this.status,
     required this.color,
     required this.icon,
-    super.key,
   });
 
   @override
@@ -579,7 +578,6 @@ class _ChipBadge extends StatelessWidget {
     required this.icon,
     required this.bg,
     required this.fg,
-    super.key,
   });
 
   @override
@@ -607,7 +605,7 @@ class _ChipBadge extends StatelessWidget {
 }
 
 class _EmptyOrders extends StatelessWidget {
-  const _EmptyOrders({super.key});
+  const _EmptyOrders();
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

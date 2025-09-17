@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
@@ -20,19 +21,14 @@ class _PetItemsAllState extends State<AllPetItemWeb> {
   String? lastCartMessage;
   bool _hover = false;
 
-  String _priceText(dynamic raw) {
-    if (raw == null) return '--';
-    final n = double.tryParse(raw.toString());
-    if (n == null) return raw.toString();
-    return n == n.roundToDouble() ? n.toStringAsFixed(0) : n.toStringAsFixed(2);
-  }
+  String _priceText(dynamic raw) => CurrencyHelper.formatVND(raw);
 
   @override
   Widget build(BuildContext context) {
     final name = widget.pet['name']?.toString() ?? '';
     final breed = widget.pet['breed']?.toString() ?? '';
     final imageUrl = widget.pet['imageUrl']?.toString() ?? '';
-    final priceStr = _priceText(widget.pet['weight']); // giữ logic cũ
+  final priceStr = _priceText(widget.pet['price']);
 
     return BlocBuilder<CartBlocWeb, CartStateWeb>(
       builder: (context, state) {
@@ -197,7 +193,7 @@ class _PetItemsAllState extends State<AllPetItemWeb> {
                                       'name': widget.pet['name'] ?? '',
                                       'imageUrl': widget.pet['imageUrl'] ?? '',
                                       'price': widget.pet['price'] ??
-                                          widget.pet['weight'], // giữ logic cũ
+                                          widget.pet['price'],
                                       'breed': widget.pet['breed'] ?? '',
                                     };
 

@@ -4,9 +4,9 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/presentation/widgets/components/my_button.dart';
 import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/mobile/VerifyEmailPage.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/VerifyEmailPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pet_shop/presentation/pages/mobile/login_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/login_page.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:flutter/foundation.dart';
 

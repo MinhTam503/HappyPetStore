@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/chatbot_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/chatBot/chatbot_page.dart';
+import 'package:pet_shop/core/services/settings_service.dart';
 
 class ChatBubbleWidget extends StatefulWidget {
   const ChatBubbleWidget({super.key});

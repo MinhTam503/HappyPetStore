@@ -10,7 +10,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admin.dart';
 
-import 'bottom_navigator.dart';
+import '../bottom_navigator.dart';
 
 class LoginPage extends StatefulWidget {
   final void Function()? onTap;

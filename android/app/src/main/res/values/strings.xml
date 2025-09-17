@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pet Shop</string>
+    
+    <!-- Facebook Configuration -->
+    <!-- Replace with your actual Facebook App ID -->
+    <string name="facebook_app_id">1141159281220831</string>
+    <string name="facebook_client_token">79cc30a23e912a7523329c99ae8fbbdb</string>
+    <string name="fb_login_protocol_scheme">1141159281220831</string>
+</resources>

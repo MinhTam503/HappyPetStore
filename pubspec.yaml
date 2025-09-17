@@ -43,6 +43,8 @@ dependencies:
   fluttertoast: ^8.2.12
   firebase_auth: ^5.5.1
   google_sign_in: ^6.2.2
+  flutter_facebook_auth: ^6.0.3
+  pin_code_fields: ^8.0.1
   bloc: ^9.0.0
   equatable: ^2.0.7
   get_it: ^7.6.4

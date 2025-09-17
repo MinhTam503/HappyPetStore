@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pet_shop/presentation/pages/chatbot_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/chatBot/chatbot_page.dart';
 
 class DraggableChatBubbleWidget extends StatefulWidget {
   const DraggableChatBubbleWidget({super.key});

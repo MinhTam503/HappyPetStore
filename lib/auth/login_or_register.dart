@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pet_shop/presentation/pages/mobile/login_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/register_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/login_page_new.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/register_page_new.dart';
 
 class LoginOrRegister extends StatefulWidget {
   const LoginOrRegister({super.key});
@@ -21,11 +21,11 @@ class _LoginOrRegisterState extends State<LoginOrRegister> {
   @override
   Widget build(BuildContext context) {
     if (showLoginPage) {
-      return LoginPage(
+      return LoginPageNew(
         onTap: togglePages,
       );
     } else {
-      return RegisterPage(onTap: togglePages);
+      return RegisterPageNew(onTap: togglePages);
     }
   }
 }

@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 
-import 'package:pet_shop/presentation/pages/mobile/change_password_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/change_password_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/your_order_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/settings_page.dart';
 
 import '../edit_profile.dart';
 import 'favorite_screen.dart';
@@ -168,6 +169,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 12),
                       _MenuCard(children: [
                         _MenuItem(
+                            icon: Icons.settings,
+                            iconBg: const Color(0xfffdeefe),
+                            iconColor: Colors.grey,
+                            title: 'Setting',
+                            titleColor: Colors.black,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SettingsPage(),
+                                ),
+                              );
+                            }),
+                      ]),
+                      const SizedBox(height: 12),
+                      _MenuCard(children: [
+                        _MenuItem(
                           icon: Icons.logout_rounded,
                           iconBg: const Color(0xfffdeefe),
                           iconColor: Colors.pink,
@@ -185,18 +203,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: const Text("Cancel"),
                                 ),
                                 TextButton(
-                                  onPressed: () {
+                                  onPressed: () async {
                                     // Đóng dialog trước
                                     Navigator.pop(context);
-                                    
-                                    debugPrint('🚪 User clicked logout, calling signOut()');
-                                    
-                                    // Chỉ signOut và để authStateChanges handle navigation
-                                    authService.value.signOut();
-                                    
-                                    debugPrint('✅ signOut() completed, authStateChanges should handle navigation');
-                                    
-                                    // Không cần Navigator.pushReplacement - StreamBuilder sẽ tự động chuyển
+
+                                    debugPrint(
+                                        '🚪 User clicked logout, calling signOut()');
+
+                                    try {
+                                      // Chỉ signOut và để authStateChanges handle navigation
+                                      await authService.value.signOut();
+                                      debugPrint(
+                                          '✅ signOut() completed successfully');
+                                    } catch (e) {
+                                      debugPrint('❌ signOut() error: $e');
+                                      // Show error message to user
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Đăng xuất thất bại: ${e.toString()}'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                   child: const Text("Ok"),
                                 ),

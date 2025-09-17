@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pet_shop/data/models/chatbot_model.dart';
@@ -19,8 +20,8 @@ class ChatBotRemoteDataSourceImpl implements ChatBotRemoteDataSource {
   @override
   Future<ChatBotResponseModel> sendMessage(String userId, String message) async {
     final requestModel = ChatBotRequestModel(
-      userId: userId,
       message: message,
+      userId: userId,
     );
 
     try {
@@ -31,13 +32,32 @@ class ChatBotRemoteDataSourceImpl implements ChatBotRemoteDataSource {
           'Accept': 'application/json',
         },
         body: json.encode(requestModel.toJson()),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       print('ChatBot API Response Status: ${response.statusCode}');
       print('ChatBot API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
+        
+        // Handle null response
+        if (responseBody == null) {
+          throw Exception('Đã có lỗi xảy ra, vui lòng thử lại sau');
+        }
+        
+        // Handle new API format (direct reply, pets, actions)
+        if (responseBody['reply'] != null) {
+          return ChatBotResponseModel.fromJson(responseBody);
+        }
+        
+        // Handle old format - Check if response indicates success
+        final success = responseBody['success'] as bool? ?? false;
+        if (!success) {
+          final errorMessage = responseBody['data']?['message'] ?? 'Unknown error from ChatBot API';
+          print('ChatBot API returned error: $errorMessage');
+          throw Exception('ChatBot API Error: $errorMessage');
+        }
+        
         return ChatBotResponseModel.fromJson(responseBody);
       } else {
         throw Exception('Failed to send message to chatbot: ${response.statusCode}');
