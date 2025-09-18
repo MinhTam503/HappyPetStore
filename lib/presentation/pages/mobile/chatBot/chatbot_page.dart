@@ -22,6 +22,33 @@ class ChatBotPage extends StatefulWidget {
 class _ChatBotPageState extends State<ChatBotPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _isUserScrolling = false;
+  bool _autoScrollEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to scroll events to detect user manual scrolling
+    _scrollController.addListener(_scrollListener);
+  }
+
+  void _scrollListener() {
+    if (_scrollController.hasClients) {
+      // Check if user is scrolling manually
+      final isAtBottom = _scrollController.position.pixels >= 
+          _scrollController.position.maxScrollExtent - 100; // 100px threshold
+      
+      setState(() {
+        // Enable auto scroll when user is near bottom
+        _autoScrollEnabled = isAtBottom;
+        
+        // Detect if user is scrolling up
+        if (!isAtBottom) {
+          _isUserScrolling = true;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -31,10 +58,10 @@ class _ChatBotPageState extends State<ChatBotPage> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      // Đảm bảo scroll tới vị trí cuối cùng với khoảng delay để content render xong
+    // Only auto scroll if enabled and user is not manually scrolling
+    if (_scrollController.hasClients && _autoScrollEnabled && !_isUserScrolling) {
       Future.delayed(const Duration(milliseconds: 50), () {
-        if (_scrollController.hasClients) {
+        if (_scrollController.hasClients && _autoScrollEnabled) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
             duration: const Duration(milliseconds: 300),
@@ -94,94 +121,119 @@ class _ChatBotPageState extends State<ChatBotPage> {
         body: Column(
           children: [
             Expanded(
-              child: BlocConsumer<ChatBotBloc, ChatBotState>(
-                listener: (context, state) {
-                  if (state is ChatBotLoaded || state is ChatBotMessageSent) {
-                    // Multiple delayed scrolls to ensure content is fully rendered
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _scrollToBottom();
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        _scrollToBottom();
-                      });
-                      Future.delayed(const Duration(milliseconds: 300), () {
-                        _scrollToBottom();
-                      });
-                    });
-                  }
-                  if (state is ChatBotError) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(state.message),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                builder: (context, state) {
-                  if (state is ChatBotLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-
-                  List<ChatBotMessage> messages = [];
-                  bool isTyping = false;
-
-                  if (state is ChatBotLoaded) {
-                    messages = state.messages;
-                    isTyping = state.isTyping;
-                  } else if (state is ChatBotError) {
-                    messages = state.messages;
-                  }
-
-                  if (messages.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.pets,
-                            size: 64,
-                            color: Theme.of(context).primaryColor,
+              child: Stack(
+                children: [
+                  BlocConsumer<ChatBotBloc, ChatBotState>(
+                    listener: (context, state) {
+                      if (state is ChatBotLoaded || state is ChatBotMessageSent) {
+                        // Only auto scroll for new messages when appropriate
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          // Reset user scrolling flag when new message arrives
+                          _isUserScrolling = false;
+                          _scrollToBottom();
+                        });
+                      }
+                      if (state is ChatBotError) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(state.message),
+                            backgroundColor: Colors.red,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Hello! I\'m your Pet Assistant.',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Ask me anything about pets!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    reverse: false, // Normal scroll direction
-                    itemCount: messages.length + (isTyping ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == messages.length && isTyping) {
-                        return _buildTypingIndicator();
+                        );
+                      }
+                    },
+                    builder: (context, state) {
+                      if (state is ChatBotLoading) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
                       }
 
-                      final message = messages[index];
-                      return _buildMessageBubble(message);
+                      List<ChatBotMessage> messages = [];
+                      bool isTyping = false;
+
+                      if (state is ChatBotLoaded) {
+                        messages = state.messages;
+                        isTyping = state.isTyping;
+                      } else if (state is ChatBotError) {
+                        messages = state.messages;
+                      }
+
+                      if (messages.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.pets,
+                                size: 64,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Hello! I\'m your Pet Assistant.',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Ask me anything about pets!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        reverse: false, // Normal scroll direction
+                        itemCount: messages.length + (isTyping ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == messages.length && isTyping) {
+                            return _buildTypingIndicator();
+                          }
+
+                          final message = messages[index];
+                          return _buildMessageBubble(message);
+                        },
+                      );
                     },
-                  );
-                },
+                  ),
+                  // Floating Action Button to scroll to bottom
+                  if (!_autoScrollEnabled)
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: FloatingActionButton(
+                        mini: true,
+                        backgroundColor: Theme.of(context).primaryColor,
+                        onPressed: () {
+                          setState(() {
+                            _isUserScrolling = false;
+                            _autoScrollEnabled = true;
+                          });
+                          _scrollController.animateTo(
+                            _scrollController.position.maxScrollExtent,
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                        child: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             _buildMessageInput(),
@@ -387,10 +439,12 @@ class _ChatBotPageState extends State<ChatBotPage> {
   }
 
   Widget _buildPetsDisplay(List<ChatBotPet> pets) {
-    // Schedule scroll after this widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
+    // Only schedule scroll if auto scroll is enabled
+    if (_autoScrollEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+    }
     
     return Container(
       margin: const EdgeInsets.only(left: 40), // Align with bot message
