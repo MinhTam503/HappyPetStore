@@ -53,9 +53,10 @@ class SuggestedPet {
   final String name;
   final String breed;
   final double weight;
-  final String image;
+  final String imageUrl;
   final int age;
   final String color;
+  final double price;
   final double confidence;
 
   const SuggestedPet({
@@ -63,9 +64,10 @@ class SuggestedPet {
     required this.name,
     required this.breed,
     required this.weight,
-    required this.image,
+    required this.imageUrl,
     required this.age,
     required this.color,
+    required this.price,
     required this.confidence,
   });
 
@@ -74,12 +76,33 @@ class SuggestedPet {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       breed: map['breed'] ?? '',
-      weight: (map['weight'] ?? 0).toDouble(),
-      image: map['image'] ?? '',
-      age: map['age'] ?? 0,
+      weight: _parseDouble(map['weight']),
+      imageUrl: map['imageUrl'] ?? '',
+      age: _parseInt(map['age']),
       color: map['color'] ?? '',
+      price: _parseDouble(map['price']),
       confidence: confidence,
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
   }
 
   Map<String, dynamic> toMap() {
@@ -88,9 +111,10 @@ class SuggestedPet {
       'name': name,
       'breed': breed,
       'weight': weight,
-      'image': image,
+      'imageUrl': imageUrl,
       'age': age,
       'color': color,
+      'price': price,
       'confidence': confidence,
     };
   }

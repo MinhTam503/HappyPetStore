@@ -609,14 +609,14 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
                                     Expanded(
-                                        child: _kv(AppLocalizations.of(context)!.totalAmountLabel, '\$$total')),
+                                        child: _kv(AppLocalizations.of(context)!.totalAmountLabel, CurrencyHelper.formatVND(total))),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
                               if (isNarrow)
                                 Row(children: [
                                   Expanded(
-                                      child: _kv(AppLocalizations.of(context)!.totalAmountLabel, '\$$total'))
+                                      child: _kv(AppLocalizations.of(context)!.totalAmountLabel, CurrencyHelper.formatVND(total)))
                                 ]),
                               const SizedBox(height: 8),
                               Row(

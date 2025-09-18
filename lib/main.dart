@@ -11,7 +11,7 @@ import 'package:pet_shop/debug_connection.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 import 'package:pet_shop/core/providers/theme_provider.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
-import 'package:pet_shop/presentation/pages/mobile/bottom_navigator.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/home_page_web_user.dart';
@@ -157,17 +157,22 @@ class MyApp extends StatelessWidget {
                                   'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
                             }
 
-                            // Check if email is verified
-                            if (user.emailVerified) {
+                            // Check authentication provider
+                            List<String> providers = user.providerData.map((info) => info.providerId).toList();
+                            bool isSocialLogin = providers.contains('google.com') || providers.contains('facebook.com') || providers.contains('phone');
+                            
+                            // Allow social login users to bypass email verification
+                            // Email/password users still need email verification
+                            if (user.emailVerified || isSocialLogin) {
                               if (kDebugMode) {
                                 debugPrint(
-                                    ' Email verified, navigating to BottomNavigator');
+                                    ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
                               }
                               return const BottomNavigator();
                             } else {
                               if (kDebugMode) {
                                 debugPrint(
-                                    ' Email not verified, showing LoginOrRegister');
+                                    ' Email not verified and not social login, showing LoginOrRegister');
                               }
                               return const LoginOrRegister();
                             }

@@ -193,7 +193,10 @@ class _PetItemsState extends State<PetItems> {
 
   void _toggleFav(bool isFavorite) async {
     UserManager userManager = UserManager();
-    final userIdentifier = await userManager.getUserIdentifier();
+    await userManager.initialize();
+    final userIdentifier = await userManager.getUserIdForOperations();
+    print("💖 PetItems: Using userId for favorites: $userIdentifier");
+    
     if (userIdentifier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Bạn cần đăng nhập trước.")),
@@ -214,7 +217,10 @@ class _PetItemsState extends State<PetItems> {
 
   void _addToCart() async {
     UserManager userManager = UserManager();
-    final userIdentifier = await userManager.getUserIdentifier();
+    await userManager.initialize();
+    final userIdentifier = await userManager.getUserIdForOperations();
+    print("🛒 PetItems: Using userId for cart: $userIdentifier");
+    
     if (userIdentifier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Bạn cần đăng nhập trước.")),

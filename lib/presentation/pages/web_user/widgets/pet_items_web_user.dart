@@ -120,7 +120,10 @@ class _PetItemsState extends State<PetItemsWebUser> {
                     child: GestureDetector(
                       onTap: () async {
                         UserManager userManager = UserManager();
-                        String? userIdentifier = await userManager.getUserIdentifier();
+                        await userManager.initialize();
+                        String? userIdentifier = await userManager.getUserIdForOperations();
+                        print("💖 PetItemsWebUser: Using userId for favorites: $userIdentifier");
+                        
                         if (userIdentifier == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text("Please login to continue")),

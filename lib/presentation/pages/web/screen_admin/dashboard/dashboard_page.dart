@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 import '../../../../widgets/language_selector.dart';
 import '../../../../widgets/theme_selector.dart';
 import 'widgets/loading_skeleton.dart';
@@ -30,6 +31,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   // Data
   Map<String, int> _statsData = {};
   Map<String, double> _revenueData = {};
+  String _revenueUnit = '₫'; // Track current unit for display
   Map<String, int> _orderStatusData = {
     'Completed': 0,
     'Pending': 0,
@@ -104,6 +106,12 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     final today = DateTime.now();
     final todayKey = '${today.day}/${today.month}';
     return _revenueData[todayKey] ?? 0.0;
+  }
+
+  // Format today revenue with proper unit
+  String _getTodayRevenueFormatted() {
+    final convertedValue = _getTodayRevenue();
+    return '${_formatChartCurrency(convertedValue)} ${_getChartUnit()}';
   }
 
   Future<void> _loadChartsData() async {
@@ -187,10 +195,12 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
           timestamp = Timestamp.now();
         }
         
+        final totalAmount = _parseDouble(data['totalAmount']);
+        
         final order = {
           'id': doc.id,
           'customerName': data['fullName'] ?? data['name'] ?? 'Unknown Customer',
-          'totalAmount': (data['totalAmount'] ?? 0.0).toDouble(),
+          'totalAmount': totalAmount,
           'status': data['statusOrder'] ?? 'Pending',
           'timestamp': timestamp,
           'source': 'Mobile',
@@ -222,10 +232,12 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
           timestamp = Timestamp.now();
         }
         
+        final totalAmount = _parseDouble(data['totalAmount']);
+        
         final order = {
           'id': doc.id,
           'customerName': data['fullName'] ?? data['name'] ?? 'Unknown Customer',
-          'totalAmount': (data['totalAmount'] ?? 0.0).toDouble(),
+          'totalAmount': totalAmount,
           'status': data['statusOrder'] ?? 'Pending',
           'timestamp': timestamp,
           'source': 'Web',
@@ -294,10 +306,16 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       for (final doc in results[0].docs) {
         final data = doc.data();
         final rawTimestamp = data['timestamp'];
-        final amount = (data['totalAmount'] ?? 0.0).toDouble();
+        final amount = _parseDouble(data['totalAmount']);
         final status = data['statusOrder'] ?? 'Pending';
         
         if (status == 'Completed' && amount > 0) {
+          // Debug: log large amounts but don't skip them
+          if (amount > 1000000) {
+            print('💰 Large amount detected: \$${amount} for mobile order ${doc.id}');
+            print('💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
+          }
+          
           DateTime? date;
           
           if (rawTimestamp is Timestamp) {
@@ -323,10 +341,16 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       for (final doc in results[1].docs) {
         final data = doc.data();
         final rawTimestamp = data['timestamp'];
-        final amount = (data['totalAmount'] ?? 0.0).toDouble();
+        final amount = _parseDouble(data['totalAmount']);
         final status = data['statusOrder'] ?? 'Pending';
         
         if (status == 'Completed' && amount > 0) {
+          // Debug: log large amounts but don't skip them
+          if (amount > 1000000) {
+            print('💰 Large amount detected: \$${amount} for web order ${doc.id}');
+            print('💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
+          }
+          
           DateTime? date;
           
           if (rawTimestamp is Timestamp) {
@@ -351,20 +375,47 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       print('📊 Total revenue data points: ${revenue.length}');
       print('💵 Revenue summary: $revenue');
       
-      // Add test data if no revenue found
-      if (revenue.isEmpty) {
+      // Convert large numbers to smaller units for chart rendering
+      final convertedRevenue = <String, double>{};
+      double maxValue = revenue.values.isNotEmpty ? revenue.values.reduce((a, b) => a > b ? a : b) : 0.0;
+      
+      if (maxValue >= 1000000) {
+        // Convert to millions for chart rendering
+        print('📊 Converting to millions for chart rendering...');
+        _revenueUnit = 'triệu';
+        for (final entry in revenue.entries) {
+          convertedRevenue[entry.key] = entry.value / 1000000; // Convert to millions
+        }
+        print('📊 Converted revenue (millions): $convertedRevenue');
+      } else if (maxValue >= 1000) {
+        // Convert to thousands for chart rendering
+        print('📊 Converting to thousands for chart rendering...');
+        _revenueUnit = 'nghìn';
+        for (final entry in revenue.entries) {
+          convertedRevenue[entry.key] = entry.value / 1000; // Convert to thousands
+        }
+        print('📊 Converted revenue (thousands): $convertedRevenue');
+      } else {
+        // Use original values
+        _revenueUnit = '₫';
+        convertedRevenue.addAll(revenue);
+      }
+      
+      // Use converted revenue data if no real data
+      if (convertedRevenue.isEmpty) {
         print('📊 Adding test revenue data...');
+        _revenueUnit = '₫'; // Set unit for test data
         final now = DateTime.now();
         for (int i = 6; i >= 0; i--) {
           final date = now.subtract(Duration(days: i));
           final dateKey = '${date.day}/${date.month}';
-          revenue[dateKey] = (100.0 + (i * 50.0)).toDouble(); // More visible data
+          convertedRevenue[dateKey] = (100.0 + (i * 50.0)).toDouble(); // More visible data
         }
-        print('📊 Test revenue data: $revenue');
+        print('📊 Test revenue data: $convertedRevenue');
       }
       
       if (mounted) {
-        setState(() => _revenueData = revenue);
+        setState(() => _revenueData = convertedRevenue);
       }
     } catch (e) {
       print('❌ Error loading revenue: $e');
@@ -577,7 +628,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             children: [
               _buildQuickStat(
                 l10n.revenue, 
-                '\$${_getTodayRevenue().toStringAsFixed(2)}', 
+                _getTodayRevenueFormatted(), 
                 Icons.attach_money, 
                 Colors.green
               ),
@@ -864,13 +915,26 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.revenue,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.headlineSmall?.color,
-            ),
+          Row(
+            children: [
+              Text(
+                l10n.revenue,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.headlineSmall?.color,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '(${_getChartUnit()})',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           Expanded(
@@ -886,7 +950,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No revenue data available', 
+                          AppLocalizations.of(context)!.noDataAvailable, 
                           style: TextStyle(
                             color: Theme.of(context).textTheme.bodyMedium?.color,
                             fontSize: 16,
@@ -950,7 +1014,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                                 interval: 100,
                                 getTitlesWidget: (value, meta) {
                                   return Text(
-                                    '\$${value.toInt()}',
+                                    _formatChartCurrency(value),
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Theme.of(context).textTheme.bodySmall?.color,
@@ -1141,7 +1205,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
           Row(
             children: [
               Text(
-                'Recent Orders',
+                AppLocalizations.of(context)!.recentOrders,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -1160,7 +1224,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(40),
-                child: Text('No recent orders found',
+                child: Text(AppLocalizations.of(context)!.noDataAvailable,
                   style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color)),
               ),
             )
@@ -1315,7 +1379,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               ),
               const SizedBox(height: 8),
               Text(
-                '\$${order['totalAmount'].toStringAsFixed(2)}',
+                CurrencyHelper.formatVND(order['totalAmount']),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -1327,5 +1391,32 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         ],
       ),
     );
+  }
+
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  // Smart currency formatting for charts - works with pre-converted data
+  String _formatChartCurrency(double convertedAmount) {
+    // Format based on current unit scale₫
+    if (_revenueUnit == 'triệu') {
+      return convertedAmount.toStringAsFixed(1); // Show decimals for millions
+    } else if (_revenueUnit == 'nghìn') {
+      return convertedAmount.toStringAsFixed(0); // No decimals for thousands
+    } else {
+      return convertedAmount.toStringAsFixed(0); // No decimals for original
+    }
+  }
+
+  // Get chart unit label
+  String _getChartUnit() {
+    return _revenueUnit;
   }
 }

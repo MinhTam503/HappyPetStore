@@ -169,6 +169,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
                   return ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    reverse: false, // Normal scroll direction
                     itemCount: messages.length + (isTyping ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == messages.length && isTyping) {

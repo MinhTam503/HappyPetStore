@@ -82,39 +82,45 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
   }
 
   void _sendOTP() async {
+    if (!mounted) return;
+    
     DialogHelper.showLoadingDialog(context, message: "Đang gửi mã OTP...");
 
     try {
       await authService.value.verifyPhoneNumber(
         phoneNumber: widget.phoneNumber,
         verificationCompleted: (PhoneAuthCredential credential) async {
-          await DialogHelper.hideLoadingDialog(context);
-          await _verifyOTP(credential);
+          if (mounted) {
+            DialogHelper.hideLoadingDialog(context);
+            await _verifyOTP(credential);
+          }
         },
         verificationFailed: (FirebaseAuthException e) async {
-          await DialogHelper.hideLoadingDialog(context);
           if (mounted) {
+            DialogHelper.hideLoadingDialog(context);
             _showSnackbar("Gửi OTP thất bại: ${e.message}");
           }
         },
         codeSent: (String verificationId, int? resendToken) async {
-          await DialogHelper.hideLoadingDialog(context);
-          setState(() {
-            _verificationId = verificationId;
-          });
           if (mounted) {
+            DialogHelper.hideLoadingDialog(context);
+            setState(() {
+              _verificationId = verificationId;
+            });
             _showSnackbar("Mã OTP đã được gửi!");
           }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
-          setState(() {
-            _verificationId = verificationId;
-          });
+          if (mounted) {
+            setState(() {
+              _verificationId = verificationId;
+            });
+          }
         },
       );
     } catch (e) {
-      await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
+        DialogHelper.hideLoadingDialog(context);
         _showSnackbar("Lỗi gửi OTP: $e");
       }
     }
@@ -133,6 +139,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
       return;
     }
 
+    if (!mounted) return;
     DialogHelper.showLoadingDialog(context, message: "Đang xác thực...");
 
     try {
@@ -142,8 +149,10 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
         finalCredential = credential;
       } else {
         if (_verificationId == null) {
-          await DialogHelper.hideLoadingDialog(context);
-          _showSnackbar("Lỗi xác thực. Vui lòng thử lại!");
+          if (mounted) {
+            DialogHelper.hideLoadingDialog(context);
+            _showSnackbar("Lỗi xác thực. Vui lòng thử lại!");
+          }
           return;
         }
         finalCredential = PhoneAuthProvider.credential(
@@ -164,29 +173,29 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
         }
       }
     } on FirebaseAuthException catch (e) {
-      await DialogHelper.hideLoadingDialog(context);
-      String errorMessage = "Xác thực thất bại";
-      
-      switch (e.code) {
-        case 'invalid-verification-code':
-          errorMessage = "Mã OTP không chính xác!";
-          break;
-        case 'invalid-verification-id':
-          errorMessage = "Phiên xác thực không hợp lệ!";
-          break;
-        case 'session-expired':
-          errorMessage = "Phiên xác thực đã hết hạn!";
-          break;
-        default:
-          errorMessage = "Lỗi xác thực: ${e.message}";
-      }
-      
       if (mounted) {
+        DialogHelper.hideLoadingDialog(context);
+        String errorMessage = "Xác thực thất bại";
+        
+        switch (e.code) {
+          case 'invalid-verification-code':
+            errorMessage = "Mã OTP không chính xác!";
+            break;
+          case 'invalid-verification-id':
+            errorMessage = "Phiên xác thực không hợp lệ!";
+            break;
+          case 'session-expired':
+            errorMessage = "Phiên xác thực đã hết hạn!";
+            break;
+          default:
+            errorMessage = "Lỗi xác thực: ${e.message}";
+        }
+        
         _showSnackbar(errorMessage);
       }
     } catch (e) {
-      await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
+        DialogHelper.hideLoadingDialog(context);
         _showSnackbar("Lỗi không xác định: $e");
       }
     }
@@ -232,15 +241,14 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
         // Sign out to prevent auto-login
         await authService.value.signOut();
 
-        await DialogHelper.hideLoadingDialog(context);
-
         if (mounted) {
+          DialogHelper.hideLoadingDialog(context);
           Navigator.pop(context, true); // Return success
         }
       }
     } catch (e) {
-      await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
+        DialogHelper.hideLoadingDialog(context);
         _showSnackbar("Lỗi đăng ký: $e");
       }
     }

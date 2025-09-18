@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 
 import '../../components/empty_state.dart';
 import 'components/account_card.dart';
@@ -329,7 +330,7 @@ class _AccountAdminState extends State<AccountAdmin> {
 
                     return ListTile(
                       title: Text('Order ID: ${order.id}'),
-                      subtitle: Text('Total: \$${total} • Status: $status'
+                      subtitle: Text('Total: ${CurrencyHelper.formatVND(total)} • Status: $status'
                           '${createdAt != null ? ' • Date: $createdAt' : ''}'),
                       leading: const Icon(Icons.receipt_outlined),
                     );

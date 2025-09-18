@@ -283,12 +283,74 @@ class _RegisterPageNewState extends State<RegisterPageNew>
       UserCredential? userCredential = await authService.value.signInWithGoogle();
 
       if (userCredential?.user != null && mounted) {
-        await _handleSuccessfulSocialRegistration(userCredential!.user!, 'google');
+        // Check if user already exists in our system
+        User user = userCredential!.user!;
+        QuerySnapshot userQuery = await FirebaseFirestore.instance
+            .collection("users")
+            .where("email", isEqualTo: user.email)
+            .get();
+
+        await DialogHelper.hideLoadingDialog(context);
+
+        if (userQuery.docs.isNotEmpty) {
+          // User already exists - this is registration, not login
+          _showSnackbar("Tài khoản đã tồn tại! Vui lòng đăng nhập.");
+          // Sign out the user since they should login instead
+          await authService.value.signOut();
+          return;
+        }
+
+        // Create new user in our system
+        await _createSocialUser(user, 'google');
+        _showSnackbar("Đăng ký thành công với Google!");
+        _clearForm();
+      } else {
+        // User cancelled or authentication failed
+        await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          debugPrint('Google registration cancelled or no credential returned');
+        }
       }
     } catch (e) {
+      // Always ensure loading dialog is hidden first
       await DialogHelper.hideLoadingDialog(context);
+      
       if (mounted) {
-        _showSnackbar("Đăng ký Google thất bại: ${e.toString()}");
+        debugPrint('Google Sign Up Error: $e');
+        
+        // Check if user cancelled the registration
+        if (e.toString().contains('sign_in_canceled') || 
+            e.toString().contains('CANCELLED') ||
+            e.toString().contains('popup_closed') ||
+            e.toString().contains('cancelled')) {
+          debugPrint('Google registration was cancelled by user');
+          return; // Don't show error for user cancellation
+        }
+        
+        String errorMessage = "Đăng ký Google thất bại";
+        
+        // Handle specific error cases
+        if (e.toString().contains('ApiException: 10')) {
+          // DEVELOPER_ERROR - Configuration issue
+          errorMessage = "Lỗi cấu hình Google Sign-In. Vui lòng sử dụng email thường hoặc thử trên thiết bị thật!";
+        } else if (e.toString().contains('sign_in_failed') && 
+                   e.toString().contains('ApiException')) {
+          // Other API exceptions
+          errorMessage = "Google Sign-In không khả dụng trên emulator. Vui lòng sử dụng email thường!";
+        } else if (e.toString().contains('network')) {
+          errorMessage = "Lỗi kết nối mạng. Vui lòng thử lại!";
+        } else {
+          errorMessage = "Đăng ký Google thất bại. Vui lòng thử lại với email thường!";
+        }
+        
+        _showSnackbar(errorMessage);
+      }
+    } finally {
+      // Additional safety net to ensure dialog is always hidden
+      try {
+        await DialogHelper.hideLoadingDialog(context);
+      } catch (e) {
+        debugPrint('Error hiding dialog in finally block: $e');
       }
     }
   }
@@ -300,35 +362,108 @@ class _RegisterPageNewState extends State<RegisterPageNew>
       UserCredential? userCredential = await authService.value.signInWithFacebook();
 
       if (userCredential?.user != null && mounted) {
-        await _handleSuccessfulSocialRegistration(userCredential!.user!, 'facebook');
+        // Check if user already exists in our system
+        User user = userCredential!.user!;
+        QuerySnapshot userQuery = await FirebaseFirestore.instance
+            .collection("users")
+            .where("email", isEqualTo: user.email)
+            .get();
+
+        await DialogHelper.hideLoadingDialog(context);
+
+        if (userQuery.docs.isNotEmpty) {
+          // User already exists - this is registration, not login
+          _showSnackbar("Tài khoản đã tồn tại! Vui lòng đăng nhập.");
+          // Sign out the user since they should login instead
+          await authService.value.signOut();
+          return;
+        }
+
+        // Create new user in our system
+        await _createSocialUser(user, 'facebook');
+        _showSnackbar("Đăng ký thành công với Facebook!");
+        _clearForm();
+      } else {
+        // User cancelled or authentication failed
+        await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          debugPrint('Facebook registration cancelled or no credential returned');
+        }
       }
     } catch (e) {
+      // Always ensure loading dialog is hidden first
       await DialogHelper.hideLoadingDialog(context);
+      
       if (mounted) {
+        debugPrint('Facebook Sign Up Error: $e');
+        
         String errorMessage = "Đăng ký Facebook thất bại";
-        if (e.toString().contains('MissingPluginException')) {
+        
+        // Check if user cancelled the registration
+        if (e.toString().contains('sign_in_canceled') || 
+            e.toString().contains('CANCELLED') ||
+            e.toString().contains('popup_closed') ||
+            e.toString().contains('cancelled')) {
+          debugPrint('Facebook registration was cancelled by user');
+          return; // Don't show error for user cancellation
+        } else if (e.toString().contains('MissingPluginException')) {
           errorMessage = "Facebook đăng ký chưa được cấu hình đầy đủ. Vui lòng sử dụng Google hoặc Email!";
-        } else if (e.toString().contains('CANCELLED')) {
-          errorMessage = "Đăng ký Facebook đã bị hủy";
+        } else if (e.toString().contains('network')) {
+          errorMessage = "Lỗi kết nối mạng. Vui lòng thử lại!";
+        } else if (e.toString().contains('WebView')) {
+          errorMessage = "Lỗi WebView Facebook. Vui lòng thử lại hoặc sử dụng Email!";
+        } else if (e.toString().contains('Facebook login failed')) {
+          errorMessage = "Facebook không thể đăng ký. Vui lòng thử lại!";
         }
+        
         _showSnackbar(errorMessage);
+      }
+    } finally {
+      // Additional safety net to ensure dialog is always hidden
+      try {
+        await DialogHelper.hideLoadingDialog(context);
+      } catch (e) {
+        debugPrint('Error hiding dialog in finally block: $e');
       }
     }
   }
 
-  Future<void> _handleSuccessfulSocialRegistration(User user, String provider) async {
+  Future<void> _createSocialUser(User user, String provider) async {
     try {
-      await DialogHelper.hideLoadingDialog(context);
+      String? fullName = user.displayName ?? "";
+      
+      if (fullName.isEmpty) {
+        fullName = "User";
+      }
 
-      if (mounted) {
-        _showSnackbar("Đăng ký thành công với $provider!");
-        _clearForm();
-      }
+      // Split full name into first and last name
+      List<String> nameParts = fullName.split(' ');
+      String firstName = nameParts.isNotEmpty ? nameParts.first : "User";
+      String lastName = nameParts.length > 1 ? nameParts.skip(1).join(' ') : "";
+
+      // Create user data directly in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'email': user.email,
+        'displayName': user.displayName,
+        'firstName': firstName,
+        'lastName': lastName,
+        'photoURL': user.photoURL ?? 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg',
+        'phoneNumber': user.phoneNumber,
+        'provider': provider,
+        'role': 'user',
+        'address': null,
+        'dateOfBirth': null,
+        'gender': null,
+        'bio': null,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
     } catch (e) {
-      await DialogHelper.hideLoadingDialog(context);
-      if (mounted) {
-        _showSnackbar("Lỗi xử lý đăng ký: $e");
-      }
+      debugPrint('Error creating social user: $e');
+      await authService.value.signOut();
+      throw Exception("Có lỗi xảy ra khi tạo tài khoản. Vui lòng thử lại!");
     }
   }
 

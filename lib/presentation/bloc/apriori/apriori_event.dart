@@ -14,7 +14,7 @@ class GetSuggestionsFromMultipleBreeds extends AprioriEvent {
   
   GetSuggestionsFromMultipleBreeds(
     this.breeds, {
-    this.minSupport = 0.05,
+    this.minSupport = 0.01,
     this.minConfidence = 0.3,
     this.maxSuggestions = 10,
   });
@@ -28,7 +28,7 @@ class GetSuggestionsFromCartItems extends AprioriEvent {
   
   GetSuggestionsFromCartItems(
     this.cartItems, {
-    this.minSupport = 0.05,
+    this.minSupport = 0.01,
     this.minConfidence = 0.3,
     this.maxSuggestions = 10,
   });

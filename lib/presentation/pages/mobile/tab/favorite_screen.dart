@@ -28,9 +28,17 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
 
   void _initializeUser() async {
     UserManager userManager = UserManager();
-    userIdentifier = await userManager.getUserIdentifier();
+    await userManager.initialize();
+    
+    // Sử dụng userId thay vì email để consistent với logic mới
+    userIdentifier = await userManager.getUserIdForOperations();
+    
+    print("💖 FavoriteScreen: Using userId for favorites: $userIdentifier");
+    
     if (userIdentifier != null) {
       context.read<FavBloc>().add(LoadFav(userIdentifier!));
+    } else {
+      print("❌ FavoriteScreen: No userId found, user may not be logged in");
     }
   }
 

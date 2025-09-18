@@ -61,7 +61,7 @@ class AuthService {
     try {
       // Check if Facebook login is available
       final LoginResult result = await FacebookAuth.instance.login(
-        permissions: ['email', 'public_profile'],
+        permissions: ['public_profile'],
       );
       
       if (result.status == LoginStatus.success) {
@@ -124,11 +124,17 @@ class AuthService {
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
       
       if (!userDoc.exists) {
+        // For Facebook users without email, set email to null
+        String? userEmail = user.email;
+        if (userEmail == null || userEmail.isEmpty || provider == 'facebook') {
+          userEmail = null; // Set to null instead of creating fake email
+        }
+        
         await _firestore.collection('users').doc(user.uid).set({
           'uid': user.uid,
-          'email': user.email,
-          'displayName': user.displayName,
-          'photoURL': user.photoURL ?? 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg',
+          'email': userEmail,
+          'displayName': user.displayName ?? 'Facebook User',
+          'imageUrl': user.photoURL ?? 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg',
           'phoneNumber': user.phoneNumber,
           'provider': provider,
           'role': 'user',

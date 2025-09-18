@@ -4,7 +4,7 @@
     
     <!-- Facebook Configuration -->
     <!-- Replace with your actual Facebook App ID -->
-    <string name="facebook_app_id">1141159281220831</string>
-    <string name="facebook_client_token">79cc30a23e912a7523329c99ae8fbbdb</string>
-    <string name="fb_login_protocol_scheme">1141159281220831</string>
+    <string name="facebook_app_id">382084861054704</string>
+    <string name="facebook_client_token">95f394c6f4fa44c93ec9edc329361a0d</string>
+    <string name="fb_login_protocol_scheme">382084861054704</string>
 </resources>

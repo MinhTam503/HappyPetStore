@@ -60,6 +60,10 @@ android {
         debug {
             // Suppress third-party library warnings in debug builds
             manifestPlaceholders = [usesCleartextTraffic: "true"]
+            // toreFile file('D:/Android_Virtual/.android/new_debug.keystore')
+            // storePassword 'null'
+            // keyAlias 'androiddebugkey'
+            // keyPassword 'null'
         }
         release {
             // TODO: Add your own signing config for the release build.

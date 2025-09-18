@@ -5,6 +5,7 @@ import 'package:pet_shop/core/constants/app_constants.dart'; // Chứa primaryCo
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/dashboard/dashboard_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet/pets_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_analytics_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
 import 'package:pet_shop/presentation/widgets/settings_menu.dart';
@@ -34,6 +35,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     const OrdersAdmin(),
     const InboxPageAdmin(),
     const ShopInfo(),
+    const PetAnalyticsPage(),
     const RevenuePage(),
   ];
 
@@ -81,7 +83,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     if (_loading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: primaryColor)),
@@ -94,12 +96,14 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).primaryColor,
-        title: Text(l10n.adminPanel, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+        title: Text(l10n.adminPanel,
+            style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
         actions: [
           const SettingsMenu(),
           const SizedBox(width: 8),
           IconButton(
-            icon: Icon(Icons.logout, color: Theme.of(context).colorScheme.onPrimary),
+            icon: Icon(Icons.logout,
+                color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _logout,
             tooltip: l10n.logout,
           ),
@@ -114,22 +118,32 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             labelType: NavigationRailLabelType.all,
             destinations: [
               NavigationRailDestination(
-                  icon: const Icon(Icons.dashboard_outlined), label: Text(l10n.dashboard)),
+                  icon: const Icon(Icons.dashboard_outlined),
+                  label: Text(l10n.dashboard)),
               NavigationRailDestination(
-                  icon: const Icon(Icons.pets_outlined), label: Text(l10n.pets)),
+                  icon: const Icon(Icons.pets_outlined),
+                  label: Text(l10n.pets)),
               NavigationRailDestination(
-                  icon: const Icon(Icons.category_outlined), label: Text(l10n.category)),
+                  icon: const Icon(Icons.category_outlined),
+                  label: Text(l10n.category)),
               NavigationRailDestination(
-                  icon: const Icon(Icons.group_outlined), label: Text(l10n.account)),
+                  icon: const Icon(Icons.group_outlined),
+                  label: Text(l10n.account)),
               NavigationRailDestination(
                   icon: const Icon(Icons.receipt_long_outlined),
                   label: Text(l10n.orders)),
               NavigationRailDestination(
-                  icon: const Icon(Icons.inbox_outlined), label: Text(l10n.inbox)),
+                  icon: const Icon(Icons.inbox_outlined),
+                  label: Text(l10n.inbox)),
               NavigationRailDestination(
-                  icon: const Icon(Icons.store_outlined), label: Text(l10n.shopInfo)),
+                  icon: const Icon(Icons.store_outlined),
+                  label: Text(l10n.shopInfo)),
               NavigationRailDestination(
-                  icon: const Icon(Icons.bar_chart_outlined), label: Text(l10n.revenue)),
+                  icon: const Icon(Icons.analytics_outlined),
+                  label: Text(l10n.petAnalytics)),
+              NavigationRailDestination(
+                  icon: const Icon(Icons.bar_chart_outlined),
+                  label: Text(l10n.revenue)),
             ],
           ),
           Expanded(

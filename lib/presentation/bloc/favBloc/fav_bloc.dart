@@ -15,17 +15,21 @@ class FavBloc extends Bloc<FavEvent, FavState> {
   Future<void> _onLoadFav(LoadFav event, Emitter<FavState> emit) async {
     emit(FavLoading());
     try {
-      final doc = await _favRef.doc(event.email).get();
+      print("💖 Loading favorites for userId: ${event.userId}");
+      final doc = await _favRef.doc(event.userId).get();
       final items = (doc.exists ? doc['items'] : []) as List<dynamic>;
+      print("💖 Found ${items.length} favorite items");
       emit(FavLoaded(List<Map<String, dynamic>>.from(items)));
     } catch (e) {
+      print("❌ Error loading favorites: $e");
       emit(FavError(e.toString()));
     }
   }
 
   Future<void> _onAddToFav(AddToFav event, Emitter<FavState> emit) async {
     try {
-      final docRef = _favRef.doc(event.email);
+      print("💖 Adding to favorites for userId: ${event.userId}");
+      final docRef = _favRef.doc(event.userId);
       final doc = await docRef.get();
 
       final items = doc.exists
@@ -35,15 +39,18 @@ class FavBloc extends Bloc<FavEvent, FavState> {
       final exists = items.any(
               (item) => item['productId'] == event.item['productId']);
       if (exists) {
+        print("💖 Product already in favorites");
         emit(FavLoaded(items, message: 'Sản phẩm đã có trong trang yêu thích'));
         return;
       } else {
         items.add(event.item);
         await docRef.set({'items': items});
+        print("💖 Added to favorites successfully");
         emit(FavLoaded(items, message: 'Đã thêm vào yêu thích'));
       }
 
     } catch (e) {
+      print("❌ Error adding to favorites: $e");
       emit(FavError(e.toString()));
     }
   }
@@ -51,7 +58,8 @@ class FavBloc extends Bloc<FavEvent, FavState> {
   Future<void> _onRemoveFromFav(
       RemoveFromFav event, Emitter<FavState> emit) async {
     try {
-      final docRef = _favRef.doc(event.email);
+      print("💖 Removing from favorites for userId: ${event.userId}");
+      final docRef = _favRef.doc(event.userId);
       final doc = await docRef.get();
 
       final items = List<Map<String, dynamic>>.from(doc['items']);
@@ -59,8 +67,10 @@ class FavBloc extends Bloc<FavEvent, FavState> {
       items.removeWhere((item) => item["productId"] == event.id);
 
       await docRef.set({'items': items});
-      emit(FavLoaded(items, message: 'Đã xóa khỏi giỏ hàng'));
+      print("💖 Removed from favorites successfully");
+      emit(FavLoaded(items, message: 'Đã xóa khỏi yêu thích'));
     } catch (e) {
+      print("❌ Error removing from favorites: $e");
       emit(FavError(e.toString()));
     }
   }

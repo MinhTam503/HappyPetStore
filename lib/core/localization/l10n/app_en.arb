@@ -286,10 +286,6 @@
   "@cancelled": {
     "description": "Cancelled status"
   },
-  "cancelled": "Cancelled",
-  "@cancelled": {
-    "description": "Cancelled status"
-  },
   "lastDays": "Last {days} days",
   "@lastDays": {
     "description": "Last X days filter",
@@ -797,5 +793,125 @@
   },
   "@noMatchingAccounts": {
     "description": "Empty state message for filtered accounts"
+  },
+  "petAnalytics": "Pet Analytics",
+  "@petAnalytics": {
+    "description": "Pet Analytics menu item"
+  },
+  "overview": "Overview",
+  "@overview": {
+    "description": "Overview tab"
+  },
+  "available": "Available",
+  "@available": {
+    "description": "Available tab"
+  },
+  "sold": "Sold",
+  "@sold": {
+    "description": "Sold tab"
+  },
+  "statistics": "Statistics",
+  "@statistics": {
+    "description": "Statistics tab"
+  },
+  "availablePets": "Available Pets",
+  "@availablePets": {
+    "description": "Available pets metric"
+  },
+  "soldPets": "Sold Pets",
+  "@soldPets": {
+    "description": "Sold pets metric"
+  },
+  "successRate": "Success Rate",
+  "@successRate": {
+    "description": "Success rate metric"
+  },
+  "breedAnalysis": "Breed Analysis",
+  "@breedAnalysis": {
+    "description": "Breed analysis section"
+  },
+  "revenueAnalysis": "Revenue Analysis",
+  "@revenueAnalysis": {
+    "description": "Revenue analysis section"
+  },
+  "petDemographics": "Pet Demographics",
+  "@petDemographics": {
+    "description": "Pet demographics section"
+  },
+  "salesPerformance": "Sales Performance",
+  "@salesPerformance": {
+    "description": "Sales performance section"
+  },
+  "averagePrice": "Average Price",
+  "@averagePrice": {
+    "description": "Average price label"
+  },
+  "highestPrice": "Highest Price",
+  "@highestPrice": {
+    "description": "Highest price label"
+  },
+  "lowestPrice": "Lowest Price",
+  "@lowestPrice": {
+    "description": "Lowest price label"
+  },
+  "mostPopularBreed": "Most Popular Breed",
+  "@mostPopularBreed": {
+    "description": "Most popular breed label"
+  },
+  "averageAge": "Average Age",
+  "@averageAge": {
+    "description": "Average age label"
+  },
+  "malePets": "Male Pets",
+  "@malePets": {
+    "description": "Male pets label"
+  },
+  "femalePets": "Female Pets",
+  "@femalePets": {
+    "description": "Female pets label"
+  },
+  "conversionRate": "Conversion Rate",
+  "@conversionRate": {
+    "description": "Conversion rate label"
+  },
+  "petsAddedThisMonth": "Pets Added This Month",
+  "@petsAddedThisMonth": {
+    "description": "Pets added this month label"
+  },
+  "petsSoldThisMonth": "Pets Sold This Month",
+  "@petsSoldThisMonth": {
+    "description": "Pets sold this month label"
+  },
+  "noDataAvailable": "No data available",
+  "@noDataAvailable": {
+    "description": "No data available message"
+  },
+  "noAvailablePets": "No available pets",
+  "@noAvailablePets": {
+    "description": "No available pets message"
+  },
+  "noSoldPets": "No sold pets yet",
+  "@noSoldPets": {
+    "description": "No sold pets message"
+  },
+  "totalLabel": "Total",
+  "@totalLabel": {
+    "description": "Total label"
+  },
+  "breed": "Breed",
+  "@breed": {
+    "description": "Breed label"
+  },
+  "age": "Age",
+  "@age": {
+    "description": "Age label"
+  },
+  "years": "years",
+  "@years": {
+    "description": "Years unit"
+  },
+  "unknown": "Unknown",
+  "@unknown": {
+    "description": "Unknown value"
   }
 }

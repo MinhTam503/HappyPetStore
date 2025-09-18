@@ -11,6 +11,7 @@ import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/core/utils/message_manager.dart';
 
 class PopularPetItems extends StatefulWidget {
   final Map<String, dynamic> pet;
@@ -22,7 +23,6 @@ class PopularPetItems extends StatefulWidget {
 }
 
 class _PetItemsAllState extends State<PopularPetItems> {
-  String? lastCartMessage;
   bool _hover = false;
 
   String _priceText(dynamic raw) => CurrencyHelper.formatVND(raw);
@@ -115,7 +115,10 @@ class _PetItemsAllState extends State<PopularPetItems> {
                                 background: Colors.white,
                                 onTap: () async {
                                   UserManager userManager = UserManager();
-                                  final userIdentifier = await userManager.getUserIdentifier();
+                                  await userManager.initialize();
+                                  final userIdentifier = await userManager.getUserIdForOperations();
+                                  print("💖 PopularPetItems: Using userId for favorites: $userIdentifier");
+                                  
                                   if (userIdentifier == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -227,7 +230,10 @@ class _PetItemsAllState extends State<PopularPetItems> {
                             icon: Icons.shopping_cart_outlined,
                             onTap: () async {
                               UserManager userManager = UserManager();
-                              final userIdentifier = await userManager.getUserIdentifier();
+                              await userManager.initialize();
+                              final userIdentifier = await userManager.getUserIdForOperations();
+                              print("🛒 PopularPetItems: Using userId for cart: $userIdentifier");
+                              
                               if (userIdentifier == null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -245,19 +251,23 @@ class _PetItemsAllState extends State<PopularPetItems> {
                             listenCart: (ctx, state) {
                               if (state is CartLoaded &&
                                   state.message != null) {
-                                if (lastCartMessage != state.message) {
+                                // Use MessageManager to prevent duplicate messages
+                                if (MessageManager().shouldShowMessage(state.message!)) {
                                   ScaffoldMessenger.of(ctx)
                                       .hideCurrentSnackBar();
                                   ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(content: Text(state.message!)),
+                                    SnackBar(
+                                      content: Text(state.message!),
+                                      duration: const Duration(seconds: 2),
+                                    ),
                                   );
-                                  lastCartMessage = state.message;
                                 }
                               } else if (state is CartError) {
                                 ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   SnackBar(
-                                      content: Text('Lỗi: ${state.message}')),
+                                      content: Text('Lỗi: ${state.message}'),
+                                      duration: const Duration(seconds: 3)),
                                 );
                               }
                             },

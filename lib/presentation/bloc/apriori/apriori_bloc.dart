@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/domain/usecases/apriori_usecase.dart';
 import 'apriori_event.dart';
 import 'apriori_state.dart';
@@ -80,23 +81,44 @@ class AprioriBloc extends Bloc<AprioriEvent, AprioriState> {
     emit(AprioriLoading());
     
     try {
+      print('🔍 Analyzing cart with ${event.cartItems.length} items');
+      print('📋 Cart items structure: ${event.cartItems.map((item) => item.keys.toList()).toList()}');
+      
       // Extract unique breeds from cart items
       Set<String> breedSet = {};
       for (var item in event.cartItems) {
-        final breed = item['breed'] as String?;
+        print('🔄 Processing cart item: $item');
+        
+        // Try to get breed directly from item
+        String? breed = item['breed'] as String?;
+        
+        // If no breed, try to get from petId
+        if (breed == null || breed.isEmpty) {
+          final petId = item['petId'] as String?;
+          if (petId != null) {
+            print('🐕 Getting breed for petId: $petId');
+            breed = await _getBreedFromPetId(petId);
+            print('✅ Found breed from Firebase: $breed');
+          }
+        }
+        
         if (breed != null && breed.isNotEmpty) {
           breedSet.add(breed);
+          print('✅ Added breed: $breed');
+        } else {
+          print('⚠️ No breed found for item: $item');
         }
       }
 
       final breeds = breedSet.toList();
       
       if (breeds.isEmpty) {
+        print('❌ No breeds extracted from cart');
         emit(AprioriEmpty('Không tìm thấy thông tin giống trong giỏ hàng'));
         return;
       }
 
-      print('🔍 Analyzing cart with ${breeds.length} unique breeds: $breeds');
+      print('🎯 Final breeds for analysis: $breeds');
 
       final suggestions = await _aprioriUseCase.getSuggestedPetsFromMultipleBreeds(
         breeds,
@@ -125,5 +147,36 @@ class AprioriBloc extends Bloc<AprioriEvent, AprioriState> {
     Emitter<AprioriState> emit,
   ) {
     emit(AprioriInitial());
+  }
+  
+  /// Helper method to fetch breed from petId
+  Future<String?> _getBreedFromPetId(String petId) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      
+      // Try with "pets" collection first
+      DocumentSnapshot? petDoc;
+      try {
+        petDoc = await firestore.collection('pets').doc(petId).get();
+      } catch (e) {
+        // Try with "Pets" collection
+        try {
+          petDoc = await firestore.collection('Pets').doc(petId).get();
+        } catch (e2) {
+          print('❌ Error fetching pet $petId from both collections: $e, $e2');
+          return null;
+        }
+      }
+      
+      if (petDoc.exists) {
+        final data = petDoc.data() as Map<String, dynamic>?;
+        return data?['breed'] as String?;
+      }
+      
+      return null;
+    } catch (e) {
+      print('❌ Error in _getBreedFromPetId: $e');
+      return null;
+    }
   }
 }

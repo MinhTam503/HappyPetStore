@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import '../../../../../core/utils/currency_helper.dart';
 
 class RevenuePage extends StatefulWidget {
   const RevenuePage({super.key});
@@ -21,6 +22,7 @@ class _RevenuePageState extends State<RevenuePage> {
   List<String> rangeDays = [];
   int selectedMonth = DateTime.now().month;
   double totalRevenue = 0.0; // Biến lưu tổng doanh thu
+  String revenueUnit = '₫'; // Track unit for chart display
   String statisticType = 'month'; // 'month' hoặc 'day'
   String dataSource = 'all'; // 'all', 'orders', 'ordersWeb'
   DateTime? selectedDate;
@@ -93,8 +95,31 @@ class _RevenuePageState extends State<RevenuePage> {
       }
     }
 
+    // Convert large numbers for chart rendering
+    final convertedRevenue = <String, double>{};
+    double maxValue = revenueData.values.isNotEmpty ? 
+      revenueData.values.reduce((a, b) => a > b ? a : b) : 0.0;
+    
+    if (maxValue >= 1000000) {
+      // Convert to millions
+      revenueUnit = 'triệu ₫';
+      for (final entry in revenueData.entries) {
+        convertedRevenue[entry.key] = entry.value / 1000000;
+      }
+    } else if (maxValue >= 1000) {
+      // Convert to thousands 
+      revenueUnit = 'nghìn ₫';
+      for (final entry in revenueData.entries) {
+        convertedRevenue[entry.key] = entry.value / 1000;
+      }
+    } else {
+      // Use original values
+      revenueUnit = '₫';
+      convertedRevenue.addAll(revenueData);
+    }
+
     setState(() {
-      dailyRevenue = revenueData;
+      dailyRevenue = convertedRevenue; // Use converted data for chart
       totalRevenue = total;
       rangeDays = days;
     });
@@ -612,12 +637,12 @@ class _RevenuePageState extends State<RevenuePage> {
                               _rowIconText(Icons.email, email),
                               const SizedBox(height: 6),
                               _rowIconText(
-                                  Icons.attach_money, 'Total: \$$total',
+                                  Icons.attach_money, AppLocalizations.of(context)!.total(CurrencyHelper.formatVND(total)),
                                   iconColor:
                                       Theme.of(context).colorScheme.primary),
                               const SizedBox(height: 6),
                               _rowIconText(
-                                  Icons.calendar_today, 'Date: $dateStr',
+                                  Icons.calendar_today, AppLocalizations.of(context)!.date(dateStr),
                                   iconColor:
                                       Theme.of(context).colorScheme.secondary),
                               const SizedBox(height: 8),
@@ -786,7 +811,7 @@ class _RevenuePageState extends State<RevenuePage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '\$${totalRevenue.toStringAsFixed(2)}',
+                            CurrencyHelper.formatVND(totalRevenue),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 32,
@@ -1231,7 +1256,7 @@ class _RevenuePageState extends State<RevenuePage> {
                               if (selectedRange != null &&
                                   group.x < rangeDays.length) {
                                 return BarTooltipItem(
-                                  '${rangeDays[group.x]}\n\$${rod.toY.toStringAsFixed(2)}',
+                                  '${rangeDays[group.x]}\n${_formatChartValue(rod.toY)} ${revenueUnit}',
                                   const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -1240,7 +1265,7 @@ class _RevenuePageState extends State<RevenuePage> {
                                 );
                               } else {
                                 return BarTooltipItem(
-                                  'Day ${group.x}\n\$${rod.toY.toStringAsFixed(2)}',
+                                  'Day ${group.x}\n${_formatChartValue(rod.toY)} ${revenueUnit}',
                                   const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -1276,5 +1301,16 @@ class _RevenuePageState extends State<RevenuePage> {
         ),
       ),
     );
+  }
+
+  // Format chart values based on current unit
+  String _formatChartValue(double value) {
+    if (revenueUnit == 'triệu ₫') {
+      return value.toStringAsFixed(1);
+    } else if (revenueUnit == 'nghìn ₫') {
+      return value.toStringAsFixed(0);
+    } else {
+      return value.toStringAsFixed(0);
+    }
   }
 }

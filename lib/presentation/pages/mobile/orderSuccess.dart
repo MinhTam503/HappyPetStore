@@ -31,6 +31,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
     }
     getTop5BestSellingBreeds();
   }
+
   Future<void> getTop5BestSellingBreeds() async {
     Map<String, int> breedSales = {};
     Set<String> neededProductIds = {};
@@ -102,6 +103,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
       print("Lỗi khi lấy top giống phổ biến: $e");
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,7 +151,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
             petItems.isEmpty
                 ? const Text("")
                 : const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     child: Text(
                       "Sản phẩm gợi ý",
                       style: TextStyle(
@@ -158,16 +160,11 @@ class _OrderSuccessState extends State<OrderSuccess> {
                           fontWeight: FontWeight.w500),
                     ),
                   ),
-            const SizedBox(
-              height: 10,
-            ),
             petItems.isEmpty
-                ? const Text(
-                    "",
-                  )
+                ? const SizedBox.shrink()
                 : Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: GridView.builder(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: GridView.builder(
                       itemCount: petItems.length,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -176,7 +173,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
-                        childAspectRatio: 0.60,
+                        childAspectRatio: 0.8,
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       itemBuilder: (context, index) {
@@ -196,8 +193,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
                         );
                       },
                     ),
-                ),
-
+                  ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 10),
               child: Text(
@@ -213,42 +209,44 @@ class _OrderSuccessState extends State<OrderSuccess> {
             ),
             top5BestSell.isEmpty
                 ? const Padding(
-              padding: EdgeInsets.all(10),
-              child: Text("Không có sản phẩm tương tự",
-                style: TextStyle(fontWeight: FontWeight.w500),),
-            )
-                : Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: GridView.builder(
-                                itemCount: top5BestSell.length,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.903,
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
-                                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              DetailPet(grocery: top5BestSell[index]),
-                        ),
-                      );
-                    },
-                    child: PetItemsAll(
-                      pet: top5BestSell[index],
+                    padding: EdgeInsets.all(10),
+                    child: Text(
+                      "Không có sản phẩm tương tự",
+                      style: TextStyle(fontWeight: FontWeight.w500),
                     ),
-                  );
-                                },
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: GridView.builder(
+                      itemCount: top5BestSell.length,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.8,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    DetailPet(grocery: top5BestSell[index]),
                               ),
-                ),
+                            );
+                          },
+                          child: PetItemsAll(
+                            pet: top5BestSell[index],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ],
         ),
       ),

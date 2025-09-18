@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:pet_shop/auth/payment/keys.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/presentation/pages/mobile/orderSuccess.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
@@ -94,21 +96,33 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> fetchUserInfo() async {
     if (userIdentifier == null) return;
+    
+    // Đảm bảo UserManager được initialize
+    await userManager.initialize();
+    
     userInfo = await userManager.getCurrentUserInfo();
+    print("👤 Fetched user info: email=${userInfo?['email']}, phone=${userInfo?['phone']}");
     setState(() {});
   }
 
-  void onOrderSuccessWithSuggestions(List<CartModel> cartItems) async {
-    // Extract breeds from cart items for improved suggestions
-    List<String> breeds = cartItems
-        .map((item) => item.grocery["breed"] as String?)
-        .where((breed) => breed != null && breed.isNotEmpty)
-        .cast<String>()
-        .toSet() // Remove duplicates
-        .toList();
-
-    print(
-        '🌱 FP-Growth analysis: Found ${breeds.length} unique breeds: $breeds');
+  void onOrderSuccessWithBreeds(List<String> breeds) async {
+    print('🚀 MULTI-BREED ANALYSIS: onOrderSuccessWithBreeds called with ${breeds.length} breeds: $breeds');
+    
+    if (!mounted) {
+      print('🚫 Widget unmounted, skipping Apriori analysis');
+      return;
+    }
+    
+    if (breeds.isEmpty) {
+      print('🚫 No breeds provided, navigating with empty suggestions');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const OrderSuccess(suggestions: []),
+        ),
+      );
+      return;
+    }
 
     // Use Apriori BLoC for breed analysis
     context.read<AprioriBloc>().add(GetSuggestionsFromMultipleBreeds(breeds));
@@ -122,6 +136,7 @@ class _CartScreenState extends State<CartScreen> {
         final suggestions =
             state.suggestions.map((pet) => pet.toMap()).toList();
 
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -130,6 +145,64 @@ class _CartScreenState extends State<CartScreen> {
         );
       } else if (state is AprioriError || state is AprioriEmpty) {
         // Fallback to empty suggestions
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OrderSuccess(suggestions: []),
+          ),
+        );
+      }
+    });
+  }
+
+  void onOrderSuccessWithSuggestions(List<CartModel> cartItems) async {
+    print('🚀 MULTI-BREED ANALYSIS: onOrderSuccessWithSuggestions called with ${cartItems.length} items');
+    
+    if (!mounted) {
+      print('🚫 Widget unmounted, skipping Apriori analysis');
+      return;
+    }
+    
+    // Extract breeds from cart items for improved suggestions
+    print('🔍 DEBUG: Extracting breeds from cart items...');
+    for (var i = 0; i < cartItems.length; i++) {
+      print('🔍 Cart item $i: ${cartItems[i].grocery}');
+      print('🔍 Cart item $i breed: ${cartItems[i].grocery["breed"]}');
+    }
+    
+    List<String> breeds = cartItems
+        .map((item) => item.grocery["breed"] as String?)
+        .where((breed) => breed != null && breed.isNotEmpty)
+        .cast<String>()
+        .toSet() // Remove duplicates
+        .toList();
+
+    print(
+        '🌱 Multi-breed Apriori analysis: Found ${breeds.length} unique breeds: $breeds');
+
+    // Use Apriori BLoC for breed analysis
+    context.read<AprioriBloc>().add(GetSuggestionsFromMultipleBreeds(breeds));
+
+    // Listen to BLoC state and navigate when loaded
+    final aprioriBloc = context.read<AprioriBloc>();
+
+    aprioriBloc.stream.listen((state) {
+      if (state is AprioriLoaded) {
+        // Convert to old format for compatibility
+        final suggestions =
+            state.suggestions.map((pet) => pet.toMap()).toList();
+
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderSuccess(suggestions: suggestions),
+          ),
+        );
+      } else if (state is AprioriError || state is AprioriEmpty) {
+        // Fallback to empty suggestions
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -277,14 +350,20 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Future<void> saveOrderToFirestore(
+  Future<List<String>> saveOrderToFirestore(
       String userIdentifier, List<CartModel> cartItems,
       {bool isPaid = true}) async {
+    
+    // Đảm bảo UserManager được initialize
+    await userManager.initialize();
+    
     final totalAmount = _calculateTotal(cartItems);
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
     // Lấy đầy đủ thông tin thú cưng từ Firestore
     List<Map<String, dynamic>> items = [];
+    List<String> breeds = []; // Collect breeds here
+    
     for (var item in cartItems) {
       final petDoc = await FirebaseFirestore.instance
           .collection('Pets')
@@ -296,6 +375,13 @@ class _CartScreenState extends State<CartScreen> {
         petData['productId'] = petDoc.id;
         petData['id'] = petDoc.id; // Thêm id
         petData['breed'] = petDoc.get('breed'); // Đảm bảo lưu breed
+        
+        // Collect breed for Apriori analysis
+        final breed = petDoc.get('breed') as String?;
+        if (breed != null && breed.isNotEmpty) {
+          breeds.add(breed);
+        }
+        
         petData['price'] = petDoc.data().toString().contains('price')
             ? petDoc.get('price')
             : petDoc.get('weight');
@@ -313,10 +399,17 @@ class _CartScreenState extends State<CartScreen> {
       items.add(petData);
     }
 
+    // Lấy thông tin user đầy đủ từ UserManager
+    final userInfoForOrder = await userManager.getUserInfoForOrder();
+    final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
+    
     final orderData = {
       "orderId": orderRef.id,
-      "userIdentifier": userIdentifier, // Changed from email to userIdentifier
-      "phone": userInfo != null ? userInfo!["phone"] ?? "" : "",
+      "userIdentifier": userIdentifier,
+      "userId": userInfoForOrder?['userId'] ?? userIdentifier,
+      "email": userInfoForOrder?['email'] ?? currentUserEmail ?? userIdentifier,
+      "phone": userInfoForOrder?['phone'] ?? (userInfo?["phone"] ?? ""),
+      "displayName": userInfoForOrder?['displayName'] ?? "",
       "totalAmount": totalAmount,
       "statusPayment": isPaid
           ? (paymentMethod == 'paypal' ? "Payment Completed" : "COD")
@@ -328,7 +421,17 @@ class _CartScreenState extends State<CartScreen> {
       "items": items,
     };
 
+    print("💾 Saving order with user info:");
+    print("  - userId: ${orderData['userId']}");
+    print("  - email: ${orderData['email']}");
+    print("  - phone: ${orderData['phone']}");
+    print("  - displayName: ${orderData['displayName']}");
+    print("🌱 Collected breeds for Apriori: $breeds");
+
     await orderRef.set(orderData);
+    
+    // Return unique breeds for Apriori analysis
+    return breeds.toSet().toList();
   }
 
   Future<void> showPaymentSheet(
@@ -351,14 +454,20 @@ class _CartScreenState extends State<CartScreen> {
         }
       }
 
-      await saveOrderToFirestore(userIdentifier, cartItems, isPaid: true);
+      // Save order and get breeds for Apriori analysis
+      final breeds = await saveOrderToFirestore(userIdentifier, cartItems, isPaid: true);
       context.read<CartBloc>().add(ClearCart(userIdentifier));
 
-      // Chuẩn bị suggestions cho OrderSuccess với improved algorithm
       if (!context.mounted) return;
 
-      // Use new multi-breed analysis instead of single breed
-      onOrderSuccessWithSuggestions(cartItems);
+      // Use new multi-breed analysis with extracted breeds
+      if (breeds.isNotEmpty) {
+        print("🌱 Stripe payment: Using breeds for Apriori: $breeds");
+        onOrderSuccessWithBreeds(breeds);
+      } else {
+        print("⚠️ Stripe payment: No breeds found, using fallback");
+        onOrderSuccessWithSuggestions(cartItems);
+      }
 
       setState(() {
         intentPaymentData = null;
@@ -684,95 +793,92 @@ class _CartScreenState extends State<CartScreen> {
                           child: ElevatedButton(
                             onPressed: () async {
                               print("Order button pressed");
-                              // Kiểm tra địa chỉ giao hàng
-                              if (selectedAddress == null ||
-                                  addresses.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        "Vui lòng chọn địa chỉ giao hàng trước khi đặt hàng"),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                                return;
-                              }
-                              // Kiểm tra phone
-                              if (userInfo == null ||
-                                  userInfo!["phone"] == null ||
-                                  userInfo!["phone"]
-                                      .toString()
-                                      .trim()
-                                      .isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        "Vui lòng bổ sung số điện thoại trong hồ sơ trước khi đặt hàng!"),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                                return;
-                              }
-                              final currentUserIdentifier = userIdentifier;
-                              if (currentUserIdentifier == null) return;
+                              
+                              // Show loading dialog
+                              DialogHelper.showLoadingDialog(context);
+                              
+                              try {
+                                // Kiểm tra địa chỉ giao hàng
+                                if (selectedAddress == null ||
+                                    addresses.isEmpty) {
+                                  DialogHelper.hideLoadingDialog(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          "Vui lòng chọn địa chỉ giao hàng trước khi đặt hàng"),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
 
-                              if (paymentMethod == 'paypal') {
+                                // Kiểm tra số điện thoại
+                                if (userInfo == null ||
+                                    userInfo!["phone"] == null ||
+                                    userInfo!["phone"].toString().trim().isEmpty) {
+                                  DialogHelper.hideLoadingDialog(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          "Vui lòng bổ sung số điện thoại trong hồ sơ trước khi đặt hàng!"),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final currentUserIdentifier = userIdentifier;
+                                if (currentUserIdentifier == null) {
+                                  DialogHelper.hideLoadingDialog(context);
+                                  return;
+                                }
+
+                                if (paymentMethod == 'paypal') {
+                                DialogHelper.hideLoadingDialog(context);
                                 print("Starting PayPal payment...");
                                 paymentInit(totalPrice, "usd",
                                     currentUserIdentifier, carts);
                               } else {
-                                print("Starting COD payment process...");
-                                await saveOrderToFirestore(
+                                print("🛒 COD PAYMENT: Starting COD payment process...");
+                                
+                                // Save order và lấy breeds từ Firestore
+                                final breeds = await saveOrderToFirestore(
                                     currentUserIdentifier, carts,
                                     isPaid: false);
-
+                                
                                 // Xóa giỏ hàng
                                 context
                                     .read<CartBloc>()
                                     .add(ClearCart(currentUserIdentifier));
-                                print("Cart cleared");
+                                print("🛒 COD PAYMENT: Cart cleared");
 
-                                // Lấy thông tin breed từ Firestore
-                                List<Map<String, dynamic>> suggestions = [];
-                                if (carts.isNotEmpty) {
-                                  final firstPet = carts.first.grocery;
-                                  print(
-                                      "First pet ID: ${firstPet["productId"]}");
-
-                                  final petDoc = await FirebaseFirestore
-                                      .instance
-                                      .collection('Pets')
-                                      .doc(firstPet["productId"])
-                                      .get();
-
-                                  if (petDoc.exists) {
-                                    final breed = petDoc.data()?['breed'];
-                                    print("Found breed from Firestore: $breed");
-                                    if (breed != null) {
-                                      // Use Apriori BLoC for analysis
-                                      context.read<AprioriBloc>().add(
-                                          GetSuggestionsFromSingleBreed(breed));
-                                      print(
-                                          "Triggered Apriori BLoC analysis for breed: $breed");
-                                      // Note: suggestions will be handled by BLoC listener in the widget
-                                    }
-                                  } else {
-                                    print(
-                                        "Pet document does not exist for ID: ${firstPet["productId"]}");
-                                  }
-                                }
-
-                                // Chuyển đến trang thành công
-                                print(
-                                    "Navigating to OrderSuccess with ${suggestions.length} suggestions");
+                                // Hide loading và sử dụng multi-breed analysis
+                                DialogHelper.hideLoadingDialog(context);
+                                
                                 if (!context.mounted) return;
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        OrderSuccess(suggestions: suggestions),
-                                  ),
-                                );
+                                print("🚀 COD PAYMENT: About to trigger Apriori with breeds: $breeds");
+                                
+                                if (breeds.isNotEmpty) {
+                                  onOrderSuccessWithBreeds(breeds);
+                                } else {
+                                  print("🚫 No breeds found, navigating with empty suggestions");
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const OrderSuccess(suggestions: []),
+                                    ),
+                                  );
+                                }
                               }
+                            } catch (e) {
+                              DialogHelper.hideLoadingDialog(context);
+                              print("Error in order process: $e");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Có lỗi xảy ra: $e"),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,

@@ -35,6 +35,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
       final exists = items.any(
               (item) => item['productId'] == event.item['productId']);
+      
       if (exists) {
         emit(CartLoaded(items, message: 'Sản phẩm đã có trong giỏ hàng'));
         return;

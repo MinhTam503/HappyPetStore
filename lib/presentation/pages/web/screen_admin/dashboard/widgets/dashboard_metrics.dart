@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:pet_shop/core/utils/currency_helper.dart';
 
 class DashboardMetrics extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -20,8 +22,8 @@ class DashboardMetrics extends StatelessWidget {
       children: [
         _buildMetricCard(
           context,
-          'Total Revenue',
-          '\$${(data['revenue'] ?? 0).toStringAsFixed(2)}',
+          AppLocalizations.of(context)!.totalRevenue,
+          CurrencyHelper.formatVND(data['revenue'] ?? 0),
           Icons.attach_money,
           Colors.green,
           '+12.5%',
@@ -29,7 +31,7 @@ class DashboardMetrics extends StatelessWidget {
         const SizedBox(height: 12),
         _buildMetricCard(
           context,
-          'Orders Today',
+          AppLocalizations.of(context)!.orders,
           '${data['orders'] ?? 0}',
           Icons.shopping_cart,
           Colors.blue,
@@ -38,7 +40,7 @@ class DashboardMetrics extends StatelessWidget {
         const SizedBox(height: 12),
         _buildMetricCard(
           context,
-          'Active Users',
+          AppLocalizations.of(context)!.users,
           '${data['users'] ?? 0}',
           Icons.people,
           Colors.orange,

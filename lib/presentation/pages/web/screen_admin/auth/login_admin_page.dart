@@ -7,7 +7,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admin.dart';
-import '../../../mobile/bottom_navigator.dart';
+import '../../../mobile/tab/bottom_navigator.dart';
 
 class LoginAdminPage extends StatefulWidget {
   const LoginAdminPage({super.key});

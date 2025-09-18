@@ -8,7 +8,7 @@ import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admin.dart';
-import 'package:pet_shop/presentation/pages/mobile/bottom_navigator.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/forgot_password_page.dart';
 
 class LoginPageNew extends StatefulWidget {
@@ -223,19 +223,47 @@ class _LoginPageNewState extends State<LoginPageNew>
       } else {
         // User cancelled or no credential returned
         await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          debugPrint('Google login cancelled or no credential returned');
+        }
       }
     } catch (e) {
+      // Always ensure loading dialog is hidden first
       await DialogHelper.hideLoadingDialog(context);
+      
       if (mounted) {
+        debugPrint('Google Sign In Error: $e');
+        
         // Check if user cancelled the login
         if (e.toString().contains('sign_in_canceled') || 
             e.toString().contains('CANCELLED') ||
             e.toString().contains('popup_closed') ||
             e.toString().contains('cancelled')) {
-          // Don't show error for user cancellation
-          return;
+          debugPrint('Google login was cancelled by user');
+          return; // Don't show error for user cancellation
         }
-        _showSnackbar("Đăng nhập Google thất bại: ${e.toString()}");
+        
+        String errorMessage = "Đăng nhập Google thất bại";
+        
+        if (e.toString().contains('ApiException: 10')) {
+          // DEVELOPER_ERROR - Configuration issue
+          errorMessage = "Lỗi cấu hình Google Sign-In. Vui lòng sử dụng email thường hoặc thử trên thiết bị thật!";
+        } else if (e.toString().contains('sign_in_failed') && 
+                   e.toString().contains('ApiException')) {
+          // Other API exceptions
+          errorMessage = "Google Sign-In không khả dụng trên emulator. Vui lòng sử dụng email thường!";
+        } else if (e.toString().contains('network')) {
+          errorMessage = "Lỗi kết nối mạng. Vui lòng thử lại!";
+        }
+        
+        _showSnackbar(errorMessage);
+      }
+    } finally {
+      // Additional safety net to ensure dialog is always hidden
+      try {
+        await DialogHelper.hideLoadingDialog(context);
+      } catch (e) {
+        debugPrint('Error hiding dialog in finally block: $e');
       }
     }
   }
@@ -253,10 +281,17 @@ class _LoginPageNewState extends State<LoginPageNew>
       } else {
         // User cancelled or no credential returned
         await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          debugPrint('Facebook login cancelled or no credential returned');
+        }
       }
     } catch (e) {
+      // Always ensure loading dialog is hidden first
       await DialogHelper.hideLoadingDialog(context);
+      
       if (mounted) {
+        debugPrint('Facebook Sign In Error: $e');
+        
         String errorMessage = "Đăng nhập Facebook thất bại";
         
         // Check if user cancelled the login
@@ -264,15 +299,27 @@ class _LoginPageNewState extends State<LoginPageNew>
             e.toString().contains('CANCELLED') ||
             e.toString().contains('popup_closed') ||
             e.toString().contains('cancelled')) {
-          // Don't show error for user cancellation
-          return;
+          debugPrint('Facebook login was cancelled by user');
+          return; // Don't show error for user cancellation
         } else if (e.toString().contains('MissingPluginException')) {
           errorMessage =
               "Facebook đăng nhập chưa được cấu hình đầy đủ. Vui lòng sử dụng Google hoặc Email!";
         } else if (e.toString().contains('network')) {
           errorMessage = "Lỗi kết nối mạng. Vui lòng thử lại!";
+        } else if (e.toString().contains('WebView')) {
+          errorMessage = "Lỗi WebView Facebook. Vui lòng thử lại hoặc sử dụng Email!";
+        } else if (e.toString().contains('Facebook login failed')) {
+          errorMessage = "Facebook không thể đăng nhập. Vui lòng thử lại!";
         }
+        
         _showSnackbar(errorMessage);
+      }
+    } finally {
+      // Additional safety net to ensure dialog is always hidden
+      try {
+        await DialogHelper.hideLoadingDialog(context);
+      } catch (e) {
+        debugPrint('Error hiding dialog in finally block: $e');
       }
     }
   }
@@ -339,239 +386,241 @@ class _LoginPageNewState extends State<LoginPageNew>
     return Scaffold(
       backgroundColor: secondaryColor,
       body: SafeArea(
-        child: Stack(
-          children: [
-            // Positioned(
-            //   bottom: 80,
-            //   right: 280,
-            //   child: Container(
-            //     width: 30,
-            //     height: 30,
-            //     decoration: BoxDecoration(
-            //       color: Colors.pink.shade300,
-            //       shape: BoxShape.circle,
-            //     ),
-            //   ),
-            // ),
-            // Positioned(
-            //   bottom: 20,
-            //   right: 320,
-            //   child: Container(
-            //     width: 80,
-            //     height: 80,
-            //     decoration: BoxDecoration(
-            //       color: Colors.pink.shade300,
-            //       shape: BoxShape.circle,
-            //     ),
-            //   ),
-            // ),
-            Center(
-              child: Column(
-                children: [
-                  // Login Image
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Center(
-                        child: Container(
-                          width: MediaQuery.of(context).size.width,
-                          height: 300,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.pink.shade300.withOpacity(0.3),
-                                spreadRadius: 5,
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
+        child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              // Positioned(
+              //   bottom: 80,
+              //   right: 280,
+              //   child: Container(
+              //     width: 30,
+              //     height: 30,
+              //     decoration: BoxDecoration(
+              //       color: Colors.pink.shade300,
+              //       shape: BoxShape.circle,
+              //     ),
+              //   ),
+              // ),
+              // Positioned(
+              //   bottom: 20,
+              //   right: 320,
+              //   child: Container(
+              //     width: 80,
+              //     height: 80,
+              //     decoration: BoxDecoration(
+              //       color: Colors.pink.shade300,
+              //       shape: BoxShape.circle,
+              //     ),
+              //   ),
+              // ),
+              Center(
+                child: Column(
+                  children: [
+                    // Login Image
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: Center(
+                          child: Container(
+                            width: MediaQuery.of(context).size.width,
+                            height: 300,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.pink.shade300.withOpacity(0.3),
+                                  spreadRadius: 5,
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.asset(
+                                "assets/images/loginImage.png",
+                                fit: BoxFit.cover,
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Image.asset(
-                              "assets/images/loginImage.png",
-                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 25),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Login",
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        const Text(
-                          "Vui lòng đăng nhập để tiếp tục",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                        const SizedBox(height: 50),
-                        MyTextField(
-                          hintText: "Tài khoản (Email hoặc SĐT)",
-                          icon: const Icon(Icons.account_circle_outlined),
-                          controller: _accountController,
-                          obsecureText: false,
-                        ),
-                        const SizedBox(height: 10),
-                        MyTextField(
-                          hintText: "Mật khẩu",
-                          icon: const Icon(Icons.lock_outline),
-                          controller: _passwordController,
-                          obsecureText: true,
-                        ),
-                        const SizedBox(height: 5),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ForgotPasswordPage(),
-                                  ),
-                                );
-                              },
-                              child: const Text(
-                                "Quên mật khẩu?",
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 25),
-                        MyButton(
-                          text: 'ĐĂNG NHẬP',
-                          onPressed: () => _login(context),
-                        ),
-                        const SizedBox(height: 15),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text("Not a member? "),
-                            GestureDetector(
-                              onTap: widget.onTap,
-                              child: Text(
-                                "Đăng ký ngay",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.pink.shade300,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        const Center(
-                          child: Text(
-                            "Hoặc đăng nhập bằng",
+                    const SizedBox(height: 30),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 25),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Login",
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 15),
-                        // Social login buttons
-                        Row(
-                          children: [
-                            // Google login
-                            Expanded(
-                              child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border:
-                                      Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: InkWell(
-                                  onTap: _signInWithGoogle,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: Image.asset(
-                                            "assets/images/google.png"),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      const Text(
-                                        "Google",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
+                          const SizedBox(height: 5),
+                          const Text(
+                            "Vui lòng đăng nhập để tiếp tục",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                          const SizedBox(height: 50),
+                          MyTextField(
+                            hintText: "Tài khoản (Email hoặc SĐT)",
+                            icon: const Icon(Icons.account_circle_outlined),
+                            controller: _accountController,
+                            obsecureText: false,
+                          ),
+                          const SizedBox(height: 10),
+                          MyTextField(
+                            hintText: "Mật khẩu",
+                            icon: const Icon(Icons.lock_outline),
+                            controller: _passwordController,
+                            obsecureText: true,
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ForgotPasswordPage(),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  "Quên mật khẩu?",
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 15),
-                            // Facebook login
-                            Expanded(
-                              child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1877F2),
-                                  borderRadius: BorderRadius.circular(12),
+                            ],
+                          ),
+                          const SizedBox(height: 25),
+                          MyButton(
+                            text: 'ĐĂNG NHẬP',
+                            onPressed: () => _login(context),
+                          ),
+                          const SizedBox(height: 15),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text("Not a member? "),
+                              GestureDetector(
+                                onTap: widget.onTap,
+                                child: Text(
+                                  "Đăng ký ngay",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.pink.shade300,
+                                  ),
                                 ),
-                                child: InkWell(
-                                  onTap: _signInWithFacebook,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.facebook,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                      SizedBox(width: 10),
-                                      Text(
-                                        "Facebook",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          const Center(
+                            child: Text(
+                              "Hoặc đăng nhập bằng",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          // Social login buttons
+                          Row(
+                            children: [
+                              // Google login
+                              Expanded(
+                                child: Container(
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border:
+                                        Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: InkWell(
+                                    onTap: _signInWithGoogle,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: Image.asset(
+                                              "assets/images/google.png"),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        const Text(
+                                          "Google",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 15),
+                              // Facebook login
+                              Expanded(
+                                child: Container(
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1877F2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: InkWell(
+                                    onTap: _signInWithFacebook,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.facebook,
                                           color: Colors.white,
+                                          size: 24,
                                         ),
-                                      ),
-                                    ],
+                                        SizedBox(width: 10),
+                                        Text(
+                                          "Facebook",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )
-                ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

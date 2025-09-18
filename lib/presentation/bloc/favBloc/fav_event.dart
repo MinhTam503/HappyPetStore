@@ -1,21 +1,21 @@
 abstract class FavEvent{}
 
 class LoadFav extends FavEvent {
-  final String email;
+  final String userId;
 
-  LoadFav(this.email);
+  LoadFav(this.userId);
 }
 
 class AddToFav extends FavEvent {
-  final String email;
+  final String userId;
   final Map<String, dynamic> item;
 
-  AddToFav(this.email, this.item);
+  AddToFav(this.userId, this.item);
 }
 
 class RemoveFromFav extends FavEvent {
-  final String email;
+  final String userId;
   final String id;
 
-  RemoveFromFav(this.email, this.id);
+  RemoveFromFav(this.userId, this.id);
 }
