@@ -44,3 +44,7 @@ app.*.map.json
 /android/app/release
 
 TrainImagePet/serviceAccountKey.json
+
+# FVM Version Cache
+.fvm/
+n8n-deploy.rar

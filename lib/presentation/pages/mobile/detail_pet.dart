@@ -79,7 +79,8 @@ class _DetailPetState extends State<DetailPet> {
         'age': data['age'] ?? '',
         'weight': data['weight'] ?? '',
         'gender': data['sex'] ?? data['color'] ?? '',
-        'description': data['about'] ?? data['breed'] ?? 'Sản phẩm gợi ý từ hệ thống',
+        'description':
+            data['about'] ?? data['breed'] ?? 'Sản phẩm gợi ý từ hệ thống',
         'category': data['category'] ?? 'Pet',
         'quantity': 1,
         'addedAt': DateTime.now().millisecondsSinceEpoch,
@@ -147,20 +148,23 @@ class _DetailPetState extends State<DetailPet> {
                       onPressed: () async {
                         UserManager userManager = UserManager();
                         await userManager.initialize();
-                        final userIdentifier = await userManager.getUserIdForOperations();
-                        print("💖 DetailPet: Using userId for favorites: $userIdentifier");
-                        
+                        final userIdentifier =
+                            await userManager.getUserIdForOperations();
+                        print(
+                            "💖 DetailPet: Using userId for favorites: $userIdentifier");
+
                         if (userIdentifier != null) {
                           if (isFavorite) {
-                            context.read<FavBloc>().add(
-                                RemoveFromFav(userIdentifier, data['id'] ?? ''));
+                            context.read<FavBloc>().add(RemoveFromFav(
+                                userIdentifier, data['id'] ?? ''));
                           } else {
                             context
                                 .read<FavBloc>()
                                 .add(AddToFav(userIdentifier, data));
                           }
                         } else {
-                          print("❌ DetailPet: No userId found for favorites operation");
+                          print(
+                              "❌ DetailPet: No userId found for favorites operation");
                         }
                       },
                       icon: Container(
@@ -237,14 +241,16 @@ class _DetailPetState extends State<DetailPet> {
                               ),
                             ),
                             const SizedBox(height: 12),
+                            _buildInfoRow('Giống',
+                                data['breed']?.toString() ?? 'Không xác định'),
+                            _buildInfoRow('Tuổi',
+                                data['age']?.toString() ?? 'Không xác định'),
+                            _buildInfoRow('Cân nặng',
+                                data['weight']?.toString() ?? 'Không xác định'),
                             _buildInfoRow(
-                                'Giống', data['breed']?.toString() ?? 'Không xác định'),
-                            _buildInfoRow(
-                                'Tuổi', data['age']?.toString() ?? 'Không xác định'),
-                            _buildInfoRow(
-                                'Cân nặng', data['weight']?.toString() ?? 'Không xác định'),
-                            _buildInfoRow(
-                                'Giới tính', (data['sex'] ?? data['color'])?.toString() ?? 'Không xác định'),
+                                'Giới tính',
+                                (data['sex'] ?? data['color'])?.toString() ??
+                                    'Không xác định'),
                           ],
                         ),
                       ),

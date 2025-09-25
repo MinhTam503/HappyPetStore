@@ -67,6 +67,7 @@ dependencies:
   go_router: ^16.2.0
   url_strategy: ^0.2.0
   shared_preferences: ^2.3.3
+  flutter_native_splash: ^2.4.6
 
 
 
@@ -82,6 +83,8 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   mockito: ^5.4.4
   build_runner: ^2.4.13
+
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -126,3 +129,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+flutter_native_splash:
+  android: true
+  ios: true
+  image: assets/images/splash_screen_mobile.png 
+  color: "#08A045"
+  android_12:
+    color: "#08A045"
+    color_dark: "#08A045"
+    image: assets/images/splash_screen_mobile.png

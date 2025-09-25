@@ -158,9 +158,14 @@ class MyApp extends StatelessWidget {
                             }
 
                             // Check authentication provider
-                            List<String> providers = user.providerData.map((info) => info.providerId).toList();
-                            bool isSocialLogin = providers.contains('google.com') || providers.contains('facebook.com') || providers.contains('phone');
-                            
+                            List<String> providers = user.providerData
+                                .map((info) => info.providerId)
+                                .toList();
+                            bool isSocialLogin =
+                                providers.contains('google.com') ||
+                                    providers.contains('facebook.com') ||
+                                    providers.contains('phone');
+
                             // Allow social login users to bypass email verification
                             // Email/password users still need email verification
                             if (user.emailVerified || isSocialLogin) {

@@ -34,8 +34,8 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     fetchData();
     fetchUserInfo();
-  // Popular breeds
-  context.read<PopularBloc>().add(const LoadPopularBreeds());
+    // Popular breeds
+    context.read<PopularBloc>().add(const LoadPopularBreeds());
     _loadUserFavorites();
   }
 
@@ -117,6 +117,7 @@ class _HomePageState extends State<HomePage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text.rich(
                       TextSpan(
@@ -132,10 +133,40 @@ class _HomePageState extends State<HomePage> {
                               text: "Chào bạn đến với Happy Pets Shop!",
                               style: TextStyle(
                                   fontSize: 17, color: Colors.black38),
-                            )
+                            ),
                           ]),
                     ),
                     const Spacer(),
+                    const Icon(Icons.favorite_border, size: 28),
+                    const SizedBox(
+                      width: 5,
+                    ),
+                    Stack(children: [
+                      GestureDetector(
+                          onTap: () {
+                            print("abc");
+                          },
+                          child:
+                              const Icon(Icons.notifications_none, size: 30)),
+                      Positioned(
+                        right: 0,
+                        top: -5,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Text(
+                            '3',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ]),
                   ],
                 ),
               ),
