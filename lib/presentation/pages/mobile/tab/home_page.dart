@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,13 +8,16 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/all_pet.dart';
 import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
+import 'package:pet_shop/presentation/pages/notification/nofi_screen.dart';
+import 'package:pet_shop/presentation/widgets/my_search_bar.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
 import 'package:pet_shop/presentation/widgets/popular_pet_items.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_event.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_state.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
-
+import 'package:path/path.dart' as path;
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
 
@@ -28,7 +34,8 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> groceryCategory = [];
   List<Map<String, dynamic>> top5BestSell = [];
   String userName = "Người dùng";
-
+  List<Map<String, dynamic>> groceryItems = [];
+  List<Map<String, dynamic>> filterItems = [];
   @override
   void initState() {
     super.initState();
@@ -98,7 +105,64 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void searchFilterItems(String query) {
+    if (query.isEmpty) {
+      setState(() {
+        filterItems = groceryItems; // show all items if query is empty
+      });
+    } else {
+      setState(() {
+        filterItems = groceryItems.where((item) {
+          return item['name']
+              .toString()
+              .toLowerCase()
+              .contains(query.toLowerCase());
+        }).toList(); //filter items based of query
+      });
+    }
+  }
+
   // Popular Breeds logic moved into PopularBloc
+  Future<void> searchByImage(File imageFile) async {
+    try {
+      final uri = Uri.parse('http://10.0.2.2:5000/search');
+      var request = http.MultipartRequest('POST', uri);
+      request.files
+          .add(await http.MultipartFile.fromPath('file', imageFile.path));
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        final respStr = await response.stream.bytesToString();
+        final data = jsonDecode(respStr);
+        if (data['similar_images'] != null &&
+            data['similar_images'].isNotEmpty) {
+          // Lấy danh sách tên file
+          List<String> fileNames = (data['similar_images'] as List)
+              .map((img) => path.basename(img['image_path'] as String))
+              .toList();
+          // Lọc danh sách thú cưng có imageUrl chứa tên file
+          final pets = groceryItems
+              .where((item) => fileNames.any((fileName) =>
+                  (item['imageUrl'] as String).contains(fileName)))
+              .toList();
+          setState(() {
+            filterItems = pets;
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không tìm thấy ảnh tương tự!')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi server: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,14 +201,30 @@ class _HomePageState extends State<HomePage> {
                           ]),
                     ),
                     const Spacer(),
-                    const Icon(Icons.favorite_border, size: 28),
+                    GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const BottomNavigator(
+                                initialIndex: 1,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Icon(Icons.favorite_border, size: 28)),
                     const SizedBox(
                       width: 5,
                     ),
                     Stack(children: [
                       GestureDetector(
                           onTap: () {
-                            print("abc");
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NofiScreen(),
+                              ),
+                            );
                           },
                           child:
                               const Icon(Icons.notifications_none, size: 30)),
@@ -185,6 +265,19 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: MySearchBar(
+                  onSearch: searchFilterItems,
+                  onImageSearch: searchByImage,
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 25),
+            ),
+
             const SliverToBoxAdapter(
               child: SizedBox(height: 10),
             ),
@@ -268,6 +361,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   }
+
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(right: 10.0),

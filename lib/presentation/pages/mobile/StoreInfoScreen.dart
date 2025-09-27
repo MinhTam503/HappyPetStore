@@ -1,12 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/firestore_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-
 
 class StoreInfoScreen extends StatefulWidget {
   const StoreInfoScreen({super.key});
@@ -22,6 +21,7 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
 
   bool _isLoading = true;
 
+  final MapController _mapController = MapController();
   @override
   void initState() {
     super.initState();
@@ -47,18 +47,38 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
     }
   }
 
-  // Ảnh static map (fallback)
-  final String mapUrl =
-      "https://static-maps.yandex.ru/1.x/?ll=106.675045,10.984057&z=14&size=600,300&l=map&pt=106.675045,10.984057,pm2rdm";
+  static const LatLng defaultLatLng = LatLng(10.762622, 106.660172);
 
-  // Google Maps (fallback)
-  final String googleMapsUrl =
-      "https://www.google.com/maps/search/?api=1&query=10.980712020778228, 106.6743278503418";
+  LatLng _getShopLatLng() {
+    // Ưu tiên lấy từ trường 'latitude' và 'longitude' trực tiếp
+    final double? lat = shopInfo?['latitude'] as double?;
+    final double? lng = shopInfo?['longitude'] as double?;
+
+    if (lat != null && lng != null) {
+      debugPrint(
+          "Lấy tọa độ từ Firebase: LatLng(latitude:$lat, longitude:$lng)");
+      return LatLng(lat, lng);
+    }
+
+    // Nếu không có trường latitude/longitude, thì thử phân tích từ googleMapsUrl
+    // Lưu ý: hàm _parseLatLngFromGoogleMapsUrl có thể bị xóa nếu bạn chắc chắn
+    // luôn có latitude/longitude trực tiếp. Tôi vẫn giữ nó làm fallback nếu
+    // bạn muốn giữ chức năng phân tích URL cũ.
+    final String? googleMapsUrlRaw =
+        (shopInfo?['googleMapsUrl'] as String?)?.trim();
+
+    debugPrint("Không thể lấy tọa độ, trả về mặc định: $defaultLatLng");
+    return defaultLatLng;
+  }
 
   void _openMap() async {
-    final fallback = "https://www.google.com/maps/search/?api=1&query=10.981024, 106.674015";
-    final urlStr = (shopInfo?['googleMapsUrl'] as String?)?.trim();
-    final Uri url = Uri.parse(urlStr?.isNotEmpty == true ? urlStr! : fallback);
+    final LatLng coords = _getShopLatLng();
+
+    // Sử dụng định dạng Universal Link cho Google Maps, ưu tiên mở ứng dụng
+    final String mapSchemeUrl =
+        'https://www.google.com/maps/search/?api=1&query=${coords.latitude},${coords.longitude}';
+    final Uri url = Uri.parse(mapSchemeUrl);
+
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
@@ -82,6 +102,9 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
     final nameText = (shopInfo?['name'] as String?)?.trim();
     final avatarUrl = (shopInfo?['avatar'] as String?)?.trim();
 
+    // Sử dụng hàm mới để lấy tọa độ
+    final LatLng initialLatLng = _getShopLatLng();
+    print("initialLatLng (trong build):  $initialLatLng");
     return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
@@ -99,174 +122,209 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
       body: _isLoading
           ? const _LoadingSkeleton()
           : RefreshIndicator(
-        onRefresh: _onRefresh,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // Header: cover + avatar nổi
-            _Header(
-              avatarUrl: avatarUrl?.isNotEmpty == true
-                  ? avatarUrl!
-                  : "https://lh3.googleusercontent.com/a/ACg8ocKhMOLcdi-5_fYDYkgolOG9C0NL3HemimWOfg2Dpv7Jkp04JuOx=s96-c",
-            ),
-
-            // Tên shop
-            const SizedBox(height: 56),
-            Center(
-              child: Text(
-                (nameText?.isNotEmpty == true) ? nameText! : "abc",
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: primaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Địa chỉ
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.location_on, color: primaryColor, size: 20),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    (addressText?.isNotEmpty == true)
-                        ? addressText!
-                        : '123 Đường ABC, Thành phố XYZ',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Hai nút hành động
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+              onRefresh: _onRefresh,
+              child: ListView(
+                padding: EdgeInsets.zero,
                 children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ChatPage()),
-                        );
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text('Nhắn tin'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
+                  // Header: cover + avatar nổi
+                  _Header(
+                    avatarUrl: avatarUrl?.isNotEmpty == true
+                        ? avatarUrl!
+                        : "https://lh3.googleusercontent.com/a/ACg8ocKhMOLcdi-5_fYDYkgolOG9C0NL3HemimWOfg2Dpv7Jkp04JuOx=s96-c",
+                  ),
+
+                  // Tên shop
+                  const SizedBox(height: 56),
+                  Center(
+                    child: Text(
+                      (nameText?.isNotEmpty == true) ? nameText! : "abc",
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: primaryColor,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _openMap,
-                      icon: const Icon(Icons.map_outlined, color: primaryColor),
-                      label: const Text('Xem bản đồ', style: TextStyle(color: primaryColor)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: primaryColor),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                  const SizedBox(height: 8),
 
-            const SizedBox(height: 20),
-
-            // Static map (preview) có bo góc & bóng
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                height: 180,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade300),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _openMap,
-                      child: Image.network(
-                        mapUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey.shade200,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.map, color: Colors.black26, size: 40),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Giới thiệu
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Địa chỉ
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'Giới thiệu',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: primaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        (aboutText?.isNotEmpty == true)
-                            ? aboutText!
-                            : "Happy Pet là cửa hàng chuyên cung cấp các sản phẩm và dịch vụ dành cho thú cưng.",
-                        textAlign: TextAlign.start,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.black87,
-                          height: 1.35,
+                      const Icon(Icons.location_on,
+                          color: primaryColor, size: 20),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          (addressText?.isNotEmpty == true)
+                              ? addressText!
+                              : '123 Đường ABC, Thành phố XYZ',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  // Hai nút hành động
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const ChatPage()),
+                              );
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline),
+                            label: const Text('Nhắn tin'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _openMap,
+                            icon: const Icon(Icons.map_outlined,
+                                color: primaryColor),
+                            label: const Text('Mở bản đồ',
+                                style: TextStyle(color: primaryColor)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: primaryColor),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Static map (preview) có bo góc & bóng
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      height: 280,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade300),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _openMap,
+                            child: InkWell(
+                              onTap:
+                                  _openMap, // Vẫn giữ InkWell để khi click vào map sẽ mở app Maps
+                              child: FlutterMap(
+                                mapController: _mapController,
+                                options: MapOptions(
+                                  initialCenter:
+                                      initialLatLng, // Sử dụng tọa độ đã phân tích
+                                  initialZoom: 15.0,
+                                  interactionOptions: const InteractionOptions(
+                                    flags: InteractiveFlag.all &
+                                        ~InteractiveFlag
+                                            .rotate, // Không cho phép xoay map
+                                  ),
+                                ),
+                                children: [
+                                  TileLayer(
+                                    urlTemplate:
+                                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                    userAgentPackageName:
+                                        'com.example.pet_shop',
+                                  ),
+                                  MarkerLayer(
+                                    markers: [
+                                      Marker(
+                                        point: initialLatLng,
+                                        width: 80,
+                                        height: 80,
+                                        child: const Icon(
+                                          Icons.location_on,
+                                          color: Colors.red,
+                                          size: 40,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Giới thiệu
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Giới thiệu',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              (aboutText?.isNotEmpty == true)
+                                  ? aboutText!
+                                  : "Happy Pet là cửa hàng chuyên cung cấp các sản phẩm và dịch vụ dành cho thú cưng.",
+                              textAlign: TextAlign.start,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.black87,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
-
-            const SizedBox(height: 30),
-          ],
-        ),
-      ),
     );
   }
 }

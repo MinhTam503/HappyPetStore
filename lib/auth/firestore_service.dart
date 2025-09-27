@@ -12,12 +12,14 @@ class Firestore_Service {
     }
   }
 
-  Future<void> updateMapShopInfo(String googleMapsUrl) async {
+  Future<void> updateMapShopInfo(String googleMapsUrl, double latitude, double longitude) async {
     final snapshot = await _firestore.collection('ShopInfo').get();
     if (snapshot.docs.isNotEmpty) {
       final docId = snapshot.docs.first.id;
       _firestore.collection('ShopInfo').doc(docId).update({
         'googleMapsUrl': googleMapsUrl,
+        'latitude': latitude,
+        'longitude': longitude,
       });
     }
   }

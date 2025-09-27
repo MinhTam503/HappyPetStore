@@ -150,7 +150,11 @@ class _ShopInfoState extends State<ShopInfo> {
 
     final googleMapsUrl =
         "https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}";
-    await _fService.updateMapShopInfo(googleMapsUrl);
+    await _fService.updateMapShopInfo(
+      googleMapsUrl,
+      location.latitude,
+      location.longitude,
+    );
 
     setState(() {
       _center = location;

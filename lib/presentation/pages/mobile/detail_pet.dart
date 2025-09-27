@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/StoreInfoScreen.dart';
+import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
 import '../../bloc/favBloc/fav_bloc.dart';
 import '../../bloc/favBloc/fav_event.dart';
 import '../../bloc/favBloc/fav_state.dart';
@@ -142,7 +143,7 @@ class _DetailPetState extends State<DetailPet> {
                     bool isFavorite = false;
                     if (favState is FavLoaded) {
                       isFavorite = favState.items
-                          .any((product) => product['id'] == data['id']);
+                          .any((it) => it['productId'] == data['id']);
                     }
                     return IconButton(
                       onPressed: () async {
@@ -154,13 +155,19 @@ class _DetailPetState extends State<DetailPet> {
                             "💖 DetailPet: Using userId for favorites: $userIdentifier");
 
                         if (userIdentifier != null) {
-                          if (isFavorite) {
-                            context.read<FavBloc>().add(RemoveFromFav(
-                                userIdentifier, data['id'] ?? ''));
+                          if (!isFavorite) {
+                            context
+                                .read<FavBloc>()
+                                .add(AddToFav(userIdentifier, {
+                                  'productId': data['id'],
+                                  'name': data["name"],
+                                  'imageUrl': data["imageUrl"],
+                                  'price': data['price'],
+                                }));
                           } else {
                             context
                                 .read<FavBloc>()
-                                .add(AddToFav(userIdentifier, data));
+                                .add(RemoveFromFav(userIdentifier, data['id']));
                           }
                         } else {
                           print(
@@ -356,26 +363,73 @@ class _DetailPetState extends State<DetailPet> {
         ),
       ),
       floatingActionButton: Container(
-        width: double.infinity,
+        height: 60,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: ElevatedButton(
-          onPressed: _addToCart,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ChatPage()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: secondaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    // side: const BorderSide(color: primaryColor),
+                  ),
+                  elevation: 4,
+                  minimumSize: const Size.fromHeight(65),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.message, color: primaryColor, size: 24),
+                    Text(
+                      'Chat ngay',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            elevation: 4,
-          ),
-          child: const Text(
-            'Thêm vào giỏ hàng',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _addToCart,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: primaryColor),
+                  ),
+                  elevation: 4,
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.shopping_cart, color: Colors.white, size: 24),
+                    Text(
+                      'Thêm vào giỏ hàng',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,

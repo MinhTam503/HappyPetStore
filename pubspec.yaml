@@ -68,6 +68,8 @@ dependencies:
   url_strategy: ^0.2.0
   shared_preferences: ^2.3.3
   flutter_native_splash: ^2.4.6
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
 
 
 

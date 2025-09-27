@@ -29,12 +29,12 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
   void _initializeUser() async {
     UserManager userManager = UserManager();
     await userManager.initialize();
-    
+
     // Sử dụng userId thay vì email để consistent với logic mới
     userIdentifier = await userManager.getUserIdForOperations();
-    
+
     print("💖 FavoriteScreen: Using userId for favorites: $userIdentifier");
-    
+
     if (userIdentifier != null) {
       context.read<FavBloc>().add(LoadFav(userIdentifier!));
     } else {
@@ -162,9 +162,8 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                             },
                             onDelete: () {
                               if (userIdentifier != null) {
-                                context
-                                    .read<FavBloc>()
-                                    .add(RemoveFromFav(userIdentifier!, productId));
+                                context.read<FavBloc>().add(
+                                    RemoveFromFav(userIdentifier!, productId));
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
