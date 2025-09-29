@@ -4,6 +4,7 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart'; // Chứa primaryColor, secondaryColor
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/dashboard/dashboard_page.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/notification/notification_management_panel.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet/pets_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_analytics_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
@@ -33,6 +34,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     const CategoryAdmin(),
     const AccountAdmin(),
     const OrdersAdmin(),
+    const NotificationManagementPanel(),
     const InboxPageAdmin(),
     const ShopInfo(),
     const PetAnalyticsPage(),
@@ -132,6 +134,9 @@ class _HomePageAdminState extends State<HomePageAdmin> {
               NavigationRailDestination(
                   icon: const Icon(Icons.receipt_long_outlined),
                   label: Text(l10n.orders)),
+              NavigationRailDestination(
+                  icon: const Icon(Icons.notifications_active),
+                  label: Text(l10n.notification)),
               NavigationRailDestination(
                   icon: const Icon(Icons.inbox_outlined),
                   label: Text(l10n.inbox)),

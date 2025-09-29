@@ -17,3 +17,9 @@
 -keep class com.stripe.** { *; }
 -keep class com.flutter.stripe.** { *; }
 -keep class com.reactnativestripesdk.** { *; }
+
+# Material Components - Keep theme related classes
+-keep class com.google.android.material.** { *; }
+-keep class androidx.appcompat.** { *; }
+-dontwarn com.google.android.material.**
+-dontwarn androidx.appcompat.**

@@ -7,8 +7,9 @@ import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
 
-import '../detail_pet.dart';
+import '../pet/detail_pet.dart';
 
 class FavoriteScreen extends StatefulWidget {
   const FavoriteScreen({super.key});
@@ -59,12 +60,19 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
     return 1.4;
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: secondaryColor,
+      drawer: const AppDrawer(),
       appBar: AppBar(
+        iconTheme: const IconThemeData(
+          color: primaryColor,
+          size: 28,
+        ),
+        key: _scaffoldKey,
         centerTitle: true,
         backgroundColor: secondaryColor,
         elevation: 0,

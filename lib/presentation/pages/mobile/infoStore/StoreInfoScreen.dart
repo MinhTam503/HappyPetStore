@@ -4,7 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/firestore_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class StoreInfoScreen extends StatefulWidget {

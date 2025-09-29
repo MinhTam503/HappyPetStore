@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/mobile/your_order_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
 
-import '../../widgets/pet_items_all.dart';
-import 'detail_pet.dart';
+import '../../../widgets/pet_items_all.dart';
+import '../pet/detail_pet.dart';
 
 class OrderSuccess extends StatefulWidget {
   final List<Map<String, dynamic>> suggestions;

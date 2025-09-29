@@ -5,7 +5,7 @@ import 'package:pet_shop/data/models/viewed_pet_model.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_state.dart';
-import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';

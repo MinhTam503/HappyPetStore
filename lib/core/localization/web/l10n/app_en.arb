@@ -16,6 +16,10 @@
   "@category": {
     "description": "Category menu item"
   },
+  "notification": "Notification",
+    "@notification": {
+    "description": "Notification menu item"
+  },
   "account": "Account",
   "@account": {
     "description": "Account menu item"

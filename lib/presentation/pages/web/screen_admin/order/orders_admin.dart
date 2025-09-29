@@ -4,6 +4,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/auth/auth_service.dart';
+import 'package:pet_shop/helpers/order_notification_helper.dart';
 import '../../components/empty_state.dart';
 import '../send_email.dart';
 import 'components/order_card.dart';
@@ -259,7 +260,30 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                   orders = orders.where((order) {
                     final orderId = (order['orderId'] ?? order['id'] ?? '').toString().toLowerCase();
                     final email = (order['email'] ?? '').toString().toLowerCase();
-                    final addr = (order['shippingAddress'] ?? order['address'] ?? '').toString().toLowerCase();
+                    
+                    // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
+                    String addr = '';
+                    try {
+                      if (order['shippingAddress'] != null) {
+                        addr = order['shippingAddress'].toString();
+                      } else if (order['address'] != null) {
+                        addr = order['address'].toString();
+                      } else if (order['deliveryInfo'] != null) {
+                        final deliveryInfo = order['deliveryInfo'];
+                        if (deliveryInfo is Map<String, dynamic>) {
+                          final name = deliveryInfo['name'] ?? '';
+                          final phone = deliveryInfo['phone'] ?? '';
+                          final address = deliveryInfo['address'] ?? '';
+                          addr = '$name $phone $address';
+                        } else if (deliveryInfo is String) {
+                          addr = deliveryInfo;
+                        }
+                      }
+                    } catch (e) {
+                      addr = '';
+                    }
+                    addr = addr.toLowerCase();
+                    
                     final st = (order['statusOrder'] ?? '').toString().toLowerCase();
                     return orderId.contains(_query) ||
                         email.contains(_query) ||
@@ -307,7 +331,29 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                         final email = (order['email'] ?? '').toString();
                         final total = order['totalAmount']?.toString() ?? '0';
                         final status = (order['statusOrder'] ?? '').toString();
-                        final address = (order['shippingAddress'] ?? order['address'] ?? '').toString();
+                        
+                        // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
+                        String address = '';
+                        try {
+                          if (order['shippingAddress'] != null) {
+                            address = order['shippingAddress'].toString();
+                          } else if (order['address'] != null) {
+                            address = order['address'].toString();
+                          } else if (order['deliveryInfo'] != null) {
+                            final deliveryInfo = order['deliveryInfo'];
+                            if (deliveryInfo is Map<String, dynamic>) {
+                              final name = deliveryInfo['name'] ?? '';
+                              final phone = deliveryInfo['phone'] ?? '';
+                              final addr = deliveryInfo['address'] ?? '';
+                              address = '$name • $phone\n$addr';
+                            } else if (deliveryInfo is String) {
+                              address = deliveryInfo;
+                            }
+                          }
+                        } catch (e) {
+                          address = '';
+                        }
+                        
                         final createdAt = order['timestamp'] ?? order['createdAt'];
                         final collection = order['collection'] ?? 'orders';
 
@@ -325,6 +371,10 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                           // Inline status changer
                           onChangeStatus: (newStatus) async {
                             if (newStatus == null) return;
+                            
+                            // Store old status for notification
+                            final oldStatus = status;
+                            
                             final payload = {
                               'statusOrder': newStatus,
                               if (newStatus == 'Completed')
@@ -332,11 +382,12 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                             };
                             await updateOrder(orderId, collection, payload);
 
-                            // Gửi email
+                            // Gửi notification và email
                             if (orderId.isNotEmpty && email.isNotEmpty) {
                               final userInfo = await authService.value
                                   .getInfoUserFromEmail(email);
                               if (userInfo != null) {
+                                // Send email
                                 sendOrderEmail(
                                   name: (userInfo['displayName'] ?? '')
                                       .toString(),
@@ -344,6 +395,19 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                   orderId: orderId,
                                   orderStatus: newStatus,
                                 );
+                                
+                                // Send in-app notification
+                                final customerInfo = await OrderNotificationHelper.getCustomerInfoFromEmail(email);
+                                if (customerInfo != null) {
+                                  await OrderNotificationHelper.sendOrderStatusChangeNotification(
+                                    userId: customerInfo['userId'],
+                                    orderId: orderId,
+                                    newStatus: newStatus,
+                                    oldStatus: oldStatus,
+                                    customerName: customerInfo['displayName'],
+                                    email: email,
+                                  );
+                                }
                               }
                             }
                           },
@@ -484,7 +548,29 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     final String statusPay = (order['statusPayment'] ?? '').toString();
     final String method = (order['paymentMethod'] ?? '').toString();
     final String status = (order['statusOrder'] ?? '').toString();
-    final String address = (order['shippingAddress'] ?? order['address'] ?? '').toString();
+    
+    // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
+    String address = '';
+    try {
+      if (order['shippingAddress'] != null) {
+        address = order['shippingAddress'].toString();
+      } else if (order['address'] != null) {
+        address = order['address'].toString();
+      } else if (order['deliveryInfo'] != null) {
+        final deliveryInfo = order['deliveryInfo'];
+        if (deliveryInfo is Map<String, dynamic>) {
+          final name = deliveryInfo['name'] ?? '';
+          final phone = deliveryInfo['phone'] ?? '';
+          final addr = deliveryInfo['address'] ?? '';
+          address = '$name • $phone\n$addr';
+        } else if (deliveryInfo is String) {
+          address = deliveryInfo;
+        }
+      }
+    } catch (e) {
+      address = '';
+    }
+    
     final String phone = (order['phone'] ?? '').toString();
     final dynamic ts = order['timestamp'] ?? order['createdAt'];
     final List<Map<String, dynamic>> items = (order['items'] is List)

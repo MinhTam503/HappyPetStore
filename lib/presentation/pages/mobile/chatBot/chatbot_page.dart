@@ -5,7 +5,7 @@ import 'package:pet_shop/presentation/bloc/chatBot/chatbot_bloc.dart';
 import 'package:pet_shop/presentation/bloc/chatBot/chatbot_event.dart';
 import 'package:pet_shop/presentation/bloc/chatBot/chatbot_state.dart';
 import 'package:pet_shop/domain/entities/chatbot_entity.dart';
-import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
+import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
 
 class ChatBotPage extends StatefulWidget {
   final String userId;

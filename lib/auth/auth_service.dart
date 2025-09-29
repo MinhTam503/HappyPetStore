@@ -32,11 +32,23 @@ class AuthService {
         email: email, password: password);
   }
 
-  // Google Authentication
+  // Google Authentication with force account selection
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      // Clear any existing session first
+      try {
+        await _googleSignIn.signOut();
+        debugPrint('✅ Previous Google session cleared');
+      } catch (e) {
+        debugPrint('No previous Google session to clear');
+      }
+      
+      // Use signIn() instead of signInSilently() to always show account picker
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+      if (googleUser == null) {
+        debugPrint('❌ Google sign in cancelled by user');
+        return null;
+      }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(

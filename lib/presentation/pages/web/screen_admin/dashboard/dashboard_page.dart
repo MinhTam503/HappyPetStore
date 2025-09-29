@@ -21,13 +21,13 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   bool _loading = true;
   bool _revenueLoading = false;
   bool _statsLoading = false;
-  
+
   // Animation controllers
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   // Data
   Map<String, int> _statsData = {};
   Map<String, double> _revenueData = {};
@@ -39,7 +39,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     'Cancelled': 0,
   };
   List<Map<String, dynamic>> _recentOrders = [];
-  
+
   // UI State
   String _timeRange = '7days';
 
@@ -49,7 +49,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animations
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -59,7 +59,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
     );
@@ -67,7 +67,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
-    
+
     _loadEssentialData();
   }
 
@@ -81,19 +81,19 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   // Load only essential data first for quick display
   Future<void> _loadEssentialData() async {
     setState(() => _loading = true);
-    
+
     try {
       await Future.wait([
         _loadStatsData(),
         _loadRecentOrders(),
       ]);
-      
+
       setState(() => _loading = false);
-      
+
       // Start animations
       _fadeController.forward();
       _slideController.forward();
-      
+
       // Load charts data in background
       _loadChartsData();
     } catch (e) {
@@ -123,7 +123,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
 
   Future<void> _loadStatsData() async {
     setState(() => _statsLoading = true);
-    
+
     try {
       final futures = [
         FirebaseFirestore.instance.collection('Pets').count().get(),
@@ -131,16 +131,16 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         FirebaseFirestore.instance.collection('orders').count().get(),
         FirebaseFirestore.instance.collection('ordersWeb').count().get(),
       ];
-      
+
       final results = await Future.wait(futures);
-      
+
       final stats = {
         'pets': results[0].count ?? 0,
         'users': results[1].count ?? 0,
         'orders': (results[2].count ?? 0) + (results[3].count ?? 0),
         'categories': 4, // Hardcoded for performance
       };
-      
+
       setState(() => _statsData = stats);
     } catch (e) {
       print('Error loading stats: $e');
@@ -152,34 +152,32 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   Future<void> _loadRecentOrders() async {
     try {
       print('🔍 Loading recent orders (one time)...');
-      
+
       // Try without orderBy first to avoid index issues
-      final ordersQuery = FirebaseFirestore.instance
-          .collection('orders')
-          .limit(10);
-      
-      final ordersWebQuery = FirebaseFirestore.instance
-          .collection('ordersWeb')
-          .limit(10);
-      
+      final ordersQuery =
+          FirebaseFirestore.instance.collection('orders').limit(10);
+
+      final ordersWebQuery =
+          FirebaseFirestore.instance.collection('ordersWeb').limit(10);
+
       final results = await Future.wait([
         ordersQuery.get(),
         ordersWebQuery.get(),
       ]);
-      
+
       print('📦 Found ${results[0].docs.length} mobile orders');
       print('🌐 Found ${results[1].docs.length} web orders');
-      
+
       final allOrders = <Map<String, dynamic>>[];
-      
+
       // Process mobile orders
       for (final doc in results[0].docs) {
         final data = doc.data();
-        
+
         // Handle different timestamp formats
         dynamic rawTimestamp = data['timestamp'];
         Timestamp timestamp;
-        
+
         if (rawTimestamp is Timestamp) {
           timestamp = rawTimestamp;
         } else if (rawTimestamp is String) {
@@ -194,29 +192,31 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         } else {
           timestamp = Timestamp.now();
         }
-        
+
         final totalAmount = _parseDouble(data['totalAmount']);
-        
+
         final order = {
           'id': doc.id,
-          'customerName': data['fullName'] ?? data['name'] ?? 'Unknown Customer',
+          'customerName':
+              data['fullName'] ?? data['name'] ?? 'Unknown Customer',
           'totalAmount': totalAmount,
           'status': data['statusOrder'] ?? 'Pending',
           'timestamp': timestamp,
           'source': 'Mobile',
         };
         allOrders.add(order);
-        print('📱 Mobile order: ${order['customerName']} - \$${order['totalAmount']}');
+        print(
+            '📱 Mobile order: ${order['customerName']} - \$${order['totalAmount']}');
       }
-      
+
       // Process web orders
       for (final doc in results[1].docs) {
         final data = doc.data();
-        
+
         // Handle different timestamp formats
         dynamic rawTimestamp = data['timestamp'];
         Timestamp timestamp;
-        
+
         if (rawTimestamp is Timestamp) {
           timestamp = rawTimestamp;
         } else if (rawTimestamp is String) {
@@ -231,21 +231,23 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         } else {
           timestamp = Timestamp.now();
         }
-        
+
         final totalAmount = _parseDouble(data['totalAmount']);
-        
+
         final order = {
           'id': doc.id,
-          'customerName': data['fullName'] ?? data['name'] ?? 'Unknown Customer',
+          'customerName':
+              data['fullName'] ?? data['name'] ?? 'Unknown Customer',
           'totalAmount': totalAmount,
           'status': data['statusOrder'] ?? 'Pending',
           'timestamp': timestamp,
           'source': 'Web',
         };
         allOrders.add(order);
-        print('🌐 Web order: ${order['customerName']} - \$${order['totalAmount']}');
+        print(
+            '🌐 Web order: ${order['customerName']} - \$${order['totalAmount']}');
       }
-      
+
       // Sort by timestamp (newest first)
       try {
         allOrders.sort((a, b) {
@@ -257,10 +259,10 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         print('⚠️ Error sorting orders: $e');
         // If sorting fails, just use the orders as-is
       }
-      
+
       final recentOrders = allOrders.take(5).toList();
       print('📋 Recent orders to display: ${recentOrders.length}');
-      
+
       if (mounted) {
         setState(() => _recentOrders = recentOrders);
       }
@@ -275,49 +277,50 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
 
   Future<void> _loadRevenueData() async {
     if (_revenueLoading) return; // Prevent multiple simultaneous calls
-    
+
     setState(() => _revenueLoading = true);
-    
+
     try {
       print('🔍 Loading revenue data for $_timeRange...');
       DateTime endDate = DateTime.now();
-      DateTime startDate = endDate.subtract(Duration(days: _timeRange == '7days' ? 7 : 30));
-      
+      DateTime startDate =
+          endDate.subtract(Duration(days: _timeRange == '7days' ? 7 : 30));
+
       // Simplified queries without complex where clauses
-      final ordersQuery = FirebaseFirestore.instance
-          .collection('orders')
-          .limit(200);
-      
-      final ordersWebQuery = FirebaseFirestore.instance
-          .collection('ordersWeb')
-          .limit(200);
-      
+      final ordersQuery =
+          FirebaseFirestore.instance.collection('orders').limit(200);
+
+      final ordersWebQuery =
+          FirebaseFirestore.instance.collection('ordersWeb').limit(200);
+
       final results = await Future.wait([
         ordersQuery.get(),
         ordersWebQuery.get(),
       ]);
-      
+
       print('📦 Orders found: ${results[0].docs.length}');
       print('🌐 Web orders found: ${results[1].docs.length}');
-      
+
       final revenue = <String, double>{};
-      
+
       // Process mobile orders
       for (final doc in results[0].docs) {
         final data = doc.data();
         final rawTimestamp = data['timestamp'];
         final amount = _parseDouble(data['totalAmount']);
         final status = data['statusOrder'] ?? 'Pending';
-        
+
         if (status == 'Completed' && amount > 0) {
           // Debug: log large amounts but don't skip them
           if (amount > 1000000) {
-            print('💰 Large amount detected: \$${amount} for mobile order ${doc.id}');
-            print('💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
+            print(
+                '💰 Large amount detected: \$${amount} for mobile order ${doc.id}');
+            print(
+                '💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
           }
-          
+
           DateTime? date;
-          
+
           if (rawTimestamp is Timestamp) {
             date = rawTimestamp.toDate();
           } else if (rawTimestamp is String) {
@@ -328,31 +331,35 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               continue;
             }
           }
-          
-          if (date != null && date.isAfter(startDate) && date.isBefore(endDate)) {
+
+          if (date != null &&
+              date.isAfter(startDate) &&
+              date.isBefore(endDate)) {
             final dateKey = '${date.day}/${date.month}';
             revenue[dateKey] = (revenue[dateKey] ?? 0) + amount;
             print('💰 Mobile order: ${dateKey} = \$${amount}');
           }
         }
       }
-      
-      // Process web orders  
+
+      // Process web orders
       for (final doc in results[1].docs) {
         final data = doc.data();
         final rawTimestamp = data['timestamp'];
         final amount = _parseDouble(data['totalAmount']);
         final status = data['statusOrder'] ?? 'Pending';
-        
+
         if (status == 'Completed' && amount > 0) {
           // Debug: log large amounts but don't skip them
           if (amount > 1000000) {
-            print('💰 Large amount detected: \$${amount} for web order ${doc.id}');
-            print('💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
+            print(
+                '💰 Large amount detected: \$${amount} for web order ${doc.id}');
+            print(
+                '💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
           }
-          
+
           DateTime? date;
-          
+
           if (rawTimestamp is Timestamp) {
             date = rawTimestamp.toDate();
           } else if (rawTimestamp is String) {
@@ -363,28 +370,33 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               continue;
             }
           }
-          
-          if (date != null && date.isAfter(startDate) && date.isBefore(endDate)) {
+
+          if (date != null &&
+              date.isAfter(startDate) &&
+              date.isBefore(endDate)) {
             final dateKey = '${date.day}/${date.month}';
             revenue[dateKey] = (revenue[dateKey] ?? 0) + amount;
             print('💰 Web order: ${dateKey} = \$${amount}');
           }
         }
       }
-      
+
       print('📊 Total revenue data points: ${revenue.length}');
       print('💵 Revenue summary: $revenue');
-      
+
       // Convert large numbers to smaller units for chart rendering
       final convertedRevenue = <String, double>{};
-      double maxValue = revenue.values.isNotEmpty ? revenue.values.reduce((a, b) => a > b ? a : b) : 0.0;
-      
+      double maxValue = revenue.values.isNotEmpty
+          ? revenue.values.reduce((a, b) => a > b ? a : b)
+          : 0.0;
+
       if (maxValue >= 1000000) {
         // Convert to millions for chart rendering
         print('📊 Converting to millions for chart rendering...');
         _revenueUnit = 'triệu';
         for (final entry in revenue.entries) {
-          convertedRevenue[entry.key] = entry.value / 1000000; // Convert to millions
+          convertedRevenue[entry.key] =
+              entry.value / 1000000; // Convert to millions
         }
         print('📊 Converted revenue (millions): $convertedRevenue');
       } else if (maxValue >= 1000) {
@@ -392,7 +404,8 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         print('📊 Converting to thousands for chart rendering...');
         _revenueUnit = 'nghìn';
         for (final entry in revenue.entries) {
-          convertedRevenue[entry.key] = entry.value / 1000; // Convert to thousands
+          convertedRevenue[entry.key] =
+              entry.value / 1000; // Convert to thousands
         }
         print('📊 Converted revenue (thousands): $convertedRevenue');
       } else {
@@ -400,7 +413,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         _revenueUnit = '₫';
         convertedRevenue.addAll(revenue);
       }
-      
+
       // Use converted revenue data if no real data
       if (convertedRevenue.isEmpty) {
         print('📊 Adding test revenue data...');
@@ -409,11 +422,12 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         for (int i = 6; i >= 0; i--) {
           final date = now.subtract(Duration(days: i));
           final dateKey = '${date.day}/${date.month}';
-          convertedRevenue[dateKey] = (100.0 + (i * 50.0)).toDouble(); // More visible data
+          convertedRevenue[dateKey] =
+              (100.0 + (i * 50.0)).toDouble(); // More visible data
         }
         print('📊 Test revenue data: $convertedRevenue');
       }
-      
+
       if (mounted) {
         setState(() => _revenueData = convertedRevenue);
       }
@@ -435,33 +449,33 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
           .collection('orders')
           .limit(200)
           .get();
-      
+
       final ordersWeb = await FirebaseFirestore.instance
           .collection('ordersWeb')
           .limit(200)
           .get();
-      
+
       final statusData = <String, int>{
         'Completed': 0,
         'Pending': 0,
         'Processing': 0,
         'Cancelled': 0,
       };
-      
+
       for (final doc in orders.docs) {
         final status = doc.data()['statusOrder'] ?? 'Pending';
         if (statusData.containsKey(status)) {
           statusData[status] = statusData[status]! + 1;
         }
       }
-      
+
       for (final doc in ordersWeb.docs) {
         final status = doc.data()['statusOrder'] ?? 'Pending';
         if (statusData.containsKey(status)) {
           statusData[status] = statusData[status]! + 1;
         }
       }
-      
+
       setState(() => _orderStatusData = statusData);
     } catch (e) {
       print('Error loading order status: $e');
@@ -471,9 +485,9 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     final isSmallScreen = MediaQuery.of(context).size.width < 1200;
-    
+
     if (_loading) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -536,9 +550,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             const SizedBox(height: 24),
             _buildStatsCards(),
             const SizedBox(height: 24),
-            isSmallScreen 
-                ? _buildMobileChartsSection()
-                : _buildChartsSection(),
+            isSmallScreen ? _buildMobileChartsSection() : _buildChartsSection(),
             const SizedBox(height: 24),
             _buildRecentOrdersSection(),
           ],
@@ -626,26 +638,14 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
           const SizedBox(height: 20),
           Row(
             children: [
-              _buildQuickStat(
-                l10n.revenue, 
-                _getTodayRevenueFormatted(), 
-                Icons.attach_money, 
-                Colors.green
-              ),
+              _buildQuickStat(l10n.revenue, _getTodayRevenueFormatted(),
+                  Icons.attach_money, Colors.green),
               const SizedBox(width: 16),
-              _buildQuickStat(
-                l10n.orders, 
-                '${_statsData['orders'] ?? 0}', 
-                Icons.shopping_cart_outlined, 
-                Colors.blue
-              ),
+              _buildQuickStat(l10n.orders, '${_statsData['orders'] ?? 0}',
+                  Icons.shopping_cart_outlined, Colors.blue),
               const SizedBox(width: 16),
-              _buildQuickStat(
-                l10n.account, 
-                '${_statsData['users'] ?? 0}', 
-                Icons.people_outline, 
-                Colors.orange
-              ),
+              _buildQuickStat(l10n.account, '${_statsData['users'] ?? 0}',
+                  Icons.people_outline, Colors.orange),
             ],
           ),
         ],
@@ -653,7 +653,8 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     );
   }
 
-  Widget _buildQuickStat(String title, String value, IconData icon, Color color) {
+  Widget _buildQuickStat(
+      String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -720,12 +721,12 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               value: _timeRange,
               dropdownColor: Theme.of(context).cardColor,
               style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.white 
-                    : Colors.black, 
-                fontSize: 14
-              ),
-              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                  fontSize: 14),
+              icon:
+                  const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
               items: const [
                 DropdownMenuItem(
                   value: '7days',
@@ -769,10 +770,30 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   Widget _buildStatsCards() {
     final l10n = AppLocalizations.of(context)!;
     final stats = [
-      {'title': l10n.pets, 'value': _statsData['pets'] ?? 0, 'icon': Icons.pets, 'color': Colors.blue},
-      {'title': l10n.account, 'value': _statsData['users'] ?? 0, 'icon': Icons.people, 'color': Colors.green},
-      {'title': l10n.orders, 'value': _statsData['orders'] ?? 0, 'icon': Icons.shopping_cart, 'color': Colors.orange},
-      {'title': l10n.category, 'value': _statsData['categories'] ?? 0, 'icon': Icons.category, 'color': Colors.purple},
+      {
+        'title': l10n.pets,
+        'value': _statsData['pets'] ?? 0,
+        'icon': Icons.pets,
+        'color': Colors.blue
+      },
+      {
+        'title': l10n.account,
+        'value': _statsData['users'] ?? 0,
+        'icon': Icons.people,
+        'color': Colors.green
+      },
+      {
+        'title': l10n.orders,
+        'value': _statsData['orders'] ?? 0,
+        'icon': Icons.shopping_cart,
+        'color': Colors.orange
+      },
+      {
+        'title': l10n.category,
+        'value': _statsData['categories'] ?? 0,
+        'icon': Icons.category,
+        'color': Colors.purple
+      },
     ];
 
     return FadeTransition(
@@ -808,7 +829,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     if (_statsLoading) {
       return const StatsCardSkeleton();
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -836,13 +857,11 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                 child: Icon(icon, color: color, size: 24),
               ),
               const Spacer(),
-              Icon(
-                Icons.trending_up, 
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Colors.lightGreenAccent 
-                    : Colors.green, 
-                size: 16
-              ),
+              Icon(Icons.trending_up,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.lightGreenAccent
+                      : Colors.green,
+                  size: 16),
             ],
           ),
           const SizedBox(height: 16),
@@ -897,7 +916,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     if (_revenueLoading) {
       return ChartSkeleton(title: l10n.revenue);
     }
-    
+
     return Container(
       height: 400,
       padding: const EdgeInsets.all(24),
@@ -930,7 +949,11 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                 '(${_getChartUnit()})',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                  color: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.color
+                      ?.withOpacity(0.7),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -946,19 +969,23 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                         Icon(
                           Icons.show_chart,
                           size: 64,
-                          color: Theme.of(context).iconTheme.color?.withOpacity(0.3),
+                          color: Theme.of(context)
+                              .iconTheme
+                              .color
+                              ?.withOpacity(0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          AppLocalizations.of(context)!.noDataAvailable, 
+                          AppLocalizations.of(context)!.noDataAvailable,
                           style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color,
                             fontSize: 16,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Data will appear when orders are completed', 
+                          'Data will appear when orders are completed',
                           style: TextStyle(
                             color: Theme.of(context).textTheme.bodySmall?.color,
                             fontSize: 12,
@@ -968,112 +995,131 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                     ),
                   )
                 : LineChart(
-                        LineChartData(
-                          gridData: FlGridData(
-                            show: true,
-                            drawVerticalLine: true,
-                            horizontalInterval: 100,
-                            verticalInterval: 1,
-                            getDrawingHorizontalLine: (value) => FlLine(
-                              color: Theme.of(context).dividerColor.withOpacity(0.3),
-                              strokeWidth: 1,
-                            ),
-                            getDrawingVerticalLine: (value) => FlLine(
-                              color: Theme.of(context).dividerColor.withOpacity(0.3),
-                              strokeWidth: 1,
-                            ),
-                          ),
-                          titlesData: FlTitlesData(
-                            show: true,
-                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 30,
-                                interval: 1,
-                                getTitlesWidget: (value, meta) {
-                                  final dates = _revenueData.keys.toList();
-                                  if (value.toInt() >= 0 && value.toInt() < dates.length) {
-                                    return Text(
-                                      dates[value.toInt()],
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Theme.of(context).textTheme.bodySmall?.color,
-                                      ),
-                                    );
-                                  }
-                                  return const Text('');
-                                },
-                              ),
-                            ),
-                            leftTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 50,
-                                interval: 100,
-                                getTitlesWidget: (value, meta) {
-                                  return Text(
-                                    _formatChartCurrency(value),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context).textTheme.bodySmall?.color,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          borderData: FlBorderData(
-                            show: true,
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor.withOpacity(0.5),
-                              width: 1,
-                            ),
-                          ),
-                          minX: 0,
-                          maxX: (_revenueData.length - 1).toDouble(),
-                          minY: 0,
-                          maxY: _revenueData.values.isNotEmpty 
-                              ? _revenueData.values.reduce((a, b) => a > b ? a : b) * 1.2
-                              : 500,
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: _revenueData.entries.map((entry) {
-                                final index = _revenueData.keys.toList().indexOf(entry.key);
-                                return FlSpot(index.toDouble(), entry.value);
-                              }).toList(),
-                              isCurved: true,
-                              color: Theme.of(context).brightness == Brightness.dark 
-                                  ? Colors.lightBlueAccent 
-                                  : const Color(0xff08A045),
-                              barWidth: 4,
-                              isStrokeCapRound: true,
-                              belowBarData: BarAreaData(
-                                show: true,
-                                color: (Theme.of(context).brightness == Brightness.dark 
-                                    ? Colors.lightBlueAccent 
-                                    : const Color(0xff08A045)).withOpacity(0.15),
-                              ),
-                              dotData: FlDotData(
-                                show: true,
-                                getDotPainter: (spot, percent, barData, index) {
-                                  return FlDotCirclePainter(
-                                    radius: 5,
-                                    color: Theme.of(context).brightness == Brightness.dark 
-                                        ? Colors.lightBlueAccent 
-                                        : const Color(0xff08A045),
-                                    strokeWidth: 2,
-                                    strokeColor: Theme.of(context).brightness == Brightness.dark 
-                                        ? Colors.black54 
-                                        : Colors.white,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: true,
+                        horizontalInterval: 100,
+                        verticalInterval: 1,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color:
+                              Theme.of(context).dividerColor.withOpacity(0.3),
+                          strokeWidth: 1,
+                        ),
+                        getDrawingVerticalLine: (value) => FlLine(
+                          color:
+                              Theme.of(context).dividerColor.withOpacity(0.3),
+                          strokeWidth: 1,
                         ),
                       ),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            interval: 1,
+                            getTitlesWidget: (value, meta) {
+                              final dates = _revenueData.keys.toList();
+                              if (value.toInt() >= 0 &&
+                                  value.toInt() < dates.length) {
+                                return Text(
+                                  dates[value.toInt()],
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color,
+                                  ),
+                                );
+                              }
+                              return const Text('');
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 50,
+                            interval: 100,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                _formatChartCurrency(value),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(
+                        show: true,
+                        border: Border.all(
+                          color:
+                              Theme.of(context).dividerColor.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                      minX: 0,
+                      maxX: (_revenueData.length - 1).toDouble(),
+                      minY: 0,
+                      maxY: _revenueData.values.isNotEmpty
+                          ? _revenueData.values
+                                  .reduce((a, b) => a > b ? a : b) *
+                              1.2
+                          : 500,
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: _revenueData.entries.map((entry) {
+                            final index =
+                                _revenueData.keys.toList().indexOf(entry.key);
+                            return FlSpot(index.toDouble(), entry.value);
+                          }).toList(),
+                          isCurved: true,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.lightBlueAccent
+                              : const Color(0xff08A045),
+                          barWidth: 4,
+                          isStrokeCapRound: true,
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color:
+                                (Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.lightBlueAccent
+                                        : const Color(0xff08A045))
+                                    .withOpacity(0.15),
+                          ),
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) {
+                              return FlDotCirclePainter(
+                                radius: 5,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.lightBlueAccent
+                                    : const Color(0xff08A045),
+                                strokeWidth: 2,
+                                strokeColor: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.black54
+                                    : Colors.white,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
@@ -1120,9 +1166,11 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                     'Processing': Colors.blue,
                     'Cancelled': Colors.red,
                   };
-                  final total = _orderStatusData.values.fold<int>(0, (sum, value) => sum + value);
-                  final percentage = total > 0 ? (entry.value / total * 100).round() : 0;
-                  
+                  final total = _orderStatusData.values
+                      .fold<int>(0, (sum, value) => sum + value);
+                  final percentage =
+                      total > 0 ? (entry.value / total * 100).round() : 0;
+
                   return PieChartSectionData(
                     value: entry.value.toDouble(),
                     color: colors[entry.key] ?? Colors.grey,
@@ -1166,7 +1214,10 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(entry.key, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color)),
+                    Text(entry.key,
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).textTheme.bodyMedium?.color)),
                     const Spacer(),
                     Text(
                       entry.value.toString(),
@@ -1225,12 +1276,14 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               child: Padding(
                 padding: const EdgeInsets.all(40),
                 child: Text(AppLocalizations.of(context)!.noDataAvailable,
-                  style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color)),
+                    style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyMedium?.color)),
               ),
             )
           else
             Column(
-              children: _recentOrders.map((order) => _buildOrderRow(order)).toList(),
+              children:
+                  _recentOrders.map((order) => _buildOrderRow(order)).toList(),
             ),
         ],
       ),
@@ -1290,14 +1343,15 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: order['source'] == 'Mobile'
-                            ? (Theme.of(context).brightness == Brightness.dark 
-                                ? Colors.blue.withOpacity(0.2) 
+                            ? (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.blue.withOpacity(0.2)
                                 : Colors.blue.withOpacity(0.1))
-                            : (Theme.of(context).brightness == Brightness.dark 
-                                ? Colors.purple.withOpacity(0.2) 
+                            : (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.purple.withOpacity(0.2)
                                 : Colors.purple.withOpacity(0.1)),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -1305,11 +1359,11 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                         order['source'],
                         style: TextStyle(
                           color: order['source'] == 'Mobile'
-                              ? (Theme.of(context).brightness == Brightness.dark 
-                                  ? Colors.lightBlueAccent 
+                              ? (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.lightBlueAccent
                                   : Colors.blue[700])
-                              : (Theme.of(context).brightness == Brightness.dark 
-                                  ? Colors.purpleAccent 
+                              : (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.purpleAccent
                                   : Colors.purple[700]),
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -1343,34 +1397,35 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: order['status'] == 'Completed' 
-                      ? (Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.green.withOpacity(0.2) 
+                  color: order['status'] == 'Completed'
+                      ? (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.green.withOpacity(0.2)
                           : Colors.green.withOpacity(0.1))
                       : order['status'] == 'Pending'
-                          ? (Theme.of(context).brightness == Brightness.dark 
-                              ? Colors.orange.withOpacity(0.2) 
+                          ? (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.orange.withOpacity(0.2)
                               : Colors.orange.withOpacity(0.1))
-                          : (Theme.of(context).brightness == Brightness.dark 
-                              ? Colors.blue.withOpacity(0.2) 
+                          : (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.blue.withOpacity(0.2)
                               : Colors.blue.withOpacity(0.1)),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   order['status'],
                   style: TextStyle(
-                    color: order['status'] == 'Completed' 
-                        ? (Theme.of(context).brightness == Brightness.dark 
-                            ? Colors.lightGreenAccent 
+                    color: order['status'] == 'Completed'
+                        ? (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.lightGreenAccent
                             : Colors.green[700])
                         : order['status'] == 'Pending'
-                            ? (Theme.of(context).brightness == Brightness.dark 
-                                ? Colors.orangeAccent 
+                            ? (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.orangeAccent
                                 : Colors.orange[700])
-                            : (Theme.of(context).brightness == Brightness.dark 
-                                ? Colors.lightBlueAccent 
+                            : (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.lightBlueAccent
                                 : Colors.blue[700]),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

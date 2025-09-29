@@ -1,17 +1,19 @@
 import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/auth/auth_service.dart';
+import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-
+import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/change_password_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/viewed_pets/viewed_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/your_order_screen.dart';
-import 'package:pet_shop/presentation/pages/mobile/settings_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 
-import '../edit_profile.dart';
+import '../profile/edit_profile.dart';
 import 'favorite_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -22,20 +24,34 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  Map<String, dynamic>? user;
-  Map<String, dynamic>? order;
+  Map<String, dynamic>? userInfo;
+  String? userIdentifier;
+  final UserManager userManager = UserManager();
 
   @override
   void initState() {
-    fetchDataUser();
     super.initState();
+    _fetchUserData();
   }
 
-  Future<void> fetchDataUser() async {
-    final userData = await authService.value.getUserInfo();
-    setState(() {
-      user = userData;
-    });
+  Future<void> _fetchUserData() async {
+    try {
+      await userManager.initialize();
+      userIdentifier = await userManager.getUserIdentifier();
+      userInfo = await userManager.getCurrentUserInfo();
+      setState(() {});
+    } catch (e) {
+      print('Error fetching user data: $e');
+      // Fallback to authService if UserManager fails
+      try {
+        final userData = await authService.value.getUserInfo();
+        setState(() {
+          userInfo = userData;
+        });
+      } catch (fallbackError) {
+        print('Fallback auth service error: $fallbackError');
+      }
+    }
   }
 
   @override
@@ -45,11 +61,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isWide = width >= 900;
 
     String displayName =
-        (user?['displayName'] as String?)?.trim().isNotEmpty == true
-            ? user!['displayName']
+        (userInfo?['displayName'] as String?)?.trim().isNotEmpty == true
+            ? userInfo!['displayName']
             : 'Guest';
-    String email = (user?['email'] as String?) ?? '';
-    String? imageUrl = (user?['imageUrl'] as String?);
+    String email = (userInfo?['email'] as String?) ?? '';
+    String? imageUrl = (userInfo?['imageUrl'] as String?);
 
     return Scaffold(
       backgroundColor: secondaryColor,
@@ -67,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () async => fetchDataUser(),
+        onRefresh: () async => _fetchUserData(),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final horizontal = isWide ? width * 0.12 : 16.0;
@@ -115,6 +131,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const YourOrderScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const _DividerInset(),
+                        _MenuItem(
+                          icon: Icons.location_on,
+                          iconBg: const Color(0xffe8f5e8),
+                          iconColor: Colors.green,
+                          title: 'Manage Addresses',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AddressListPage(),
                               ),
                             );
                           },
@@ -202,56 +233,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 12),
                       _MenuCard(children: [
                         _MenuItem(
-                          icon: Icons.logout_rounded,
-                          iconBg: const Color(0xfffdeefe),
-                          iconColor: Colors.pink,
-                          title: 'Logout',
-                          titleColor: Colors.red.shade600,
-                          onTap: () => showDialog(
-                            context: context,
-                            builder: (BuildContext dialogContext) =>
-                                AlertDialog(
-                              title: const Text("Xác nhận đăng xuất"),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, 'Cancel'),
-                                  child: const Text("Cancel"),
-                                ),
-                                TextButton(
-                                  onPressed: () async {
-                                    // Đóng dialog trước
-                                    Navigator.pop(context);
-
-                                    debugPrint(
-                                        '🚪 User clicked logout, calling signOut()');
-
-                                    try {
-                                      // Chỉ signOut và để authStateChanges handle navigation
-                                      await authService.value.signOut();
-                                      debugPrint(
-                                          '✅ signOut() completed successfully');
-                                    } catch (e) {
-                                      debugPrint('❌ signOut() error: $e');
-                                      // Show error message to user
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                'Đăng xuất thất bại: ${e.toString()}'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: const Text("Ok"),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                            icon: Icons.logout_rounded,
+                            iconBg: const Color(0xfffdeefe),
+                            iconColor: Colors.pink,
+                            title: 'Logout',
+                            titleColor: Colors.red.shade600,
+                            onTap: () {
+                              _showLogoutDialog(context);
+                            }),
                       ]),
                     ],
                   ),
@@ -265,6 +254,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+void _showLogoutDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.rectangle,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                offset: const Offset(0, 10),
+                blurRadius: 10,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  color: Colors.red.shade400,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Title
+              const Text(
+                'Đăng xuất',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Message
+              const Text(
+                'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      child: const Text(
+                        'Hủy',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _logout(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade400,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Đăng xuất',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _logout(BuildContext context) async {
+  try {
+    // Use AuthService signOut which handles Google, Facebook, and Firebase signOut
+    await authService.value.signOut();
+    
+    // Clear UserManager data
+    final userManager = UserManager();
+    await userManager.clearUserData();
+
+    if (context.mounted) {
+      NotificationHelper.showSuccess(
+        context,
+        'Đăng xuất thành công',
+        'Hẹn gặp lại bạn!',
+      );
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginOrRegister()),
+        (route) => false,
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      NotificationHelper.showError(
+        context,
+        'Lỗi đăng xuất',
+        'Không thể đăng xuất. Vui lòng thử lại.',
+      );
+    }
+  }
+}
+
 // Header: gradient + avatar + tên & email
 class _ProfileHeader extends StatelessWidget {
   final String displayName;
@@ -275,7 +421,6 @@ class _ProfileHeader extends StatelessWidget {
     required this.displayName,
     required this.email,
     this.imageUrl,
-    super.key,
   });
 
   String _initials(String name) {
@@ -373,7 +518,7 @@ class _ProfileHeader extends StatelessWidget {
 class _MenuCard extends StatelessWidget {
   final List<Widget> children;
 
-  const _MenuCard({required this.children, super.key});
+  const _MenuCard({required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +549,6 @@ class _MenuItem extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.titleColor,
-    super.key,
   });
 
   @override
@@ -438,7 +582,7 @@ class _MenuItem extends StatelessWidget {
 
 // Divider có inset để đẹp mắt
 class _DividerInset extends StatelessWidget {
-  const _DividerInset({super.key});
+  const _DividerInset();
 
   @override
   Widget build(BuildContext context) {

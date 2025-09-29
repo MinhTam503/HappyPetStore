@@ -8,6 +8,7 @@ import 'package:pet_shop/presentation/pages/mobile/tab/home_page.dart'
     show HomePage;
 import 'package:pet_shop/presentation/pages/mobile/tab/profile_screen.dart';
 import 'package:pet_shop/presentation/widgets/conditional_draggable_chat_bubble.dart';
+import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
 
 class BottomNavigator extends StatefulWidget {
   final int initialIndex;
@@ -47,6 +48,7 @@ class _HomePageState extends State<BottomNavigator> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: secondaryColor,
+      drawer: const AppDrawer(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex,
         selectedItemColor: primaryColor,

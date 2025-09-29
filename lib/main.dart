@@ -5,12 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
+import 'package:pet_shop/data/repositories/notification_repository.dart';
 import 'package:pet_shop/data/repositories/viewed_pets/recent_pets_repository_impl.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/debug_connection.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 import 'package:pet_shop/core/providers/theme_provider.dart';
+import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
@@ -83,10 +85,13 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => FavBloc()),
         BlocProvider(create: (_) => CartBlocWeb()),
         BlocProvider(create: (_) => PopularBloc()),
+        BlocProvider(
+            create: (_) => NotificationBloc(
+                notificationRepository: NotificationRepository())),
         BlocProvider(create: (_) => serviceLocator.createAprioriBloc()),
         BlocProvider(
-          create: (_) => RecentPetsBloc(RecentPetsRepositoryImpl())
-            ..add(LoadRecentPets()),
+          create: (_) =>
+              RecentPetsBloc(RecentPetsRepositoryImpl())..add(LoadRecentPets()),
         ),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
@@ -202,6 +207,7 @@ class MyApp extends StatelessWidget {
               '/home': (context) => const HomePageWebUser(),
               '/cart': (context) => const CartScreenWeb(),
               '/debug': (context) => const DebugConnectionScreen(),
+            
               '/payment-success': (context) {
                 // Parse session_id from URL
                 String? sessionId;

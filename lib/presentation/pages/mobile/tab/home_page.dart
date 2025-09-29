@@ -1,23 +1,23 @@
-import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/mobile/all_pet.dart';
-import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
+import 'package:pet_shop/presentation/pages/mobile/pet/all_pet.dart';
+import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
+import 'package:pet_shop/presentation/pages/mobile/search/search_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
-import 'package:pet_shop/presentation/pages/notification/nofi_screen.dart';
-import 'package:pet_shop/presentation/widgets/my_search_bar.dart';
+import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
+import 'package:pet_shop/presentation/widgets/notification_button.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
 import 'package:pet_shop/presentation/widgets/popular_pet_items.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_event.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_state.dart';
+import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
+import 'package:pet_shop/presentation/bloc/notification/notification_event.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
-import 'package:path/path.dart' as path;
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
 
@@ -34,8 +34,12 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> groceryCategory = [];
   List<Map<String, dynamic>> top5BestSell = [];
   String userName = "Người dùng";
+  String? userId;
   List<Map<String, dynamic>> groceryItems = [];
   List<Map<String, dynamic>> filterItems = [];
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  UserManager userManager = UserManager();
+
   @override
   void initState() {
     super.initState();
@@ -44,10 +48,24 @@ class _HomePageState extends State<HomePage> {
     // Popular breeds
     context.read<PopularBloc>().add(const LoadPopularBreeds());
     _loadUserFavorites();
+    _loadUnreadCount();
+  }
+
+  // Add lifecycle method to refresh unread count when returning to screen
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadUnreadCount();
+  }
+
+  void _loadUnreadCount() async {
+    final userIdentifier = await userManager.getUserIdentifier();
+    if (userIdentifier != null) {
+      context.read<NotificationBloc>().add(LoadUnreadCount(userIdentifier));
+    }
   }
 
   void _loadUserFavorites() async {
-    UserManager userManager = UserManager();
     final userIdentifier = await userManager.getUserIdentifier();
     if (userIdentifier != null) {
       context.read<FavBloc>().add(LoadFav(userIdentifier));
@@ -62,6 +80,7 @@ class _HomePageState extends State<HomePage> {
         userName = userInfo['displayName']?.isNotEmpty == true
             ? userInfo['displayName']
             : "Bạn";
+        userId = FirebaseAuth.instance.currentUser?.uid;
       });
     }
   }
@@ -122,48 +141,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Popular Breeds logic moved into PopularBloc
-  Future<void> searchByImage(File imageFile) async {
-    try {
-      final uri = Uri.parse('http://10.0.2.2:5000/search');
-      var request = http.MultipartRequest('POST', uri);
-      request.files
-          .add(await http.MultipartFile.fromPath('file', imageFile.path));
-      var response = await request.send();
-      if (response.statusCode == 200) {
-        final respStr = await response.stream.bytesToString();
-        final data = jsonDecode(respStr);
-        if (data['similar_images'] != null &&
-            data['similar_images'].isNotEmpty) {
-          // Lấy danh sách tên file
-          List<String> fileNames = (data['similar_images'] as List)
-              .map((img) => path.basename(img['image_path'] as String))
-              .toList();
-          // Lọc danh sách thú cưng có imageUrl chứa tên file
-          final pets = groceryItems
-              .where((item) => fileNames.any((fileName) =>
-                  (item['imageUrl'] as String).contains(fileName)))
-              .toList();
-          setState(() {
-            filterItems = pets;
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Không tìm thấy ảnh tương tự!')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi server: ${response.statusCode}')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
@@ -173,83 +150,95 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: secondaryColor,
+      key: _scaffoldKey,
+      drawer: const AppDrawer(),
+      drawerEnableOpenDragGesture: true,
+      drawerEdgeDragWidth: 60,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text.rich(
-                      TextSpan(
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 23),
-                          children: [
-                            const TextSpan(text: "Xin chào, "),
-                            TextSpan(
-                              text: "$userName\n",
-                              style: const TextStyle(color: primaryColor),
-                            ),
-                            const TextSpan(
-                              text: "Chào bạn đến với Happy Pets Shop!",
-                              style: TextStyle(
-                                  fontSize: 17, color: Colors.black38),
-                            ),
-                          ]),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const BottomNavigator(
-                                initialIndex: 1,
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Icon(Icons.favorite_border, size: 28)),
-                    const SizedBox(
-                      width: 5,
-                    ),
-                    Stack(children: [
-                      GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const NofiScreen(),
-                              ),
-                            );
-                          },
-                          child:
-                              const Icon(Icons.notifications_none, size: 30)),
-                      Positioned(
-                        right: 0,
-                        top: -5,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '3',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold),
-                          ),
+                  padding:
+                      const EdgeInsets.only(top: 12, right: 10, bottom: 10),
+                  child: Row(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start, // căn giữa theo trục dọc
+                    children: [
+                      const SizedBox(width: 8),
+                      SizedBox.square(
+                        dimension: 28,
+                        child: IconButton(
+                          icon: const Icon(Icons.menu, color: primaryColor),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          iconSize: 28,
+                          splashRadius: 20,
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
                         ),
                       ),
-                    ]),
-                  ],
-                ),
-              ),
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 23),
+                            children: [
+                              const TextSpan(text: "Xin chào, "),
+                              TextSpan(
+                                text: "$userName\n",
+                                style: const TextStyle(color: primaryColor),
+                              ),
+                              const TextSpan(
+                                text: "Chào bạn đến với Happy Pets Shop!",
+                                style: TextStyle(
+                                    fontSize: 17, color: Colors.black38),
+                              ),
+                            ],
+                          ),
+                          maxLines: 2, // tránh quá dài
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                        ),
+                      ),
+
+                      // Cụm action có kích thước nhỏ, cố định
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const BottomNavigator(initialIndex: 1),
+                                ),
+                              );
+                            },
+                            child: const Icon(Icons.favorite_border, size: 28),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Ép NotificationButton về kích thước 28x28 để thẳng hàng với icon tim
+                          FutureBuilder<String?>(
+                            future: userManager.getUserIdentifier(),
+                            builder: (context, snapshot) {
+                              final uid = snapshot.data;
+                              return SizedBox.square(
+                                dimension: 28,
+                                child: uid != null
+                                    ? NotificationButton(userId: uid)
+                                    : const Icon(Icons.notifications_none,
+                                        size: 28),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  )),
             ),
             const SliverToBoxAdapter(
               child: Padding(
@@ -266,11 +255,58 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             SliverToBoxAdapter(
-              child: Padding(
+              child: Container(
+                height: 50,
                 padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: MySearchBar(
-                  onSearch: searchFilterItems,
-                  onImageSearch: searchByImage,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SearchPage(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.only(left: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 12,
+                          spreadRadius: 3,
+                          offset: Offset(0, 5),
+                        )
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.search,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 10),
+                        const SizedBox(
+                          width: 300,
+                          child: Text(
+                            "Tìm kiếm thú cưng", // Nội dung hiển thị
+                            style: TextStyle(
+                              color: Colors.black45,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          child: const Icon(Icons.camera_alt,
+                              color: Colors.blue, size: 25),
+                        ),
+                        const SizedBox(width: 20),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

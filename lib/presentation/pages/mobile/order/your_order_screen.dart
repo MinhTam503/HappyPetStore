@@ -4,9 +4,7 @@ import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
-
-
+import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
 
 class YourOrderScreen extends StatefulWidget {
   const YourOrderScreen({super.key});
@@ -18,9 +16,9 @@ class YourOrderScreen extends StatefulWidget {
 class _YourOrderScreenState extends State<YourOrderScreen> {
   Map<String, dynamic>? userData;
   final CollectionReference ordersCollection =
-  FirebaseFirestore.instance.collection('orders');
+      FirebaseFirestore.instance.collection('orders');
   final CollectionReference petsCollection =
-  FirebaseFirestore.instance.collection('Pets'); // Lấy dữ liệu thú cưng
+      FirebaseFirestore.instance.collection('Pets'); // Lấy dữ liệu thú cưng
 
   String orderSort = 'desc'; // 'desc' = mới nhất trước, 'asc' = cũ nhất trước
   String statusFilter = 'All';
@@ -131,10 +129,11 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
           stream: userData == null
               ? null
               : ordersCollection
-              .where('email', isEqualTo: userData?['email'])
-              .snapshots(),
+                  .where('email', isEqualTo: userData?['email'])
+                  .snapshots(),
           builder: (context, snapshot) {
-            if (userData == null || snapshot.connectionState == ConnectionState.waiting) {
+            if (userData == null ||
+                snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -173,7 +172,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
               itemBuilder: (context, index) {
                 final order = orders[index];
                 final status = order['statusOrder'] ?? '';
-                final total = (order['totalAmount'] ?? 0).toString();
+                final totalRaw = order['totalAmount'] ?? 0;
                 final statusPay = order['statusPayment'] ?? '';
                 final id = order['orderId'] ?? order.id;
 
@@ -190,7 +189,10 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _StatusIcon(status: status, color: getStatusColor(status), icon: getStatusIcon(status)),
+                          _StatusIcon(
+                              status: status,
+                              color: getStatusColor(status),
+                              icon: getStatusIcon(status)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -204,14 +206,16 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                         "Order #$id",
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.titleMedium?.copyWith(
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
                                     Text(
                                       _formatTime(order['timestamp']),
-                                      style: theme.textTheme.bodySmall?.copyWith(
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
                                         color: Colors.black54,
                                       ),
                                     ),
@@ -225,7 +229,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     _ChipBadge(
-                                      label: "\$ $total",
+                                      label: CurrencyHelper.formatVND(totalRaw),
                                       icon: Icons.payments_outlined,
                                       bg: Colors.grey.shade100,
                                       fg: Colors.black87,
@@ -239,7 +243,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                     _ChipBadge(
                                       label: status,
                                       icon: Icons.local_shipping_outlined,
-                                      bg: getStatusColor(status).withOpacity(.12),
+                                      bg: getStatusColor(status)
+                                          .withOpacity(.12),
                                       fg: getStatusColor(status),
                                     ),
                                   ],
@@ -251,12 +256,16 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                     alignment: Alignment.centerRight,
                                     child: TextButton.icon(
                                       onPressed: () => cancelOrder(order.id),
-                                      icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                                      label: const Text('Hủy đơn', style: TextStyle(color: Colors.red)),
+                                      icon: const Icon(Icons.cancel_outlined,
+                                          color: Colors.red),
+                                      label: const Text('Hủy đơn',
+                                          style: TextStyle(color: Colors.red)),
                                       style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 8),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                         ),
                                       ),
                                     ),
@@ -306,10 +315,40 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
       ),
       builder: (context) {
         final status = order['statusOrder'] ?? '';
-        final total = (order['totalAmount'] ?? 0).toString();
+        final totalRaw = order['totalAmount'] ?? 0;
         final statusPay = order['statusPayment'] ?? '';
         final email = order['email'] ?? '';
-        final address = order['shippingAddress'] ?? '';
+
+        // Debug logging for order details
+        print(
+            "🐛 Order Details: totalAmount raw = $totalRaw (${totalRaw.runtimeType})");
+        print(
+            "🐛 Order Details: formatted = '${CurrencyHelper.formatVND(totalRaw)}'");
+
+        // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
+        String address = '';
+        try {
+          if (order.data() is Map<String, dynamic>) {
+            final orderData = order.data() as Map<String, dynamic>;
+            if (orderData.containsKey('shippingAddress')) {
+              address = orderData['shippingAddress'] ?? '';
+            } else if (orderData.containsKey('shippingInfo')) {
+              // Format từ deliveryInfo cũ
+              final deliveryInfo = orderData['shippingInfo'];
+              if (deliveryInfo is Map<String, dynamic>) {
+                final name = deliveryInfo['name'] ?? '';
+                final phone = deliveryInfo['phone'] ?? '';
+                final addr = deliveryInfo['address'] ?? '';
+                address = '$name • $phone\n$addr';
+              } else if (deliveryInfo is String) {
+                address = deliveryInfo;
+              }
+            }
+          }
+        } catch (e) {
+          print('Error getting address: $e');
+          address = '';
+        }
 
         return DraggableScrollableSheet(
           expand: false,
@@ -324,7 +363,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                 children: [
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 40,
+                      height: 4,
                       decoration: BoxDecoration(
                         color: Colors.black12,
                         borderRadius: BorderRadius.circular(2),
@@ -334,14 +374,18 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _StatusIcon(status: status, color: getStatusColor(status), icon: getStatusIcon(status)),
+                      _StatusIcon(
+                          status: status,
+                          color: getStatusColor(status),
+                          icon: getStatusIcon(status)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           "Order Details",
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
                         ),
                       ),
                       _ChipBadge(
@@ -370,7 +414,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         fg: Colors.black87,
                       ),
                       _ChipBadge(
-                        label: "Total: \$ $total",
+                        label: "Total: ${CurrencyHelper.formatVND(totalRaw)}",
                         icon: Icons.payments_outlined,
                         bg: Colors.grey.shade100,
                         fg: Colors.black87,
@@ -378,11 +422,12 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  if ((address as String).trim().isNotEmpty)
+                  if (address.trim().isNotEmpty)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_outlined, color: primaryColor),
+                        const Icon(Icons.location_on_outlined,
+                            color: primaryColor),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -398,8 +443,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                   Text(
                     "Items",
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
@@ -410,7 +455,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       itemBuilder: (context, index) {
                         final petData = petsData[index];
                         final name = petData['name'] ?? '';
-                        final price = petData['price'] ?? petData['weight'] ?? '';
+                        final price =
+                            petData['price'] ?? petData['weight'] ?? '';
                         final qty = petData['quantity'] ?? 1;
                         final image = (petData['imageUrl'] ?? '') as String;
 
@@ -423,28 +469,34 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                             leading: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: image.isNotEmpty
-                                  ? Image.network(image, width: 56, height: 56, fit: BoxFit.cover)
+                                  ? Image.network(image,
+                                      width: 56, height: 56, fit: BoxFit.cover)
                                   : Container(
-                                width: 56, height: 56,
-                                color: Colors.grey.shade200,
-                                child: const Icon(Icons.pets, color: Colors.black38),
-                              ),
+                                      width: 56,
+                                      height: 56,
+                                      color: Colors.grey.shade200,
+                                      child: const Icon(Icons.pets,
+                                          color: Colors.black38),
+                                    ),
                             ),
                             title: GestureDetector(
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => DetailPet(pet: petData)),
+                                  MaterialPageRoute(
+                                      builder: (_) => DetailPet(pet: petData)),
                                 );
                               },
                               child: Text(
                                 name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700),
                               ),
                             ),
-                            subtitle: Text("${CurrencyHelper.formatVND(price)}  •  x$qty"),
+                            subtitle: Text(
+                                "${CurrencyHelper.formatVND(price)}  •  x$qty"),
                           ),
                         );
                       },
@@ -487,7 +539,13 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filterItems = ['All', 'Pending', 'Processing', 'Completed', 'Cancelled'];
+    final filterItems = [
+      'All',
+      'Pending',
+      'Processing',
+      'Completed',
+      'Cancelled'
+    ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
@@ -513,8 +571,10 @@ class _FilterBar extends StatelessWidget {
                   .toList(),
               decoration: InputDecoration(
                 labelText: 'Trạng thái',
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
@@ -530,8 +590,10 @@ class _FilterBar extends StatelessWidget {
               ],
               decoration: InputDecoration(
                 labelText: 'Sắp xếp',
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),

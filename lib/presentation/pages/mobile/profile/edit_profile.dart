@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:intl/intl.dart';
 
 
 
@@ -22,9 +23,12 @@ class _EditProfileState extends State<EditProfile> {
   Map<String, dynamic>? user;
   final TextEditingController displayNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   String? userIdentifier;
   String imageUrl = "";
-  List<String> addresses = [];
+  List<Map<String, dynamic>> deliveryInfos = [];
+  DateTime? selectedBirthDate;
+  String? selectedGender;
 
   bool _isSaving = false;
 
@@ -55,8 +59,39 @@ class _EditProfileState extends State<EditProfile> {
         user = userDoc.data() as Map<String, dynamic>;
         displayNameController.text = user?['displayName'] ?? "";
         phoneController.text = user?['phone'] ?? "";
-        addresses =
-        user?['address'] is List ? List<String>.from(user?['address']) : [];
+        emailController.text = user?['email'] ?? authUser.email ?? "";
+        
+        // Parse delivery infos
+        var deliveryData = user?['deliveryInfos'];
+        if (deliveryData is List) {
+          deliveryInfos = List<Map<String, dynamic>>.from(deliveryData);
+        } else {
+          // Migrate old address format to new delivery info format
+          var oldAddresses = user?['address'];
+          if (oldAddresses is List) {
+            deliveryInfos = oldAddresses.map<Map<String, dynamic>>((addr) => {
+              'name': user?['displayName'] ?? '',
+              'phone': user?['phone'] ?? '',
+              'address': addr.toString(),
+              'isDefault': deliveryInfos.isEmpty,
+            }).toList();
+          }
+        }
+        
+        // Parse birth date
+        if (user?['birthDate'] != null) {
+          if (user!['birthDate'] is Timestamp) {
+            selectedBirthDate = (user!['birthDate'] as Timestamp).toDate();
+          } else if (user!['birthDate'] is String) {
+            try {
+              selectedBirthDate = DateTime.parse(user!['birthDate']);
+            } catch (e) {
+              print('Error parsing birth date: $e');
+            }
+          }
+        }
+        
+        selectedGender = user?['gender'];
         imageUrl = user?['imageUrl'] ?? "";
       });
     }
@@ -68,12 +103,27 @@ class _EditProfileState extends State<EditProfile> {
 
     setState(() => _isSaving = true);
     try {
-      await FirebaseFirestore.instance.collection("users").doc(authUser.uid).update({
+      Map<String, dynamic> updateData = {
         'displayName': displayNameController.text.trim(),
         'phone': phoneController.text.trim(),
-        'address': addresses,
+        'deliveryInfos': deliveryInfos,
         'imageUrl': imageUrl,
-      });
+        'gender': selectedGender,
+      };
+      
+      if (selectedBirthDate != null) {
+        updateData['birthDate'] = Timestamp.fromDate(selectedBirthDate!);
+      }
+      
+      // Only update email if it's different and not empty
+      String newEmail = emailController.text.trim();
+      if (newEmail.isNotEmpty && newEmail != authUser.email) {
+        // Verify email before updating
+        await _verifyAndUpdateEmail(newEmail);
+      }
+      
+      await FirebaseFirestore.instance.collection("users").doc(authUser.uid).update(updateData);
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
@@ -82,6 +132,31 @@ class _EditProfileState extends State<EditProfile> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _verifyAndUpdateEmail(String newEmail) async {
+    User? authUser = FirebaseAuth.instance.currentUser;
+    if (authUser == null) return;
+
+    try {
+      // Send verification email to new address
+      await authUser.verifyBeforeUpdateEmail(newEmail);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Verification email sent to $newEmail. Please verify before the email is updated.'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating email: $e')),
+        );
+      }
     }
   }
 
@@ -118,14 +193,36 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   // =========================
-  // Address
+  // Date Picker
   // =========================
-  Future<void> addAddressDialog() async {
+  Future<void> _selectBirthDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedBirthDate ?? DateTime.now().subtract(const Duration(days: 365 * 18)),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: 'Chọn ngày sinh',
+      cancelText: 'Hủy',
+      confirmText: 'Chọn',
+    );
+    if (picked != null && picked != selectedBirthDate) {
+      setState(() {
+        selectedBirthDate = picked;
+      });
+    }
+  }
+
+  // =========================
+  // Delivery Info Management
+  // =========================
+  Future<void> addDeliveryInfoDialog() async {
     List<String> provinces = ListCity().city;
     Map<String, List<String>> districts = ListCity().districts;
     String? selectedProvince;
     String? selectedDistrict;
     String detail = '';
+    String name = displayNameController.text;
+    String phone = phoneController.text;
 
     await showDialog(
       context: context,
@@ -133,11 +230,24 @@ class _EditProfileState extends State<EditProfile> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Thêm địa chỉ mới'),
+              title: const Text('Thêm thông tin giao hàng'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    TextField(
+                      decoration: _inputDecoration("Tên người nhận"),
+                      onChanged: (value) => name = value,
+                      controller: TextEditingController(text: name),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      decoration: _inputDecoration("Số điện thoại"),
+                      onChanged: (value) => phone = value,
+                      controller: TextEditingController(text: phone),
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
                       decoration: _inputDecoration("Tỉnh/Thành phố"),
@@ -172,7 +282,7 @@ class _EditProfileState extends State<EditProfile> {
                     const SizedBox(height: 10),
                     TextField(
                       decoration: _inputDecoration(
-                        'Thông tin chi tiết (số nhà, tên đường...)',
+                        'Địa chỉ chi tiết (số nhà, tên đường...)',
                       ),
                       onChanged: (value) => detail = value,
                       keyboardType: TextInputType.multiline,
@@ -191,38 +301,22 @@ class _EditProfileState extends State<EditProfile> {
                     if (selectedDistrict != null &&
                         selectedProvince != null &&
                         detail.trim().isNotEmpty &&
+                        name.trim().isNotEmpty &&
+                        phone.trim().isNotEmpty &&
                         userIdentifier != null) {
-                      final newAddress =
-                          '$detail, $selectedDistrict, $selectedProvince';
+                      final newAddress = '$detail, $selectedDistrict, $selectedProvince';
+                      final newDeliveryInfo = {
+                        'name': name.trim(),
+                        'phone': phone.trim(),
+                        'address': newAddress,
+                        'isDefault': deliveryInfos.isEmpty, // First one is default
+                      };
 
-                      final userQuery = await FirebaseFirestore.instance
-                          .collection('users')
-                          .where(FieldPath.documentId, isEqualTo: userIdentifier)
-                          .limit(1)
-                          .get();
-                      if (userQuery.docs.isEmpty) return;
-
-                      final userRef = userQuery.docs.first.reference;
-                      final userDoc = userQuery.docs.first.data();
-                      var addr = userDoc['address'];
-
-                      if (addr == null || (addr is String && addr.isEmpty)) {
-                        await userRef.update({'address': [newAddress]});
-                        setState(() {
-                          addresses = [newAddress];
-                        });
-                      } else if (addr is List) {
-                        await userRef.update({
-                          'address': FieldValue.arrayUnion([newAddress]),
-                        });
-                        // Cập nhật local ngay để UI phản hồi
-                        setState(() {
-                          addresses = [...addresses, newAddress];
-                        });
-                      }
+                      setState(() {
+                        deliveryInfos.add(newDeliveryInfo);
+                      });
 
                       if (mounted) Navigator.pop(context);
-                      await fetchUserData();
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -241,12 +335,24 @@ class _EditProfileState extends State<EditProfile> {
     );
   }
 
-  void removeAddress(int index) {
+  void removeDeliveryInfo(int index) {
     setState(() {
-      addresses.removeAt(index);
+      bool wasDefault = deliveryInfos[index]['isDefault'] == true;
+      deliveryInfos.removeAt(index);
+      
+      // If removed item was default, make first item default
+      if (wasDefault && deliveryInfos.isNotEmpty) {
+        deliveryInfos[0]['isDefault'] = true;
+      }
     });
-    // Chỉ đổi UI local như code gốc. Nếu muốn lưu lên Firestore ngay, có thể
-    // gọi updateUserData() tại đây. (Không thay đổi logic theo yêu cầu.)
+  }
+
+  void setDefaultDeliveryInfo(int index) {
+    setState(() {
+      for (int i = 0; i < deliveryInfos.length; i++) {
+        deliveryInfos[i]['isDefault'] = i == index;
+      }
+    });
   }
 
   // =========================
@@ -301,7 +407,7 @@ class _EditProfileState extends State<EditProfile> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SectionTitle(title: "Thông tin cá nhân"),
+                    const _SectionTitle(title: "Thông tin cá nhân"),
                     const SizedBox(height: 12),
                     TextField(
                       controller: displayNameController,
@@ -319,6 +425,54 @@ class _EditProfileState extends State<EditProfile> {
                         icon: Icons.phone_outlined,
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      enabled: false, // Email không thể chỉnh sửa trực tiếp
+                      decoration: _inputDecorationWithIcon(
+                        label: "Email (liên hệ admin để thay đổi)",
+                        icon: Icons.email_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Birth Date
+                    InkWell(
+                      onTap: _selectBirthDate,
+                      child: InputDecorator(
+                        decoration: _inputDecorationWithIcon(
+                          label: "Ngày sinh",
+                          icon: Icons.cake_outlined,
+                        ),
+                        child: Text(
+                          selectedBirthDate != null 
+                              ? DateFormat('dd/MM/yyyy').format(selectedBirthDate!)
+                              : 'Chưa chọn ngày sinh',
+                          style: TextStyle(
+                            color: selectedBirthDate != null ? Colors.black : Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Gender
+                    DropdownButtonFormField<String>(
+                      value: selectedGender,
+                      decoration: _inputDecorationWithIcon(
+                        label: "Giới tính",
+                        icon: Icons.person_outline,
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'male', child: Text('Nam')),
+                        DropdownMenuItem(value: 'female', child: Text('Nữ')),
+                        DropdownMenuItem(value: 'other', child: Text('Khác')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          selectedGender = value;
+                        });
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -326,15 +480,15 @@ class _EditProfileState extends State<EditProfile> {
 
             const SizedBox(height: 20),
 
-            // Địa chỉ
+            // Thông tin giao hàng
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _SectionTitle(title: "Địa chỉ nhận hàng"),
+                const _SectionTitle(title: "Thông tin giao hàng"),
                 ElevatedButton.icon(
-                  onPressed: addAddressDialog,
+                  onPressed: addDeliveryInfoDialog,
                   icon: const Icon(Icons.add_location_alt_outlined, size: 18),
-                  label: const Text("Thêm địa chỉ"),
+                  label: const Text("Chỉnh sửa"),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.black,
@@ -353,7 +507,7 @@ class _EditProfileState extends State<EditProfile> {
             ),
             const SizedBox(height: 8),
 
-            if (addresses.isEmpty)
+            if (deliveryInfos.isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -361,13 +515,13 @@ class _EditProfileState extends State<EditProfile> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: Row(
-                  children: const [
+                child: const Row(
+                  children: [
                     Icon(Icons.info_outline, color: Colors.black54),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        "Chưa có địa chỉ nào",
+                        "Chưa có thông tin giao hàng nào",
                         style: TextStyle(color: Colors.black54),
                       ),
                     ),
@@ -378,11 +532,12 @@ class _EditProfileState extends State<EditProfile> {
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: addresses.length,
+                itemCount: deliveryInfos.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) => _AddressTile(
-                  address: addresses[index],
-                  onDelete: () => removeAddress(index),
+                itemBuilder: (context, index) => _DeliveryInfoTile(
+                  deliveryInfo: deliveryInfos[index],
+                  onDelete: () => removeDeliveryInfo(index),
+                  onSetDefault: () => setDefaultDeliveryInfo(index),
                 ),
               ),
 
@@ -468,7 +623,6 @@ class _HeaderCard extends StatelessWidget {
     required this.imageUrl,
     required this.displayName,
     required this.onEditAvatar,
-    super.key,
   });
 
   String _initials(String name) {
@@ -571,7 +725,7 @@ class _HeaderCard extends StatelessWidget {
 
 class _SectionTitle extends StatelessWidget {
   final String title;
-  const _SectionTitle({required this.title, super.key});
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -586,33 +740,97 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _AddressTile extends StatelessWidget {
-  final String address;
+class _DeliveryInfoTile extends StatelessWidget {
+  final Map<String, dynamic> deliveryInfo;
   final VoidCallback onDelete;
-  const _AddressTile({
-    required this.address,
+  final VoidCallback onSetDefault;
+  
+  const _DeliveryInfoTile({
+    required this.deliveryInfo,
     required this.onDelete,
-    super.key,
+    required this.onSetDefault,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDefault = deliveryInfo['isDefault'] == true;
+    
     return Card(
-      elevation: 1.5,
+      elevation: isDefault ? 3 : 1.5,
+      color: isDefault ? primaryColor.withOpacity(0.1) : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: const Icon(Icons.location_on, color: primaryColor),
-        title: Text(
-          address,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (isDefault)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Mặc định',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                const Spacer(),
+                if (!isDefault)
+                  TextButton(
+                    onPressed: onSetDefault,
+                    child: const Text('Đặt làm mặc định'),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: onDelete,
+                  tooltip: 'Xóa thông tin giao hàng',
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.person, color: primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  deliveryInfo['name'] ?? '',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.phone, color: primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(deliveryInfo['phone'] ?? ''),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on, color: primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    deliveryInfo['address'] ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: onDelete,
-          tooltip: 'Xóa địa chỉ',
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
     );
   }

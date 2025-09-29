@@ -7,7 +7,7 @@ import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:provider/provider.dart';
 
-import '../bloc/model/cart_model.dart';
+import '../../data/models/cart_model.dart';
 
 class CartItem extends StatelessWidget {
   final CartModel cart;
@@ -92,15 +92,16 @@ class CartItem extends StatelessWidget {
               child: GestureDetector(
                 onTap: () async {
                   UserManager userManager = UserManager();
-                  String? userIdentifier = await userManager.getUserIdentifier();
+                  String? userIdentifier =
+                      await userManager.getUserIdentifier();
                   if (userIdentifier == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Please login to continue")),
                     );
                     return;
                   }
-                  context.read<CartBloc>().add(
-                      RemoveFromCart(userIdentifier, cart.grocery['productId']));
+                  context.read<CartBloc>().add(RemoveFromCart(
+                      userIdentifier, cart.grocery['productId']));
                 },
                 child: const Icon(
                   Icons.cancel_rounded,

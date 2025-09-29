@@ -8,7 +8,7 @@ class DialogHelper {
   static void showLoadingDialog(BuildContext context,
       {String message = "Đang xử lý..."}) {
     if (!_isDialogShowing && _overlayEntry == null) {
-      debugPrint('🔄 Showing overlay dialog...');
+      debugPrint('🔄 DialogHelper: Showing overlay dialog with message: "$message"');
       _isDialogShowing = true;
 
       _overlayEntry = OverlayEntry(
@@ -46,32 +46,50 @@ class DialogHelper {
       // Insert the overlay
       try {
         Overlay.of(context).insert(_overlayEntry!);
-        debugPrint('✅ Overlay dialog inserted successfully');
+        debugPrint('✅ DialogHelper: Overlay dialog inserted successfully');
       } catch (e) {
-        debugPrint('❌ Error inserting overlay: $e');
+        debugPrint('❌ DialogHelper: Error inserting overlay: $e');
         _cleanup();
       }
     } else {
-      debugPrint('ℹ️ Dialog already showing or overlay exists');
+      debugPrint('ℹ️ DialogHelper: Dialog already showing (showing: $_isDialogShowing) or overlay exists ($_overlayEntry)');
     }
   }
 
   static Future<void> hideLoadingDialog(BuildContext context) async {
     if (_isDialogShowing && _overlayEntry != null) {
       try {
-        debugPrint('🔄 Removing overlay dialog...');
+        debugPrint('🔄 DialogHelper: Removing overlay dialog...');
         _overlayEntry?.remove();
         _cleanup();
-        debugPrint('✅ Overlay dialog removed successfully');
+        debugPrint('✅ DialogHelper: Overlay dialog removed successfully');
 
         // Small delay to ensure overlay is fully removed
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 100));
       } catch (e) {
-        debugPrint('❌ Error removing overlay: $e');
+        debugPrint('❌ DialogHelper: Error removing overlay: $e');
         _cleanup();
       }
     } else {
-      debugPrint('ℹ️ No dialog to hide (showing: $_isDialogShowing, entry: $_overlayEntry)');
+      debugPrint('ℹ️ DialogHelper: No dialog to hide (showing: $_isDialogShowing, entry: $_overlayEntry)');
+    }
+  }
+
+  /// Safe version of hideLoadingDialog that doesn't require context
+  static Future<void> safeHideLoadingDialog() async {
+    if (_isDialogShowing && _overlayEntry != null) {
+      try {
+        debugPrint('🔄 DialogHelper: Safely removing overlay dialog...');
+        _overlayEntry?.remove();
+        _cleanup();
+        debugPrint('✅ DialogHelper: Overlay dialog safely removed');
+        await Future.delayed(const Duration(milliseconds: 50));
+      } catch (e) {
+        debugPrint('❌ DialogHelper: Error safely removing overlay: $e');
+        _cleanup();
+      }
+    } else {
+      debugPrint('ℹ️ DialogHelper: No dialog to safely hide (showing: $_isDialogShowing, entry: $_overlayEntry)');
     }
   }
 

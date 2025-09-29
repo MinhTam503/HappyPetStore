@@ -67,8 +67,31 @@ class StripeHelper {
     }
   }
   
-  /// Check if Stripe is initialized
+  /// Check if Stripe is initialized and ready for payment sheet
   static bool get isInitialized => _initialized;
+  
+  /// Check if Stripe can be used for payment (more thorough check)
+  static Future<bool> canUseStripe() async {
+    if (!_initialized) {
+      return await initialize();
+    }
+    
+    // Additional check: try to access Stripe instance
+    if (!kIsWeb) {
+      try {
+        // Just check if we can access the publishable key
+        final key = Stripe.publishableKey;
+        return key.isNotEmpty;
+      } catch (e) {
+        if (kDebugMode) {
+          print('Stripe instance check failed: $e');
+        }
+        return false;
+      }
+    }
+    
+    return true;
+  }
   
   /// Force re-initialization (for testing purposes)
   static void reset() {
