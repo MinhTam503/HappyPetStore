@@ -720,7 +720,7 @@ class _CartScreenState extends State<CartScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => DetailPet(grocery: pet),
+                                builder: (context) => DetailPet(pet: pet),
                               ),
                             );
                           }

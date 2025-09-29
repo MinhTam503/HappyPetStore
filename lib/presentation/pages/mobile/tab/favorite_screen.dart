@@ -156,7 +156,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      DetailPet(grocery: itemData),
+                                      DetailPet(pet: itemData),
                                 ),
                               );
                             },

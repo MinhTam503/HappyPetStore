@@ -4,7 +4,9 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+  final Map<String, dynamic>? selectedPet;
+
+  const ChatPage({super.key, this.selectedPet});
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -14,11 +16,21 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Map<String, dynamic>? user;
+  bool _showPetInfo = true; // Để kiểm soát việc hiển thị thông tin thú cưng
 
   @override
   void initState() {
     super.initState();
     fetchUser();
+
+    // Nếu có thông tin thú cưng được chọn, tự động điền vào tin nhắn
+    if (widget.selectedPet != null) {
+      final pet = widget.selectedPet!;
+      _messageController.text =
+          'Tôi muốn hỏi thêm thông tin về thú cưng: ${pet['name']}'
+          '\nGiống: ${pet['breed'] ?? 'Không xác định'}'
+          '\nGiá: ${pet['price'] ?? 'Chưa có giá'}';
+    }
   }
 
   @override

@@ -35,13 +35,13 @@ class _ChatBotPageState extends State<ChatBotPage> {
   void _scrollListener() {
     if (_scrollController.hasClients) {
       // Check if user is scrolling manually
-      final isAtBottom = _scrollController.position.pixels >= 
+      final isAtBottom = _scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 100; // 100px threshold
-      
+
       setState(() {
         // Enable auto scroll when user is near bottom
         _autoScrollEnabled = isAtBottom;
-        
+
         // Detect if user is scrolling up
         if (!isAtBottom) {
           _isUserScrolling = true;
@@ -59,7 +59,9 @@ class _ChatBotPageState extends State<ChatBotPage> {
 
   void _scrollToBottom() {
     // Only auto scroll if enabled and user is not manually scrolling
-    if (_scrollController.hasClients && _autoScrollEnabled && !_isUserScrolling) {
+    if (_scrollController.hasClients &&
+        _autoScrollEnabled &&
+        !_isUserScrolling) {
       Future.delayed(const Duration(milliseconds: 50), () {
         if (_scrollController.hasClients && _autoScrollEnabled) {
           _scrollController.animateTo(
@@ -75,171 +77,177 @@ class _ChatBotPageState extends State<ChatBotPage> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => serviceLocator<ChatBotBloc>()..add(LoadChatBotHistory(widget.userId)),
+      create: (context) =>
+          serviceLocator<ChatBotBloc>()..add(LoadChatBotHistory(widget.userId)),
       child: Builder(
         builder: (context) => Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          centerTitle: true,
-          title: const Text('Pet Assistant'),
-          backgroundColor: const Color(0xff08A045),
-          foregroundColor: Colors.white,
-          elevation: 2,
-          actions: [
-            BlocBuilder<ChatBotBloc, ChatBotState>(
-              builder: (blocContext, state) {
-                return IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext dialogContext) {
-                        return AlertDialog(
-                          title: const Text('Clear Chat History'),
-                          content: const Text('Are you sure you want to clear all chat history?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(dialogContext).pop(),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                blocContext.read<ChatBotBloc>().add(ClearChatBotHistory(widget.userId));
-                                Navigator.of(dialogContext).pop();
-                              },
-                              child: const Text('Clear'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  BlocConsumer<ChatBotBloc, ChatBotState>(
-                    listener: (context, state) {
-                      if (state is ChatBotLoaded || state is ChatBotMessageSent) {
-                        // Only auto scroll for new messages when appropriate
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          // Reset user scrolling flag when new message arrives
-                          _isUserScrolling = false;
-                          _scrollToBottom();
-                        });
-                      }
-                      if (state is ChatBotError) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(state.message),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-                    builder: (context, state) {
-                      if (state is ChatBotLoading) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
-                      }
-
-                      List<ChatBotMessage> messages = [];
-                      bool isTyping = false;
-
-                      if (state is ChatBotLoaded) {
-                        messages = state.messages;
-                        isTyping = state.isTyping;
-                      } else if (state is ChatBotError) {
-                        messages = state.messages;
-                      }
-
-                      if (messages.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.pets,
-                                size: 64,
-                                color: Theme.of(context).primaryColor,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: AppBar(
+            centerTitle: true,
+            title: const Text('Pet Assistant'),
+            backgroundColor: const Color(0xff08A045),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            actions: [
+              BlocBuilder<ChatBotBloc, ChatBotState>(
+                builder: (blocContext, state) {
+                  return IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext dialogContext) {
+                          return AlertDialog(
+                            title: const Text('Clear Chat History'),
+                            content: const Text(
+                                'Are you sure you want to clear all chat history?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(),
+                                child: const Text('Cancel'),
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Hello! I\'m your Pet Assistant.',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Ask me anything about pets!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
+                              TextButton(
+                                onPressed: () {
+                                  blocContext
+                                      .read<ChatBotBloc>()
+                                      .add(ClearChatBotHistory(widget.userId));
+                                  Navigator.of(dialogContext).pop();
+                                },
+                                child: const Text('Clear'),
                               ),
                             ],
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        reverse: false, // Normal scroll direction
-                        itemCount: messages.length + (isTyping ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == messages.length && isTyping) {
-                            return _buildTypingIndicator();
-                          }
-
-                          final message = messages[index];
-                          return _buildMessageBubble(message);
+                          );
                         },
                       );
                     },
-                  ),
-                  // Floating Action Button to scroll to bottom
-                  if (!_autoScrollEnabled)
-                    Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: FloatingActionButton(
-                        mini: true,
-                        backgroundColor: Theme.of(context).primaryColor,
-                        onPressed: () {
-                          setState(() {
+                  );
+                },
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    BlocConsumer<ChatBotBloc, ChatBotState>(
+                      listener: (context, state) {
+                        if (state is ChatBotLoaded ||
+                            state is ChatBotMessageSent) {
+                          // Only auto scroll for new messages when appropriate
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            // Reset user scrolling flag when new message arrives
                             _isUserScrolling = false;
-                            _autoScrollEnabled = true;
+                            _scrollToBottom();
                           });
-                          _scrollController.animateTo(
-                            _scrollController.position.maxScrollExtent,
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeInOut,
+                        }
+                        if (state is ChatBotError) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(state.message),
+                              backgroundColor: Colors.red,
+                            ),
                           );
-                        },
-                        child: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.white,
+                        }
+                      },
+                      builder: (context, state) {
+                        if (state is ChatBotLoading) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        List<ChatBotMessage> messages = [];
+                        bool isTyping = false;
+
+                        if (state is ChatBotLoaded) {
+                          messages = state.messages;
+                          isTyping = state.isTyping;
+                        } else if (state is ChatBotError) {
+                          messages = state.messages;
+                        }
+
+                        if (messages.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.pets,
+                                  size: 64,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Hello! I\'m your Pet Assistant.',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Theme.of(context).primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Ask me anything about pets!',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(16),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          reverse: false, // Normal scroll direction
+                          itemCount: messages.length + (isTyping ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == messages.length && isTyping) {
+                              return _buildTypingIndicator();
+                            }
+
+                            final message = messages[index];
+                            return _buildMessageBubble(message);
+                          },
+                        );
+                      },
+                    ),
+                    // Floating Action Button to scroll to bottom
+                    if (!_autoScrollEnabled)
+                      Positioned(
+                        bottom: 16,
+                        right: 16,
+                        child: FloatingActionButton(
+                          mini: true,
+                          backgroundColor: Theme.of(context).primaryColor,
+                          onPressed: () {
+                            setState(() {
+                              _isUserScrolling = false;
+                              _autoScrollEnabled = true;
+                            });
+                            _scrollController.animateTo(
+                              _scrollController.position.maxScrollExtent,
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            _buildMessageInput(),
-          ],
-        ),
+              _buildMessageInput(),
+            ],
+          ),
         ),
       ),
     );
@@ -249,11 +257,13 @@ class _ChatBotPageState extends State<ChatBotPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
-        crossAxisAlignment: message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment:
-                message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: message.isUser
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             children: [
               if (!message.isUser) ...[
                 CircleAvatar(
@@ -274,18 +284,23 @@ class _ChatBotPageState extends State<ChatBotPage> {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: Colors.grey[400],
-                  child: const Icon(Icons.person, color: Colors.white, size: 18),
+                  child:
+                      const Icon(Icons.person, color: Colors.white, size: 18),
                 ),
               ],
             ],
           ),
           // Display pets if available
-          if (!message.isUser && message.pets != null && message.pets!.isNotEmpty) ...[
+          if (!message.isUser &&
+              message.pets != null &&
+              message.pets!.isNotEmpty) ...[
             const SizedBox(height: 8),
             _buildPetsDisplay(message.pets!),
           ],
           // Display quick replies if available
-          if (!message.isUser && message.quickReplies != null && message.quickReplies!.isNotEmpty) ...[
+          if (!message.isUser &&
+              message.quickReplies != null &&
+              message.quickReplies!.isNotEmpty) ...[
             const SizedBox(height: 8),
             _buildQuickReplies(message.quickReplies!),
           ],
@@ -323,7 +338,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -374,7 +390,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                  borderSide: BorderSide(
+                      color: Theme.of(context).primaryColor, width: 2),
                 ),
                 filled: true,
                 fillColor: Theme.of(context).scaffoldBackgroundColor,
@@ -389,11 +406,11 @@ class _ChatBotPageState extends State<ChatBotPage> {
                 final message = _messageController.text.trim();
                 if (message.isNotEmpty) {
                   context.read<ChatBotBloc>().add(
-                    SendChatBotMessage(
-                      userId: widget.userId,
-                      message: message,
-                    ),
-                  );
+                        SendChatBotMessage(
+                          userId: widget.userId,
+                          message: message,
+                        ),
+                      );
                   _messageController.clear();
                 }
               },
@@ -404,7 +421,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
             builder: (blocContext, state) {
               final isLoading = state is ChatBotLoading ||
                   (state is ChatBotLoaded && state.isTyping);
-              
+
               return CircleAvatar(
                 backgroundColor: Theme.of(context).primaryColor,
                 child: IconButton(
@@ -414,22 +431,25 @@ class _ChatBotPageState extends State<ChatBotPage> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Icon(Icons.send, color: Colors.white),
-                  onPressed: isLoading ? null : () {
-                    final message = _messageController.text.trim();
-                    if (message.isNotEmpty) {
-                      blocContext.read<ChatBotBloc>().add(
-                        SendChatBotMessage(
-                          userId: widget.userId,
-                          message: message,
-                        ),
-                      );
-                      _messageController.clear();
-                    }
-                  },
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          final message = _messageController.text.trim();
+                          if (message.isNotEmpty) {
+                            blocContext.read<ChatBotBloc>().add(
+                                  SendChatBotMessage(
+                                    userId: widget.userId,
+                                    message: message,
+                                  ),
+                                );
+                            _messageController.clear();
+                          }
+                        },
                 ),
               );
             },
@@ -446,7 +466,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
         _scrollToBottom();
       });
     }
-    
+
     return Container(
       margin: const EdgeInsets.only(left: 40), // Align with bot message
       child: Column(
@@ -496,7 +516,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
           context,
           MaterialPageRoute(
             builder: (context) => DetailPet(
-              grocery: {
+              pet: {
                 'id': pet.id,
                 'name': pet.name,
                 'breed': pet.breed,
@@ -538,18 +558,19 @@ class _ChatBotPageState extends State<ChatBotPage> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                  child: pet.imageUrl.isNotEmpty 
-                    ? Image.network(
-                        pet.imageUrl,
-                        height: 75,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildPlaceholderImage(pet.category);
-                        },
-                      )
-                    : _buildPlaceholderImage(pet.category),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(8)),
+                  child: pet.imageUrl.isNotEmpty
+                      ? Image.network(
+                          pet.imageUrl,
+                          height: 75,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildPlaceholderImage(pet.category);
+                          },
+                        )
+                      : _buildPlaceholderImage(pet.category),
                 ),
                 Positioned(
                   top: 4,
@@ -592,7 +613,9 @@ class _ChatBotPageState extends State<ChatBotPage> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          pet.breed != "Không rõ" ? pet.breed : pet.about.split(',')[0],
+                          pet.breed != "Không rõ"
+                              ? pet.breed
+                              : pet.about.split(',')[0],
                           style: TextStyle(
                             fontSize: 10,
                             color: Colors.grey[600],
@@ -604,7 +627,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
                     ),
                     // Price with nice formatting
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 2),
                       decoration: BoxDecoration(
                         color: Theme.of(context).primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -690,7 +714,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
       child: Wrap(
         spacing: 8,
         runSpacing: 4,
-        children: quickReplies.map((reply) => _buildQuickReplyChip(reply)).toList(),
+        children:
+            quickReplies.map((reply) => _buildQuickReplyChip(reply)).toList(),
       ),
     );
   }
@@ -702,11 +727,11 @@ class _ChatBotPageState extends State<ChatBotPage> {
           onTap: () {
             // Send the quick reply as a message
             blocContext.read<ChatBotBloc>().add(
-              SendChatBotMessage(
-                userId: widget.userId,
-                message: quickReply.text,
-              ),
-            );
+                  SendChatBotMessage(
+                    userId: widget.userId,
+                    message: quickReply.text,
+                  ),
+                );
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -752,26 +777,26 @@ class _ExpandableMessageTextState extends State<_ExpandableMessageText> {
   static const int _maxCharacters = 200;
 
   bool get _shouldShowToggle {
-    return widget.text.length > _maxCharacters || 
-           widget.text.split('\n').length > _maxLines;
+    return widget.text.length > _maxCharacters ||
+        widget.text.split('\n').length > _maxLines;
   }
 
   String get _displayText {
     if (!_shouldShowToggle || _isExpanded) {
       return widget.text;
     }
-    
+
     // Truncate by character count
     if (widget.text.length > _maxCharacters) {
       return widget.text.substring(0, _maxCharacters) + '...';
     }
-    
+
     // Truncate by line count
     final lines = widget.text.split('\n');
     if (lines.length > _maxLines) {
       return lines.take(_maxLines).join('\n') + '...';
     }
-    
+
     return widget.text;
   }
 
@@ -784,10 +809,12 @@ class _ExpandableMessageTextState extends State<_ExpandableMessageText> {
             ? Theme.of(context).primaryColor
             : Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: widget.isUser ? null : Border.all(
-          color: Colors.grey[300]!,
-          width: 1,
-        ),
+        border: widget.isUser
+            ? null
+            : Border.all(
+                color: Colors.grey[300]!,
+                width: 1,
+              ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,7 +837,7 @@ class _ExpandableMessageTextState extends State<_ExpandableMessageText> {
               child: Text(
                 _isExpanded ? 'Thu gọn' : 'Xem thêm',
                 style: TextStyle(
-                  color: widget.isUser 
+                  color: widget.isUser
                       ? Colors.white.withOpacity(0.8)
                       : Theme.of(context).primaryColor,
                   fontSize: 14,

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 // import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/data/models/viewed_pet_model.dart';
+import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
+import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/pages/mobile/StoreInfoScreen.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
 import '../../bloc/favBloc/fav_bloc.dart';
@@ -17,9 +20,9 @@ import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_state.dart';
 
 class DetailPet extends StatefulWidget {
-  final Map<String, dynamic> grocery;
+  final Map<String, dynamic> pet;
 
-  const DetailPet({super.key, required this.grocery});
+  const DetailPet({super.key, required this.pet});
 
   @override
   State<DetailPet> createState() => _DetailPetState();
@@ -30,10 +33,24 @@ class _DetailPetState extends State<DetailPet> {
   List<Map<String, dynamic>> petItems = [];
   final UserManager userManager = UserManager();
 
+  
+
   @override
   void initState() {
     super.initState();
     fetchPetData();
+    final pet = widget.pet;
+    
+    // Dispatch event to BLoC to handle both local state and Firestore
+    context.read<RecentPetsBloc>().add(AddViewedPet(ViewedPetModel(
+      id: pet['id'],
+      name: pet['name'],
+      imageUrl: pet["imageUrl"],
+      category: pet['category'],
+      breed: pet['breed'],
+      price: pet['price'],
+      viewedAt: DateTime.now(),
+    )));
   }
 
   Future<void> fetchPetData() async {
@@ -70,7 +87,7 @@ class _DetailPetState extends State<DetailPet> {
       }
 
       // Chuẩn bị dữ liệu giỏ hàng
-      final data = widget.grocery;
+      final data = widget.pet;
       final cartItem = {
         'productId': data['id'] ?? data['productId'] ?? '',
         'name': data['name'] ?? '',
@@ -106,7 +123,7 @@ class _DetailPetState extends State<DetailPet> {
 
   @override
   Widget build(BuildContext context) {
-    final data = widget.grocery;
+    final data = widget.pet;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(

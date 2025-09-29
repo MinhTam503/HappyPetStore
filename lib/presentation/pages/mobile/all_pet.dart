@@ -272,7 +272,7 @@ class _AllPetState extends State<AllPet> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => DetailPet(grocery: pet),
+                              builder: (context) => DetailPet(pet: pet),
                             ),
                           );
                         },

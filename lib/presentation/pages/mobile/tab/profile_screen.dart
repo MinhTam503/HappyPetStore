@@ -7,6 +7,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 
 import 'package:pet_shop/presentation/pages/mobile/auth/change_password_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/viewed_pets/viewed_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/your_order_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/settings_page.dart';
 
@@ -103,7 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        _DividerInset(),
+                        const _DividerInset(),
                         _MenuItem(
                           icon: Icons.production_quantity_limits,
                           iconBg: const Color(0xffe6f5ea),
@@ -114,6 +115,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const YourOrderScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const _DividerInset(),
+                        _MenuItem(
+                          icon: Icons.pets,
+                          iconBg: const Color(0xfffde2e2),
+                          iconColor: primaryColor,
+                          title: 'Viewed Pets',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ViewedPage(),
                               ),
                             );
                           },
@@ -135,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        _DividerInset(),
+                        const _DividerInset(),
                         _MenuItem(
                           icon: Icons.message_outlined,
                           iconBg: const Color(0xfff0ecff),
@@ -150,7 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        _DividerInset(),
+                        const _DividerInset(),
                         _MenuItem(
                           icon: Icons.password_rounded,
                           iconBg: const Color(0xfffff2e5),

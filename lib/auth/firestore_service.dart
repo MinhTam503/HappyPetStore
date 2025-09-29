@@ -1,6 +1,22 @@
+import 'package:pet_shop/presentation/pages/web/model/pet_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Firestore_Service {
+
+  /// Lấy 1 thú cưng theo id
+  Future<Pet?> getPetById(String id) async {
+    final doc = await _firestore.collection('Pets').doc(id).get();
+    if (doc.exists) {
+      return Pet.fromDocument(doc);
+    }
+    return null;
+  }
+
+  /// Lấy tất cả thú cưng
+  Future<List<Pet>> getAllPets() async {
+    final snapshot = await _firestore.collection('Pets').get();
+    return snapshot.docs.map((doc) => Pet.fromDocument(doc)).toList();
+  }
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<Map<String, dynamic>?> getShopInfo() async {

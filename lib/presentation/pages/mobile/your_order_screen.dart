@@ -434,7 +434,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => DetailPet(grocery: petData)),
+                                  MaterialPageRoute(builder: (_) => DetailPet(pet: petData)),
                                 );
                               },
                               child: Text(

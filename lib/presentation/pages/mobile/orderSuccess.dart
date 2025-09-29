@@ -183,7 +183,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    DetailPet(grocery: petItems[index]),
+                                    DetailPet(pet: petItems[index]),
                               ),
                             );
                           },
@@ -236,7 +236,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    DetailPet(grocery: top5BestSell[index]),
+                                    DetailPet(pet: top5BestSell[index]),
                               ),
                             );
                           },

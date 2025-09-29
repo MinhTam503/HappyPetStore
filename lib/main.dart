@@ -5,12 +5,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
+import 'package:pet_shop/data/repositories/viewed_pets/recent_pets_repository_impl.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/debug_connection.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 import 'package:pet_shop/core/providers/theme_provider.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
+import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
+import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
@@ -81,6 +84,10 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => CartBlocWeb()),
         BlocProvider(create: (_) => PopularBloc()),
         BlocProvider(create: (_) => serviceLocator.createAprioriBloc()),
+        BlocProvider(
+          create: (_) => RecentPetsBloc(RecentPetsRepositoryImpl())
+            ..add(LoadRecentPets()),
+        ),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],

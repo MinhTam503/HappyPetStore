@@ -382,7 +382,7 @@ class _HomePageState extends State<HomePage> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => DetailPet(
-                                        grocery: pet,
+                                        pet: pet,
                                       ),
                                     ),
                                   );
@@ -460,7 +460,7 @@ class _HomePageState extends State<HomePage> {
                                   context,
                                   MaterialPageRoute(
                                       builder: (context) =>
-                                          DetailPet(grocery: petItems[index])));
+                                          DetailPet(pet: petItems[index])));
                             },
                             child: PetItemsAll(
                               pet: petItems[index],
