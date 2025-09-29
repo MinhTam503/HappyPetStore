@@ -6,6 +6,7 @@ import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
 import 'package:pet_shop/presentation/widgets/my_search_bar.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
+import 'package:pet_shop/presentation/pages/mobile/search/search_page.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
@@ -229,9 +230,38 @@ class _AllPetState extends State<AllPet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Search
-                  MySearchBar(
-                    onSearch: searchFilterItems,
-                    onImageSearch: searchByImage,
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SearchPage(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.black12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search, color: Colors.grey[600]),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Tìm kiếm thú cưng...',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(Icons.image_search, color: Colors.grey[600]),
+                        ],
+                      ),
+                    ),
                   ),
                   SizedBox(height: gap),
 

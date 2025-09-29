@@ -85,8 +85,8 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => PopularBloc()),
         BlocProvider(create: (_) => serviceLocator.createAprioriBloc()),
         BlocProvider(
-          create: (_) => RecentPetsBloc(RecentPetsRepositoryImpl())
-            ..add(LoadRecentPets()),
+          create: (_) =>
+              RecentPetsBloc(RecentPetsRepositoryImpl())..add(LoadRecentPets()),
         ),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
