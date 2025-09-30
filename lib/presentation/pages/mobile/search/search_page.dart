@@ -4,20 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-<<<<<<< HEAD
 import 'package:pet_shop/core/utils/dialog_helper.dart';
-=======
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
 import 'package:pet_shop/data/repositories/search_history_repository.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
 import 'package:pet_shop/presentation/bloc/search/search_event.dart';
 import 'package:pet_shop/presentation/bloc/search/search_state.dart';
-<<<<<<< HEAD
 import 'package:pet_shop/presentation/pages/mobile/search/search_results_page.dart';
-=======
-import 'package:pet_shop/presentation/pages/mobile/detail_pet.dart';
-import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -31,11 +23,8 @@ class _NewSearchPageState extends State<SearchPage> {
   final ImagePicker _picker = ImagePicker();
   late final SearchBloc _searchBloc;
   File? selectedImage;
-<<<<<<< HEAD
   String? searchImagePath;
   bool isLoading = false;
-=======
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
 
   @override
   void initState() {
@@ -138,7 +127,6 @@ class _NewSearchPageState extends State<SearchPage> {
       value: _searchBloc,
       child: BlocConsumer<SearchBloc, SearchState>(
         listener: (context, state) {
-<<<<<<< HEAD
           if (state is SearchLoading) {
             if (!isLoading) {
               setState(() => isLoading = true);
@@ -185,12 +173,6 @@ class _NewSearchPageState extends State<SearchPage> {
               });
               _searchController.clear();
             }
-=======
-          if (state is SearchError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
           }
         },
         builder: (context, state) {
@@ -246,14 +228,11 @@ class _NewSearchPageState extends State<SearchPage> {
                                     source: ImageSource.gallery,
                                   );
                                   if (image != null) {
-<<<<<<< HEAD
                                     setState(() {
                                       selectedImage = File(image.path);
                                       searchImagePath = image.path;
                                     });
 
-=======
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                     _searchBloc
                                         .add(ImageSearchSubmitted(image.path));
                                   }
@@ -293,27 +272,17 @@ class _NewSearchPageState extends State<SearchPage> {
                 ],
               ),
             ),
-<<<<<<< HEAD
             body: state is SearchSuccess
                     ? CustomScrollView(
                         slivers: [
                           // Hiển thị hình ảnh đã chọn cho tìm kiếm (chỉ khi chưa có kết quả)
                           if (selectedImage != null && state.searchResults.isEmpty)
-=======
-            body: state is SearchLoading
-                ? const Center(child: CircularProgressIndicator())
-                : state is SearchSuccess
-                    ? CustomScrollView(
-                        slivers: [
-                          if (selectedImage != null)
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                             SliverToBoxAdapter(
                               child: Container(
                                 height: 200,
                                 margin: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
-<<<<<<< HEAD
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.grey.withOpacity(0.3),
@@ -405,12 +374,6 @@ class _NewSearchPageState extends State<SearchPage> {
                                       ),
                                     ),
                                   ],
-=======
-                                  image: DecorationImage(
-                                    image: FileImage(selectedImage!),
-                                    fit: BoxFit.cover,
-                                  ),
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                 ),
                               ),
                             ),
@@ -586,17 +549,10 @@ class _NewSearchPageState extends State<SearchPage> {
                               ),
                             ),
 
-<<<<<<< HEAD
                           // Search History (chỉ hiển thị lịch sử text search, không hiển thị lịch sử image search)
                           if (state.searchResults.isEmpty &&
                               state.suggestions.isEmpty &&
                               state.searchHistory.where((search) => !search.isImageSearch).isNotEmpty)
-=======
-                          // Search History
-                          if (state.searchResults.isEmpty &&
-                              state.suggestions.isEmpty &&
-                              state.searchHistory.isNotEmpty)
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                             SliverToBoxAdapter(
                               child: Container(
                                 margin: const EdgeInsets.all(8.0),
@@ -652,31 +608,20 @@ class _NewSearchPageState extends State<SearchPage> {
                                       ),
                                     ),
                                     const Divider(height: 1),
-<<<<<<< HEAD
                                     // Chỉ hiển thị lịch sử tìm kiếm text
                                     ...state.searchHistory
                                         .where((search) => !search.isImageSearch)
                                         .toList()
-=======
-                                    ...state.searchHistory
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                         .asMap()
                                         .entries
                                         .map((entry) {
                                       final index = entry.key;
                                       final search = entry.value;
-<<<<<<< HEAD
                                       final textHistoryList = state.searchHistory.where((s) => !s.isImageSearch).toList();
                                       
                                       return Container(
                                         decoration: BoxDecoration(
                                           border: index < textHistoryList.length - 1
-=======
-                                      return Container(
-                                        decoration: BoxDecoration(
-                                          border: index <
-                                                  state.searchHistory.length - 1
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                               ? Border(
                                                   bottom: BorderSide(
                                                       color: Colors.grey
@@ -691,30 +636,13 @@ class _NewSearchPageState extends State<SearchPage> {
                                             width: 40,
                                             height: 40,
                                             decoration: BoxDecoration(
-<<<<<<< HEAD
                                               color: Colors.grey.withOpacity(0.1),
-=======
-                                              color: search.isImageSearch
-                                                  ? Colors.purple
-                                                      .withOpacity(0.1)
-                                                  : Colors.grey
-                                                      .withOpacity(0.1),
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
                                             child: Icon(
-<<<<<<< HEAD
                                               Icons.history,
                                               color: Colors.grey[600],
-=======
-                                              search.isImageSearch
-                                                  ? Icons.image_search
-                                                  : Icons.history,
-                                              color: search.isImageSearch
-                                                  ? Colors.purple
-                                                  : Colors.grey[600],
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                               size: 20,
                                             ),
                                           ),
@@ -732,35 +660,11 @@ class _NewSearchPageState extends State<SearchPage> {
                                               color: Colors.grey[600],
                                             ),
                                           ),
-<<<<<<< HEAD
                                           trailing: Icon(
                                             Icons.north_west,
                                             color: Colors.grey[400],
                                             size: 16,
                                           ),
-=======
-                                          trailing: search.isImageSearch &&
-                                                  search.imageUrl != null
-                                              ? Container(
-                                                  width: 32,
-                                                  height: 32,
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            6),
-                                                    image: DecorationImage(
-                                                      image: NetworkImage(
-                                                          search.imageUrl!),
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Icon(
-                                                  Icons.north_west,
-                                                  color: Colors.grey[400],
-                                                  size: 16,
-                                                ),
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                           onTap: () {
                                             _searchController.text =
                                                 search.query;
@@ -775,7 +679,6 @@ class _NewSearchPageState extends State<SearchPage> {
                               ),
                             ),
 
-<<<<<<< HEAD
                           // Empty State cho Image Search (khi chọn ảnh nhưng chưa có kết quả)
                           if (selectedImage != null && state.searchResults.isEmpty)
                             SliverToBoxAdapter(
@@ -820,37 +723,6 @@ class _NewSearchPageState extends State<SearchPage> {
                                       textAlign: TextAlign.center,
                                     ),
                                   ],
-=======
-                          // Search Results
-                          if (state.searchResults.isNotEmpty)
-                            SliverPadding(
-                              padding: const EdgeInsets.all(16),
-                              sliver: SliverGrid(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: 0.75,
-                                  mainAxisSpacing: 16,
-                                  crossAxisSpacing: 16,
-                                ),
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final pet = state.searchResults[index];
-                                    return GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                DetailPet(pet: pet),
-                                          ),
-                                        );
-                                      },
-                                      child: PetItemsAll(pet: pet),
-                                    );
-                                  },
-                                  childCount: state.searchResults.length,
->>>>>>> ff195ee7612bef4fb442907b3c981712b39b2455
                                 ),
                               ),
                             ),
