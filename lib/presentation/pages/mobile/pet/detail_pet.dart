@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 // import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
 import 'package:pet_shop/data/models/viewed_pet_model.dart';
+import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
@@ -41,6 +43,9 @@ class _DetailPetState extends State<DetailPet> {
     fetchPetData();
     final pet = widget.pet;
     
+    // Track pet view for recommendation system
+    _trackPetView();
+    
     // Dispatch event to BLoC to handle both local state and Firestore
     context.read<RecentPetsBloc>().add(AddViewedPet(ViewedPetModel(
       id: pet['id'],
@@ -51,6 +56,54 @@ class _DetailPetState extends State<DetailPet> {
       price: pet['price'],
       viewedAt: DateTime.now(),
     )));
+  }
+
+  void _trackPetView() async {
+    try {
+      final petId = widget.pet['id'] ?? widget.pet['productId'] ?? '';
+      if (petId.isNotEmpty) {
+        await RecommendationTrackingService().trackPetView(
+          petId,
+          metadata: {
+            'category': widget.pet['category'],
+            'breed': widget.pet['breed'],
+            'price': widget.pet['price'],
+          },
+        );
+      }
+    } catch (e) {
+      print('Error tracking pet view: $e');
+    }
+  }
+
+  void _trackAddToCart(String petId) async {
+    try {
+      await RecommendationTrackingService().trackAddToCart(
+        petId,
+        metadata: {
+          'category': widget.pet['category'],
+          'breed': widget.pet['breed'],
+          'price': widget.pet['price'],
+        },
+      );
+    } catch (e) {
+      print('Error tracking add to cart: $e');
+    }
+  }
+
+  void _trackFavorite(String petId) async {
+    try {
+      await RecommendationTrackingService().trackFavorite(
+        petId,
+        metadata: {
+          'category': widget.pet['category'],
+          'breed': widget.pet['breed'],
+          'price': widget.pet['price'],
+        },
+      );
+    } catch (e) {
+      print('Error tracking favorite: $e');
+    }
   }
 
   Future<void> fetchPetData() async {
@@ -106,6 +159,10 @@ class _DetailPetState extends State<DetailPet> {
 
       // Thêm vào giỏ hàng sử dụng BLoC
       context.read<CartBloc>().add(AddToCart(userIdentifier, cartItem));
+      
+      // Track add to cart for recommendation system
+      _trackAddToCart(cartItem['productId']);
+      
       // Không hiển thị message thủ công - để BlocListener xử lý
     } catch (e) {
       _showMessage('Có lỗi xảy ra: ${e.toString()}');
@@ -181,6 +238,8 @@ class _DetailPetState extends State<DetailPet> {
                                   'imageUrl': data["imageUrl"],
                                   'price': data['price'],
                                 }));
+                            // Track favorite action
+                            _trackFavorite(data['id']);
                           } else {
                             context
                                 .read<FavBloc>()

@@ -12,12 +12,18 @@ import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
 import 'package:pet_shop/presentation/widgets/notification_button.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
 import 'package:pet_shop/presentation/widgets/popular_pet_items.dart';
+import 'package:pet_shop/presentation/widgets/simple_recommendation_section.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_event.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_state.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_event.dart';
+import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
+import 'package:pet_shop/presentation/bloc/recommendation/recommendation_event.dart';
+import 'package:pet_shop/presentation/bloc/recommendation/recommendation_state.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/presentation/pages/mobile/analytics/recommendation_analytics_page.dart';
+import 'package:pet_shop/demo/sample_interactions_demo_page.dart';
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
 
@@ -49,6 +55,7 @@ class _HomePageState extends State<HomePage> {
     context.read<PopularBloc>().add(const LoadPopularBreeds());
     _loadUserFavorites();
     _loadUnreadCount();
+    _loadRecommendations();
   }
 
   // Add lifecycle method to refresh unread count when returning to screen
@@ -69,6 +76,15 @@ class _HomePageState extends State<HomePage> {
     final userIdentifier = await userManager.getUserIdentifier();
     if (userIdentifier != null) {
       context.read<FavBloc>().add(LoadFav(userIdentifier));
+    }
+  }
+
+  void _loadRecommendations() async {
+    final userIdentifier = await userManager.getUserIdentifier();
+    if (userIdentifier != null) {
+      context
+          .read<RecommendationBloc>()
+          .add(LoadRecommendations(userId: userIdentifier));
     }
   }
 
@@ -221,6 +237,24 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(width: 8),
 
+                          // Debug: Analytics button (chỉ hiển thị trong development)
+                          if (const bool.fromEnvironment('dart.vm.product') ==
+                              false)
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const RecommendationAnalyticsPage(),
+                                  ),
+                                );
+                              },
+                              child: const Icon(Icons.analytics,
+                                  size: 28, color: Colors.blue),
+                            ),
+                          const SizedBox(width: 8),
+
                           // Ép NotificationButton về kích thước 28x28 để thẳng hàng với icon tim
                           FutureBuilder<String?>(
                             future: userManager.getUserIdentifier(),
@@ -328,6 +362,86 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
             ),
+            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+
+            // Recommendation System
+            SliverToBoxAdapter(
+              child: BlocBuilder<RecommendationBloc, RecommendationState>(
+                builder: (context, state) {
+                  print('🔍 Current RecommendationState: $state');
+
+                  if (state is RecommendationLoading) {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 15),
+                            child: Text(
+                              "Khuyến nghị cho bạn",
+                              style: TextStyle(
+                                  fontSize: 23, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Center(child: CircularProgressIndicator()),
+                        ],
+                      ),
+                    );
+                  } else if (state is RecommendationLoaded) {
+                    print(
+                        '📋 RecommendationLoaded with ${state.recommendations.length} items');
+                    return _buildRecommendationSection(state.recommendations);
+                  } else if (state is RecommendationEmpty) {
+                    print(
+                        '⚠️ RecommendationEmpty state - trying to show simple section');
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          const SimpleRecommendationSection(
+                            title: "Khuyến nghị đơn giản cho bạn",
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: () => _loadRecommendations(),
+                            child: const Text('Tải khuyến nghị'),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else if (state is RecommendationError) {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              'Lỗi tải khuyến nghị: ${state.message}',
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                              onPressed: () => _loadRecommendations(),
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  } else {
+                    // For Initial or any other state
+                    print(
+                        '🔄 Default state ($state) - showing simple recommendations');
+                    return const SimpleRecommendationSection(
+                      title: "Khuyến nghị đơn giản cho bạn",
+                    );
+                  }
+                },
+              ),
+            ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
             // Thú cưng phổ biến
             SliverToBoxAdapter(
@@ -436,6 +550,32 @@ class _HomePageState extends State<HomePage> {
               },
             ),
 
+            // // Recommendation sections
+            // const SliverToBoxAdapter(child: SizedBox(height: 30)),
+            // SliverToBoxAdapter(
+            //   child: RecommendationSection(
+            //     title: "Đề xuất cho bạn",
+            //     type: RecommendationType.personalized,
+            //     limit: 10,
+            //   ),
+            // ),
+            // const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            // SliverToBoxAdapter(
+            //   child: RecommendationSection(
+            //     title: "Thú cưng thịnh hành",
+            //     type: RecommendationType.trending,
+            //     limit: 8,
+            //   ),
+            // ),
+            // const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            // SliverToBoxAdapter(
+            //   child: RecommendationSection(
+            //     title: "Có thể bạn sẽ thích",
+            //     type: RecommendationType.contentBased,
+            //     limit: 8,
+            //   ),
+            // ),
+
             // Tất cả thú cưng
             SliverToBoxAdapter(
               child: Padding(
@@ -518,6 +658,135 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SampleInteractionsDemo(),
+            ),
+          );
+        },
+        backgroundColor: primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Create Sample Interactions',
+      ),
+    );
+  }
+
+  Widget _buildRecommendationSection(List<dynamic> recommendations) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 15),
+          child: Text(
+            "Khuyến nghị cho bạn",
+            style: TextStyle(fontSize: 23, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 250,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            itemCount: recommendations.length,
+            itemBuilder: (context, index) {
+              final item = recommendations[index];
+              return Container(
+                width: 160,
+                margin: const EdgeInsets.only(right: 12),
+                child: Card(
+                  elevation: 2,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailPet(
+                            pet: {
+                              'id': item.petId,
+                              'name': item.name,
+                              'category': item.category,
+                              'breed': item.breed,
+                              'price': item.price,
+                              'image': item.imageUrl,
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Pet Image
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8),
+                          ),
+                          child: Image.network(
+                            item.imageUrl,
+                            height: 120,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 120,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.pets, size: 40),
+                              );
+                            },
+                          ),
+                        ),
+                        // Pet Info
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  item.breed,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const Spacer(),
+                                Text(
+                                  item.price.toString(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

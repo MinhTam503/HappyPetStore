@@ -14,6 +14,7 @@ class SearchResultsPage extends StatefulWidget {
   final List<Map<String, dynamic>>? initialResults;
   final File? searchImage;
   final SearchBloc searchBloc;
+  final String? originalSearchText;
 
   const SearchResultsPage({
     super.key,
@@ -21,6 +22,7 @@ class SearchResultsPage extends StatefulWidget {
     this.initialResults,
     this.searchImage,
     required this.searchBloc,
+    this.originalSearchText,
   });
 
   @override
@@ -30,11 +32,22 @@ class SearchResultsPage extends StatefulWidget {
 class _SearchResultsPageState extends State<SearchResultsPage> {
   late List<Map<String, dynamic>> results;
   bool isLoading = false;
+  bool _isNavigatingToNewResults = false;
 
   @override
   void initState() {
     super.initState();
     results = widget.initialResults ?? [];
+  }
+
+  void _navigateBackToSearch() {
+    // Create a new SearchPage with fresh state to ensure clean history
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SearchPage(),
+      ),
+    );
   }
 
   @override
@@ -59,8 +72,32 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 SnackBar(content: Text(state.message)),
               );
             } else if (state is SearchSuccess) {
+              if (state.searchResults.isNotEmpty && !_isNavigatingToNewResults) {
+                // Check if these are new results from a new search
+                final currentQuery = state.searchResults.isNotEmpty ? 
+                  state.searchResults.first['name']?.toString() ?? '' : '';
+                final originalQuery = widget.searchQuery;
+                
+                if (currentQuery != originalQuery && currentQuery.isNotEmpty) {
+                  // This is a new search from within results page, replace current page
+                  setState(() => _isNavigatingToNewResults = true);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SearchResultsPage(
+                        searchQuery: currentQuery,
+                        initialResults: state.searchResults,
+                        searchBloc: widget.searchBloc,
+                      ),
+                    ),
+                  );
+                  return;
+                }
+              }
+              
               setState(() {
                 results = state.searchResults;
+                _isNavigatingToNewResults = false;
               });
             }
           }
@@ -73,24 +110,14 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.black),
               onPressed: () {
-                // Clear navigation stack và về SearchPage
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => const SearchPage(),
-                  ),
-                  (route) => false, // Remove all previous routes
-                );
+                // Always go back to SearchPage with preserved state
+                _navigateBackToSearch();
               },
             ),
             title: GestureDetector(
               onTap: () {
-                // Quay lại SearchPage khi tap vào search bar - clear stack
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => const SearchPage(),
-                  ),
-                  (route) => false, // Remove all previous routes
-                );
+                // Always go back to SearchPage with preserved state
+                _navigateBackToSearch();
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -139,6 +166,15 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
               ),
             ),
             actions: [
+              // Nút tìm kiếm mới
+              IconButton(
+                icon: const Icon(Icons.search, color: Colors.black),
+                onPressed: () {
+                  // Navigate back to SearchPage for new search
+                  _navigateBackToSearch();
+                },
+                tooltip: 'Tìm kiếm mới',
+              ),
               // Nút xóa kết quả tìm kiếm
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.black),

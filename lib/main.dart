@@ -5,10 +5,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
+import 'package:pet_shop/core/di/recommendation_di.dart';
+import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
 import 'package:pet_shop/data/repositories/notification_repository.dart';
 import 'package:pet_shop/data/repositories/viewed_pets/recent_pets_repository_impl.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
+import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
 import 'package:pet_shop/debug_connection.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 import 'package:pet_shop/core/providers/theme_provider.dart';
@@ -71,6 +74,19 @@ void main() async {
   // Initialize UserManager for centralized user state management
   await userManager.initialize();
 
+  // Initialize recommendation system
+  try {
+    await setupRecommendationDI();
+    await RecommendationTrackingService().initialize();
+    if (kDebugMode) {
+      debugPrint('🎯 Recommendation system initialized successfully');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('❌ Failed to initialize recommendation system: $e');
+    }
+  }
+
   runApp(const MyApp());
 }
 
@@ -93,6 +109,7 @@ class MyApp extends StatelessWidget {
           create: (_) =>
               RecentPetsBloc(RecentPetsRepositoryImpl())..add(LoadRecentPets()),
         ),
+        BlocProvider(create: (_) => getIt<RecommendationBloc>()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],

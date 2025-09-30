@@ -288,10 +288,11 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       print('\n=== SEARCH SUBMITTED ===');
       print('Raw query: "$raw"');
+      print('Is suggestion tap: ${event.isSuggestionTap}');
 
-      if (!event.isSuggestionTap) {
-        await _searchHistoryRepo.addSearchQuery(raw);
-      }
+      // Always save to search history, regardless of source
+      await _searchHistoryRepo.addSearchQuery(raw);
+      print('✅ Search history saved: "$raw"');
 
       final queryLower = raw.toLowerCase();
       print('Query lowercase: "$queryLower"');

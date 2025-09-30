@@ -72,6 +72,8 @@ dependencies:
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   stream_transform: ^2.1.1
+  path_provider: ^2.1.4
+  share_plus: ^7.2.2
 
 
 

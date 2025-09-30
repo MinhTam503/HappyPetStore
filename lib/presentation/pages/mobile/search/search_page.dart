@@ -96,6 +96,16 @@ class _NewSearchPageState extends State<SearchPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Load search history when returning to this page
+    if (mounted) {
+      _searchBloc.add(LoadSearchHistory());
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _searchBloc.close();
@@ -154,6 +164,7 @@ class _NewSearchPageState extends State<SearchPage> {
                 searchQuery = _searchController.text.trim();
               }
               
+              // Use pushReplacement to avoid stack buildup - always replace current screen
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -162,16 +173,10 @@ class _NewSearchPageState extends State<SearchPage> {
                     initialResults: state.searchResults,
                     searchImage: searchImage,
                     searchBloc: _searchBloc,
+                    originalSearchText: _searchController.text.trim(),
                   ),
                 ),
               );
-              
-              // Reset UI state
-              setState(() {
-                selectedImage = null;
-                searchImagePath = null;
-              });
-              _searchController.clear();
             }
           }
         },
@@ -262,9 +267,7 @@ class _NewSearchPageState extends State<SearchPage> {
                           _searchBloc.add(
                             SearchSubmitted(_searchController.text),
                           );
-                          setState(() {
-                            _searchController.clear();
-                          });
+                          // Don't clear the text immediately
                         },
                       ),
                     ),
