@@ -12,17 +12,32 @@ class RecommendationLogger {
       final directory = await getApplicationDocumentsDirectory();
       _logFile = File('${directory.path}/recommendation_analysis.txt');
       
-      // Create file in project workspace using full path
-      _workspaceFile = File('d:\\Subjects\\FinalReport\\project\\pet_shop\\RECOMMENDATION_ANALYSIS_RESULTS.txt');
+      // Try multiple locations for workspace file
+      final workspacePaths = [
+        'd:\\Subjects\\FinalReport\\project\\pet_shop\\RECOMMENDATION_ANALYSIS_RESULTS.txt',
+        '${directory.path}/RECOMMENDATION_ANALYSIS_RESULTS.txt',
+        '/storage/emulated/0/Download/RECOMMENDATION_ANALYSIS_RESULTS.txt',
+      ];
       
       // Clear previous logs and add header
       await _logFile!.writeAsString('');
       
-      // Only write to workspace if writable
-      try {
-        await _workspaceFile!.writeAsString('');
-      } catch (e) {
-        print('⚠️ Cannot write to workspace file (read-only), will only log to console and app documents');
+      // Try each workspace path until one works
+      bool workspaceWritten = false;
+      for (final path in workspacePaths) {
+        try {
+          _workspaceFile = File(path);
+          await _workspaceFile!.writeAsString('RECOMMENDATION SYSTEM TEST\n');
+          workspaceWritten = true;
+          await log('✅ Workspace file created at: $path');
+          break;
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      if (!workspaceWritten) {
+        await log('⚠️ Cannot write to workspace file, using app documents only');
         _workspaceFile = null;
       }
       
@@ -201,13 +216,49 @@ class RecommendationLogger {
   /// Copy final results to workspace
   static Future<void> saveToWorkspace() async {
     try {
-      if (_logFile != null && _workspaceFile != null && await _logFile!.exists()) {
+      if (_logFile != null && await _logFile!.exists()) {
         final content = await _logFile!.readAsString();
-        await _workspaceFile!.writeAsString(content);
-        await log('📄 Comprehensive analysis saved to: ${_workspaceFile!.absolute.path}');
+        
+        // Try to save to workspace file if available
+        if (_workspaceFile != null) {
+          await _workspaceFile!.writeAsString(content);
+          await log('💾 Analysis saved to workspace: ${_workspaceFile!.path}');
+        }
+        
+        // Always save to app documents
+        await log('💾 Analysis saved to app documents: ${_logFile!.path}');
+        
+        // Also try saving to Downloads folder for easy access
+        try {
+          final downloadsFile = File('/storage/emulated/0/Download/recommendation_analysis_${DateTime.now().millisecondsSinceEpoch}.txt');
+          await downloadsFile.writeAsString(content);
+          await log('💾 Analysis also saved to Downloads: ${downloadsFile.path}');
+        } catch (e) {
+          await log('⚠️ Could not save to Downloads folder: $e');
+        }
       }
     } catch (e) {
-      print('❌ Failed to save analysis to workspace: $e');
+      await log('❌ Error saving to workspace: $e');
+    }
+  }
+  
+  /// Force create analysis file with timestamp
+  static Future<String?> createAnalysisFile() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final analysisFile = File('${directory.path}/recommendation_analysis_$timestamp.txt');
+      
+      if (_logFile != null && await _logFile!.exists()) {
+        final content = await _logFile!.readAsString();
+        await analysisFile.writeAsString(content);
+        await log('📁 Analysis file created: ${analysisFile.path}');
+        return analysisFile.path;
+      }
+      return null;
+    } catch (e) {
+      await log('❌ Error creating analysis file: $e');
+      return null;
     }
   }
 }

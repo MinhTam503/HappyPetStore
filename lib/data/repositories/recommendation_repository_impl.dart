@@ -46,13 +46,19 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       // Debug: Check what categories exist in database
       final allPetsSnapshot = await firestore.collection('Pets').limit(50).get();
       final availableCategories = <String>{};
+      final availableBreeds = <String>{};
       for (final doc in allPetsSnapshot.docs) {
         final category = doc.data()['category']?.toString();
+        final breed = doc.data()['breed']?.toString();
         if (category != null && category.isNotEmpty) {
           availableCategories.add(category);
         }
+        if (breed != null && breed.isNotEmpty) {
+          availableBreeds.add(breed);
+        }
       }
       await RecommendationLogger.log('📊 Available categories in database: $availableCategories');
+      await RecommendationLogger.log('🐕 Available breeds in database (sample): ${availableBreeds.take(10).toList()}');
       
       // Get user preferences with comprehensive analysis
       final userPreferences = await _analyzeUserPreferences(request.userId);
@@ -72,25 +78,80 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         print('🎯 Category scores: ${categoryScores.entries.map((e) => '${e.key}: ${e.value}').toList()}');
         print('🎯 Breed scores: ${breedScores.entries.map((e) => '${e.key}: ${e.value}').toList()}');
         
-        // PHASE 1: BREED-SPECIFIC RECOMMENDATIONS (Highest Priority)
+        // PHASE 1: BREED-SPECIFIC RECOMMENDATIONS (Dynamic threshold based on scores)
         if (favoriteBreeds.isNotEmpty) {
-          await RecommendationLogger.log('🎯 PHASE 1: Targeting specific breeds: ${favoriteBreeds.take(2).toList()}');
+          // Calculate dynamic breed threshold - include breeds with score >= 60% of top breed
+          final topBreedScore = breedScores.values.isNotEmpty ? breedScores.values.reduce((a, b) => a > b ? a : b) : 0;
+          final threshold = (topBreedScore * 0.6).round(); // 60% threshold for better coverage
           
-          for (final breed in favoriteBreeds.take(2)) { // Top 2 favorite breeds
-            if (items.length >= (request.limit * 0.6).round()) break; // 60% for breed-specific
+          final qualifiedBreeds = favoriteBreeds.where((breed) {
+            final score = breedScores[breed] ?? 0;
+            return score >= threshold;
+          }).take(5).toList(); // Max 5 breeds for comprehensive targeting
+          
+          await RecommendationLogger.log('🎯 PHASE 1: Dynamic breed targeting (threshold: $threshold): $qualifiedBreeds');
+          
+          for (final breed in qualifiedBreeds) { // Dynamic number of breeds
+            if (items.length >= (request.limit * 0.8).round()) {
+              await RecommendationLogger.log('⏹️ PHASE 1 STOPPED: Reached 80% limit (${items.length}/${request.limit}) for breed: $breed');
+              break; // 80% for breed-specific (increased to ensure all top breeds get coverage)
+            }
             
             final breedScore = breedScores[breed] ?? 0;
             
-            final breedSnapshot = await firestore
+            await RecommendationLogger.log('🔍 SEARCHING for breed: "$breed" (score: $breedScore)');
+            
+            // Primary query: exact match
+            var breedSnapshot = await firestore
                 .collection('Pets')
                 .where('breed', isEqualTo: breed)
-                .limit(8) // More pets per specific breed
+                .limit(3) // Reduced from 8 to 3 to ensure even distribution across all breeds
                 .get();
             
+            // Fallback query: case-insensitive for problematic breeds
+            if (breedSnapshot.docs.isEmpty && (breed.contains('Golden') || breed.contains('Retriever'))) {
+              await RecommendationLogger.log('🔄 FALLBACK: Trying lowercase for "$breed"');
+              breedSnapshot = await firestore
+                  .collection('Pets')
+                  .where('breed', isEqualTo: breed.toLowerCase())
+                  .limit(3)
+                  .get();
+              
+              if (breedSnapshot.docs.isEmpty) {
+                await RecommendationLogger.log('🔄 FALLBACK: Trying capitalized for "$breed"');
+                final capitalizedBreed = breed.split(' ').map((word) => 
+                  word[0].toUpperCase() + word.substring(1).toLowerCase()).join(' ');
+                breedSnapshot = await firestore
+                    .collection('Pets')
+                    .where('breed', isEqualTo: capitalizedBreed)
+                    .limit(3)
+                    .get();
+              }
+            }
+            
             print('🎯 BREED-SPECIFIC: "$breed" (score: $breedScore) -> ${breedSnapshot.docs.length} pets found');
+            await RecommendationLogger.log('🎯 BREED-SPECIFIC: "$breed" -> ${breedSnapshot.docs.length} pets found in database');
+            
+            if (breedSnapshot.docs.isEmpty) {
+              await RecommendationLogger.log('⚠️ NO PETS FOUND for breed: "$breed" - trying partial match');
+              
+              // Last resort: partial match for Golden Retriever
+              if (breed.contains('Golden')) {
+                final partialSnapshot = await firestore
+                    .collection('Pets')
+                    .where('breed', isGreaterThanOrEqualTo: 'Golden')
+                    .where('breed', isLessThan: 'Golden\uf8ff')
+                    .limit(3)
+                    .get();
+                await RecommendationLogger.log('🔍 PARTIAL MATCH for "Golden": ${partialSnapshot.docs.length} pets found');
+                if (partialSnapshot.docs.isNotEmpty) {
+                  breedSnapshot = partialSnapshot;
+                }
+              }
+            }
             
             for (final doc in breedSnapshot.docs) {
-              if (items.length >= (request.limit * 0.6).round()) break;
+              if (items.length >= (request.limit * 0.8).round()) break;
               
               final data = doc.data();
               
@@ -113,6 +174,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               );
               items.add(item);
               print('✅ BREED-MATCH: "${breed}" -> ${data['name']} (score: $recommendationScore)');
+              await RecommendationLogger.log('✅ BREED-MATCH: "${breed}" -> ${data['name']} (score: $recommendationScore)');
             }
           }
         }
@@ -268,6 +330,22 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       
       // Save analysis to workspace for easy access
       await RecommendationLogger.saveToWorkspace();
+      
+      // Create timestamped analysis file
+      final analysisFilePath = await RecommendationLogger.createAnalysisFile();
+      if (analysisFilePath != null) {
+        print('📁 Complete analysis saved to: $analysisFilePath');
+      }
+      
+      // Show file locations
+      final filePaths = RecommendationLogger.getLogFilePaths();
+      print('📂 Log file locations:');
+      if (filePaths['appDocuments'] != null) {
+        print('   • App Documents: ${filePaths['appDocuments']}');
+      }
+      if (filePaths['workspace'] != null) {
+        print('   • Workspace: ${filePaths['workspace']}');
+      }
       
       print('✅ Generated ${items.length} recommendations (${favoriteCategories.isNotEmpty ? "personalized" : "general"})');
       
@@ -621,9 +699,21 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           final breed = itemData['breed']?.toString() ?? '';
           
           if (category.isNotEmpty) {
-            final weightedScore = (5 * recencyMultiplier).round();
-            categoryCount[category] = (categoryCount[category] ?? 0) + weightedScore;
-            print('💰 Purchased $category (${daysSinceOrder}d ago): +$weightedScore points');
+            // Smart hybrid scoring: 70% repeat, 30% discovery
+            final baseScore = (5 * recencyMultiplier).round();
+            final repeatScore = (baseScore * 0.7).round(); // Favor same category
+            final discoveryBonus = (baseScore * 0.3).round(); // Discovery for other categories
+            
+            categoryCount[category] = (categoryCount[category] ?? 0) + repeatScore;
+            print('💰 Purchased $category (${daysSinceOrder}d ago): +$repeatScore points (repeat preference)');
+            
+            // Add small discovery bonus to other categories
+            final allCategories = ['Birds', 'Dogs', 'Cats', 'Fish'];
+            for (final otherCategory in allCategories) {
+              if (otherCategory != category) {
+                categoryCount[otherCategory] = (categoryCount[otherCategory] ?? 0) + (discoveryBonus ~/ 3);
+              }
+            }
           }
           if (breed.isNotEmpty) {
             final weightedScore = (5 * recencyMultiplier).round();
@@ -674,10 +764,24 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               final breed = petData['breed']?.toString() ?? '';
               
               // Calculate recency bonus for favorites (with createdAt support)
-              final createdAt = data['createdAt'] as Timestamp?;
+              dynamic createdAtRaw = data['createdAt'];
+              DateTime? createdAtDate;
+              
+              // Handle both Timestamp and String formats
+              if (createdAtRaw is Timestamp) {
+                createdAtDate = createdAtRaw.toDate();
+              } else if (createdAtRaw is String) {
+                try {
+                  createdAtDate = DateTime.parse(createdAtRaw);
+                } catch (e) {
+                  print('⚠️ Invalid createdAt format: $createdAtRaw');
+                  createdAtDate = null;
+                }
+              }
+              
               double recencyMultiplier = 1.0;
-              if (createdAt != null) {
-                final daysSinceFavorite = now.difference(createdAt.toDate()).inDays;
+              if (createdAtDate != null) {
+                final daysSinceFavorite = now.difference(createdAtDate).inDays;
                 recencyMultiplier = daysSinceFavorite <= 14 ? 1.3 : 
                                   daysSinceFavorite <= 30 ? 1.1 : 1.0;
               }
@@ -685,7 +789,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               if (category.isNotEmpty) {
                 final weightedScore = (3 * recencyMultiplier).round();
                 categoryCount[category] = (categoryCount[category] ?? 0) + weightedScore;
-                print('💖 Favorited $category (${createdAt != null ? "${now.difference(createdAt.toDate()).inDays}d ago" : "no timestamp"}): +$weightedScore points');
+                print('💖 Favorited $category (${createdAtDate != null ? "${now.difference(createdAtDate).inDays}d ago" : "no timestamp"}): +$weightedScore points');
               }
               if (breed.isNotEmpty) {
                 final weightedScore = (3 * recencyMultiplier).round();
