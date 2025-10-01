@@ -87,9 +87,8 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
             if (items.length >= request.limit) break;
             
             final data = doc.data();
-            final isAlreadyViewed = await _isPetAlreadyInteractedWith(request.userId, doc.id);
-            
-            if (!isAlreadyViewed) {
+            // Include ALL pets to show more variety (no exclusions for viewed pets)
+            {
               // Score based on category preference strength
               final recommendationScore = score > 20 ? 0.95 : // Very high preference (Dogs: 29)
                                         score > 10 ? 0.85 : // High preference  
