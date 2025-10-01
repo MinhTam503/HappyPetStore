@@ -238,22 +238,6 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(width: 8),
 
                           // Debug: Analytics button (chỉ hiển thị trong development)
-                          if (const bool.fromEnvironment('dart.vm.product') ==
-                              false)
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const RecommendationAnalyticsPage(),
-                                  ),
-                                );
-                              },
-                              child: const Icon(Icons.analytics,
-                                  size: 28, color: Colors.blue),
-                            ),
-                          const SizedBox(width: 8),
 
                           // Ép NotificationButton về kích thước 28x28 để thẳng hàng với icon tim
                           FutureBuilder<String?>(
@@ -657,19 +641,6 @@ class _HomePageState extends State<HomePage> {
             const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SampleInteractionsDemo(),
-            ),
-          );
-        },
-        backgroundColor: primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-        tooltip: 'Create Sample Interactions',
       ),
     );
   }
