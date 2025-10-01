@@ -16,13 +16,16 @@ class RecentPetsRepositoryImpl implements RecentPetsRepository {
   @override
   Future<void> add(ViewedPetModel pet) async {
     try {
+      print('📺 Adding viewed pet: ${pet.name} (${pet.id})');
       await _userManager.initialize();
       final userId = await _userManager.getUserIdentifier();
       
       if (userId == null) {
+        print('❌ User not authenticated when adding viewed pet');
         throw Exception('User not authenticated');
       }
 
+      print('👤 User ID: $userId');
       final viewedPetRef = _firestore
           .collection('ViewedPets')
           .doc(userId)
@@ -33,17 +36,21 @@ class RecentPetsRepositoryImpl implements RecentPetsRepository {
       final docSnapshot = await viewedPetRef.get();
       
       if (docSnapshot.exists) {
+        print('🔄 Pet already exists, updating view time for: ${pet.name}');
         // Nếu đã tồn tại, chỉ cập nhật thời gian xem
         await viewedPetRef.update({
           'viewedAt': FieldValue.serverTimestamp(),
           'viewedAtMillis': DateTime.now().millisecondsSinceEpoch,
         });
       } else {
+        print('➕ Creating new viewed pet record for: ${pet.name}');
         // Nếu chưa tồn tại, tạo mới document
         await viewedPetRef.set(pet.toFirestore());
       }
+      
+      print('✅ Successfully saved viewed pet: ${pet.name}');
     } catch (e) {
-      print('Error adding viewed pet: $e');
+      print('❌ Error adding viewed pet: $e');
       rethrow;
     }
   }
@@ -72,9 +79,14 @@ class RecentPetsRepositoryImpl implements RecentPetsRepository {
   @override
   Future<List<ViewedPetModel>> getAll({int limit = 10}) async {
     try {
+      print('📺 Getting all viewed pets with limit: $limit');
       final userId = await _userManager.getUserIdentifier();
-      if (userId == null) return [];
+      if (userId == null) {
+        print('❌ User not authenticated when getting viewed pets');
+        return [];
+      }
 
+      print('👤 User ID: $userId');
       final snapshot = await _firestore
           .collection('ViewedPets')
           .doc(userId)
@@ -83,11 +95,19 @@ class RecentPetsRepositoryImpl implements RecentPetsRepository {
           .limit(limit)
           .get();
 
-      return snapshot.docs
-          .map((doc) => ViewedPetModel.fromFirestore(doc.id, doc.data()))
+      print('📊 Found ${snapshot.docs.length} viewed pets in Firestore');
+      
+      final result = snapshot.docs
+          .map((doc) {
+            print('📋 Pet: ${doc.data()['name']} (${doc.id})');
+            return ViewedPetModel.fromFirestore(doc.id, doc.data());
+          })
           .toList();
+      
+      print('✅ Successfully loaded ${result.length} viewed pets');
+      return result;
     } catch (e) {
-      print('Error getting viewed pets: $e');
+      print('❌ Error getting viewed pets: $e');
       return [];
     }
   }

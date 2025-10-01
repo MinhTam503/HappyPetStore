@@ -32,17 +32,39 @@ class ViewedPetModel {
 
   static ViewedPetModel fromFirestore(String id, Map<String, dynamic> data) {
     final ts = data['viewedAt'] as Timestamp?;
+    
+    // Handle price conversion - could be String or num
+    int? priceValue;
+    final priceData = data['price'];
+    if (priceData != null) {
+      if (priceData is num) {
+        priceValue = priceData.toInt();
+      } else if (priceData is String) {
+        priceValue = int.tryParse(priceData);
+      }
+    }
+    
+    // Handle viewedAtMillis conversion - could be String or num
+    int viewedAtMillis = 0;
+    final viewedAtMillisData = data['viewedAtMillis'];
+    if (viewedAtMillisData != null) {
+      if (viewedAtMillisData is num) {
+        viewedAtMillis = viewedAtMillisData.toInt();
+      } else if (viewedAtMillisData is String) {
+        viewedAtMillis = int.tryParse(viewedAtMillisData) ?? 0;
+      }
+    }
+    
     return ViewedPetModel(
       id: id,
       name: data['name'] ?? '',
       imageUrl: (data['imageUrl'] ?? '') as String,
       category: data['category'],
       breed: data['breed'],
-      price: (data['price'] as num?)?.toInt(),
+      price: priceValue,
       viewedAt: ts is Timestamp
           ? ts.toDate()
-          : DateTime.fromMillisecondsSinceEpoch(
-              (data['viewedAtMillis'] ?? 0) as int),
+          : DateTime.fromMillisecondsSinceEpoch(viewedAtMillis),
     );
   }
 }

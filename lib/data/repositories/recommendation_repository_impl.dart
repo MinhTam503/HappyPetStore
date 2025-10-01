@@ -46,23 +46,43 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       if (favoriteCategories.isNotEmpty) {
         print('🎯 User has preferences: $favoriteCategories');
         
-        // If user likes birds, definitely recommend more birds
-        if (favoriteCategories.contains('Birds')) {
-          final birdSnapshot = await firestore
+        // Get category scores to determine priority order
+        final categoryScores = userPreferences['categoryScores'] as Map<String, int>;
+        final sortedCategories = categoryScores.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value)); // Sort by score descending
+        
+        print('🎯 Category scores sorted: ${sortedCategories.map((e) => '${e.key}: ${e.value}').toList()}');
+        
+        // Process top 2 categories based on actual preference scores
+        for (final categoryEntry in sortedCategories.take(2)) {
+          final category = categoryEntry.key;
+          final score = categoryEntry.value;
+          
+          if (items.length >= request.limit) break;
+          
+          print('� Processing top category: $category (score: $score)');
+          
+          final snapshot = await firestore
               .collection('Pets')
-              .where('category', isEqualTo: 'Birds')
-              .limit(request.limit ~/ 2)
+              .where('category', isEqualTo: category)
+              .limit((request.limit * 0.7).round()) // Give more slots to top categories
               .get();
           
-          print('🐦 Found ${birdSnapshot.docs.length} birds in database');
+          print('🔍 Found ${snapshot.docs.length} pets in $category category');
           
-          for (final doc in birdSnapshot.docs) {
+          for (final doc in snapshot.docs) {
+            if (items.length >= request.limit) break;
+            
             final data = doc.data();
             final isAlreadyViewed = await _isPetAlreadyInteractedWith(request.userId, doc.id);
             
-            print('🐦 Checking bird: ${data['name']} (${data['breed']}) - Already viewed: $isAlreadyViewed');
-            
             if (!isAlreadyViewed) {
+              // Score based on category preference strength
+              final recommendationScore = score > 20 ? 0.95 : // Very high preference (Dogs: 29)
+                                        score > 10 ? 0.85 : // High preference  
+                                        score > 5 ? 0.75 :  // Medium preference
+                                        0.65; // Lower preference (Birds: 2)
+              
               final item = RecommendationItem(
                 petId: doc.id,
                 name: data['name'] ?? 'Unknown Pet',
@@ -70,47 +90,12 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 breed: data['breed'] ?? 'Mixed',
                 price: (data['price'] ?? 0.0).toDouble(),
                 imageUrl: data['imageUrl'] ?? '',
-                score: 0.95, // Very high score for user's favorite category
-                reason: 'Dựa trên sở thích chim của bạn',
+                score: recommendationScore,
+                reason: 'Dựa trên sở thích ${category.toLowerCase()} của bạn (điểm: $score)',
                 type: RecommendationType.hybrid,
               );
               items.add(item);
-              print('✅ Added bird: ${data['name']} (${data['breed']})');
-            } else {
-              print('❌ Skipped bird: ${data['name']} (already viewed/favorited)');
-            }
-          }
-          
-          print('🐦 Birds added from primary search: ${items.where((item) => item.category == 'Birds').length}');
-          
-          // If no birds were added (all viewed), try to get more birds with different strategy
-          if (items.where((item) => item.category == 'Birds').length == 0) {
-            print('🐦 No new birds found, trying to get more birds from broader search...');
-            final moreBirdsSnapshot = await firestore
-                .collection('Pets')
-                .where('category', isEqualTo: 'Birds')
-                .limit(15) // Get more to have better chance
-                .get();
-                
-            for (final doc in moreBirdsSnapshot.docs) {
-              if (items.where((item) => item.category == 'Birds').length >= 3) break; // Limit to 3 birds max
-              
-              final data = doc.data();
-              
-              // Add birds even if viewed, but with lower score
-              final item = RecommendationItem(
-                petId: doc.id,
-                name: data['name'] ?? 'Unknown Pet',
-                category: data['category'] ?? 'Unknown',
-                breed: data['breed'] ?? 'Mixed',
-                price: (data['price'] ?? 0.0).toDouble(),
-                imageUrl: data['imageUrl'] ?? '',
-                score: 0.85, // Lower score for re-recommended items
-                reason: 'Chim bạn có thể quan tâm lại',
-                type: RecommendationType.hybrid,
-              );
-              items.add(item);
-              print('✅ Re-added bird: ${data['name']} (${data['breed']}) - with lower score');
+              print('✅ Added ${category.toLowerCase()}: ${data['name']} (score: $recommendationScore)');
             }
           }
         }
@@ -454,12 +439,15 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           .get();
       
       // Get user favorites
-      final favoritesSnapshot = await firestore
-          .collection('UserFav')
-          .doc(userId)
+      final favoritesDoc = await firestore
           .collection('favorites')
-          .limit(20)
+          .doc(userId)
           .get();
+      
+      // Process favorites from the document field
+      final favoritesItems = favoritesDoc.exists 
+          ? (favoritesDoc.data()?['items'] as List<dynamic>?) ?? []
+          : [];
       
       // Get search history
       final searchHistorySnapshot = await firestore
@@ -488,9 +476,9 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
       
-      print('📊 Favorites: ${favoritesSnapshot.docs.length}');
-      for (final doc in favoritesSnapshot.docs) {
-        final data = doc.data();
+      print('📊 Favorites: ${favoritesItems.length}');
+      for (final item in favoritesItems) {
+        final data = item as Map<String, dynamic>;
         
         // Get pet details from Pets collection to get category
         final petId = data['productId']?.toString() ?? '';

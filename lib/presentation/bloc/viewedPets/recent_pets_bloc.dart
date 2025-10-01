@@ -14,21 +14,27 @@ class RecentPetsBloc extends Bloc<RecentPetsEvent, RecentPetsState> {
   final RecentPetsRepository repo;
 
   Future<void> _onLoad(LoadRecentPets event, Emitter<RecentPetsState> emit) async {
+    print('🔄 RecentPetsBloc: Loading recent pets...');
     emit(RecentPetsLoading());
     try {
       final data = await repo.getAll();
+      print('📊 RecentPetsBloc: Loaded ${data.length} recent pets');
       emit(data.isEmpty ? RecentPetsEmpty() : RecentPetsLoaded(data));
     } catch (e) {
+      print('❌ RecentPetsBloc: Error loading recent pets: $e');
       emit(RecentPetsError(e.toString()));
     }
   }
 
   Future<void> _onAdd(AddViewedPet event, Emitter<RecentPetsState> emit) async {
+    print('➕ RecentPetsBloc: Adding viewed pet: ${event.pet.name}');
     try {
       await repo.add(event.pet);
+      print('✅ RecentPetsBloc: Successfully added pet, reloading list...');
       final data = await repo.getAll();
       emit(data.isEmpty ? RecentPetsEmpty() : RecentPetsLoaded(data));
     } catch (e) {
+      print('❌ RecentPetsBloc: Error adding viewed pet: $e');
       emit(RecentPetsError(e.toString()));
     }
   }
