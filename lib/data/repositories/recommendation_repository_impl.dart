@@ -90,42 +90,38 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           }).take(5).toList(); // Max 5 breeds for comprehensive targeting
           
           await RecommendationLogger.log('🎯 PHASE 1: Dynamic breed targeting (threshold: $threshold): $qualifiedBreeds');
+          await RecommendationLogger.log('🚀 NO LIMITS MODE: Processing ALL breeds completely');
           
-          for (final breed in qualifiedBreeds) { // Dynamic number of breeds
-            if (items.length >= (request.limit * 0.8).round()) {
-              await RecommendationLogger.log('⏹️ PHASE 1 STOPPED: Reached 80% limit (${items.length}/${request.limit}) for breed: $breed');
-              break; // 80% for breed-specific (increased to ensure all top breeds get coverage)
-            }
-            
+          for (final breed in qualifiedBreeds) { // Process ALL breeds completely
             final breedScore = breedScores[breed] ?? 0;
             
             await RecommendationLogger.log('🔍 SEARCHING for breed: "$breed" (score: $breedScore)');
             
-            // Primary query: exact match
+            // NO LIMITS: Get ALL available pets for this breed
+            await RecommendationLogger.log('� NO LIMITS: Fetching ALL pets for breed "$breed"');
+            
+            // Primary query: exact match - GET ALL pets (no limit)
             var breedSnapshot = await firestore
                 .collection('Pets')
                 .where('breed', isEqualTo: breed)
-                .limit(3) // Reduced from 8 to 3 to ensure even distribution across all breeds
-                .get();
+                .get(); // Removed .limit() to get ALL pets
             
-            // Fallback query: case-insensitive for problematic breeds
+            // Fallback query: case-insensitive for problematic breeds - GET ALL
             if (breedSnapshot.docs.isEmpty && (breed.contains('Golden') || breed.contains('Retriever'))) {
-              await RecommendationLogger.log('🔄 FALLBACK: Trying lowercase for "$breed"');
+              await RecommendationLogger.log('🔄 FALLBACK: Trying lowercase for "$breed" - NO LIMITS');
               breedSnapshot = await firestore
                   .collection('Pets')
                   .where('breed', isEqualTo: breed.toLowerCase())
-                  .limit(3)
-                  .get();
+                  .get(); // No limit - get ALL
               
               if (breedSnapshot.docs.isEmpty) {
-                await RecommendationLogger.log('🔄 FALLBACK: Trying capitalized for "$breed"');
+                await RecommendationLogger.log('🔄 FALLBACK: Trying capitalized for "$breed" - NO LIMITS');
                 final capitalizedBreed = breed.split(' ').map((word) => 
                   word[0].toUpperCase() + word.substring(1).toLowerCase()).join(' ');
                 breedSnapshot = await firestore
                     .collection('Pets')
                     .where('breed', isEqualTo: capitalizedBreed)
-                    .limit(3)
-                    .get();
+                    .get(); // No limit - get ALL
               }
             }
             
@@ -133,16 +129,15 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
             await RecommendationLogger.log('🎯 BREED-SPECIFIC: "$breed" -> ${breedSnapshot.docs.length} pets found in database');
             
             if (breedSnapshot.docs.isEmpty) {
-              await RecommendationLogger.log('⚠️ NO PETS FOUND for breed: "$breed" - trying partial match');
+              await RecommendationLogger.log('⚠️ NO PETS FOUND for breed: "$breed" - trying partial match - NO LIMITS');
               
-              // Last resort: partial match for Golden Retriever
+              // Last resort: partial match for Golden Retriever - GET ALL
               if (breed.contains('Golden')) {
                 final partialSnapshot = await firestore
                     .collection('Pets')
                     .where('breed', isGreaterThanOrEqualTo: 'Golden')
                     .where('breed', isLessThan: 'Golden\uf8ff')
-                    .limit(3)
-                    .get();
+                    .get(); // No limit - get ALL
                 await RecommendationLogger.log('🔍 PARTIAL MATCH for "Golden": ${partialSnapshot.docs.length} pets found');
                 if (partialSnapshot.docs.isNotEmpty) {
                   breedSnapshot = partialSnapshot;
@@ -150,9 +145,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               }
             }
             
+            // Add ALL pets from this breed (no limits)
+            int petsAddedFromBreed = 0;
             for (final doc in breedSnapshot.docs) {
-              if (items.length >= (request.limit * 0.8).round()) break;
-              
+              // NO LIMITS: Add ALL pets from this breed
               final data = doc.data();
               
               // BREED TARGETING: Higher scores for specific breed matches
@@ -173,9 +169,12 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 type: RecommendationType.hybrid,
               );
               items.add(item);
+              petsAddedFromBreed++;
               print('✅ BREED-MATCH: "${breed}" -> ${data['name']} (score: $recommendationScore)');
               await RecommendationLogger.log('✅ BREED-MATCH: "${breed}" -> ${data['name']} (score: $recommendationScore)');
             }
+            
+            await RecommendationLogger.log('📊 BREED SUMMARY: "$breed" -> Added ALL $petsAddedFromBreed pets (found ${breedSnapshot.docs.length} total in database)');
           }
         }
         
