@@ -4,6 +4,8 @@ import 'dart:async';
 class SettingsService {
   static const String _chatBubbleKey = 'show_chat_bubble';
   static const String _languageKey = 'selected_language';
+  static const String _searchHistoryKey = 'save_search_history';
+  static const String _viewedPetsHistoryKey = 'save_viewed_pets_history';
 
   // Singleton instance
   static final SettingsService _instance = SettingsService._internal();
@@ -13,10 +15,14 @@ class SettingsService {
   // Stream controllers for settings changes
   final _chatBubbleController = StreamController<bool>.broadcast();
   final _languageController = StreamController<String>.broadcast();
+  final _searchHistoryController = StreamController<bool>.broadcast();
+  final _viewedPetsHistoryController = StreamController<bool>.broadcast();
 
   // Streams for listening to changes
   Stream<bool> get chatBubbleVisibilityStream => _chatBubbleController.stream;
   Stream<String> get languageStream => _languageController.stream;
+  Stream<bool> get searchHistoryStream => _searchHistoryController.stream;
+  Stream<bool> get viewedPetsHistoryStream => _viewedPetsHistoryController.stream;
 
   // Chat Bubble Settings
   Future<bool> getChatBubbleVisibility() async {
@@ -60,9 +66,53 @@ class SettingsService {
     }
   }
 
+  // Search History Settings
+  Future<bool> getSearchHistoryEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_searchHistoryKey) ?? true; // Default to true
+    } catch (e) {
+      return true; // Default fallback
+    }
+  }
+
+  Future<void> setSearchHistoryEnabled(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_searchHistoryKey, enabled);
+      // Notify listeners
+      _searchHistoryController.add(enabled);
+    } catch (e) {
+      // Handle error silently or log
+    }
+  }
+
+  // Viewed Pets History Settings
+  Future<bool> getViewedPetsHistoryEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_viewedPetsHistoryKey) ?? true; // Default to true
+    } catch (e) {
+      return true; // Default fallback
+    }
+  }
+
+  Future<void> setViewedPetsHistoryEnabled(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_viewedPetsHistoryKey, enabled);
+      // Notify listeners
+      _viewedPetsHistoryController.add(enabled);
+    } catch (e) {
+      // Handle error silently or log
+    }
+  }
+
   // Dispose method to close stream controllers
   void dispose() {
     _chatBubbleController.close();
     _languageController.close();
+    _searchHistoryController.close();
+    _viewedPetsHistoryController.close();
   }
 }

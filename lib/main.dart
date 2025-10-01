@@ -7,6 +7,7 @@ import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
 import 'package:pet_shop/core/di/recommendation_di.dart';
 import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
+import 'package:pet_shop/core/services/settings_service.dart';
 import 'package:pet_shop/data/repositories/notification_repository.dart';
 import 'package:pet_shop/data/repositories/viewed_pets/recent_pets_repository_impl.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
@@ -107,7 +108,9 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => serviceLocator.createAprioriBloc()),
         BlocProvider(
           create: (_) =>
-              RecentPetsBloc(RecentPetsRepositoryImpl())..add(LoadRecentPets()),
+              RecentPetsBloc(RecentPetsRepositoryImpl(
+                settingsService: SettingsService(),
+              ))..add(LoadRecentPets()),
         ),
         BlocProvider(create: (_) => getIt<RecommendationBloc>()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),

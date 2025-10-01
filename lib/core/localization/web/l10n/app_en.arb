@@ -1157,5 +1157,49 @@
   "tryDifferentKeywords": "Try different keywords",
   "@tryDifferentKeywords": {
     "description": "Try different keywords suggestion"
+  },
+  "privacySettings": "Privacy Settings",
+  "@privacySettings": {
+    "description": "Privacy settings section title"
+  },
+  "searchHistory": "Search History",
+  "@searchHistory": {
+    "description": "Search history setting title"
+  },
+  "saveSearchHistory": "Save search history",
+  "@saveSearchHistory": {
+    "description": "Save search history toggle title"
+  },
+  "searchHistoryDescription": "Save your search queries for quick access",
+  "@searchHistoryDescription": {
+    "description": "Search history setting description"
+  },
+  "viewedPetsHistory": "Viewed Pets History",
+  "@viewedPetsHistory": {
+    "description": "Viewed pets history setting title"
+  },
+  "saveViewedPetsHistory": "Save viewed pets history",
+  "@saveViewedPetsHistory": {
+    "description": "Save viewed pets history toggle title"
+  },
+  "viewedPetsHistoryDescription": "Track pets you've viewed recently",
+  "@viewedPetsHistoryDescription": {
+    "description": "Viewed pets history setting description"
+  },
+  "searchHistoryEnabled": "Search history enabled",
+  "@searchHistoryEnabled": {
+    "description": "Search history enabled feedback message"
+  },
+  "searchHistoryDisabled": "Search history disabled",
+  "@searchHistoryDisabled": {
+    "description": "Search history disabled feedback message"
+  },
+  "viewedPetsHistoryEnabled": "Viewed pets history enabled",
+  "@viewedPetsHistoryEnabled": {
+    "description": "Viewed pets history enabled feedback message"
+  },
+  "viewedPetsHistoryDisabled": "Viewed pets history disabled",
+  "@viewedPetsHistoryDisabled": {
+    "description": "Viewed pets history disabled feedback message"
   }
 }

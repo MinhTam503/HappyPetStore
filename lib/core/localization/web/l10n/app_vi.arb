@@ -292,5 +292,16 @@
   "priceAsc": "Giá: Thấp đến cao",
   "priceDesc": "Giá: Cao đến thấp",
   "noResults": "Không tìm thấy kết quả",
-  "tryDifferentKeywords": "Thử từ khóa khác"
+  "tryDifferentKeywords": "Thử từ khóa khác",
+  "privacySettings": "Cài đặt riêng tư",
+  "searchHistory": "Lịch sử tìm kiếm",
+  "saveSearchHistory": "Lưu lịch sử tìm kiếm",
+  "searchHistoryDescription": "Lưu các truy vấn tìm kiếm để truy cập nhanh",
+  "viewedPetsHistory": "Lịch sử xem thú cưng",
+  "saveViewedPetsHistory": "Lưu lịch sử xem thú cưng",
+  "viewedPetsHistoryDescription": "Theo dõi các thú cưng bạn đã xem gần đây",
+  "searchHistoryEnabled": "Đã bật lưu lịch sử tìm kiếm",
+  "searchHistoryDisabled": "Đã tắt lưu lịch sử tìm kiếm",
+  "viewedPetsHistoryEnabled": "Đã bật lưu lịch sử xem thú cưng",
+  "viewedPetsHistoryDisabled": "Đã tắt lưu lịch sử xem thú cưng"
 }

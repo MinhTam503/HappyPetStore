@@ -1,21 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/core/services/settings_service.dart';
 import 'package:pet_shop/data/models/viewed_pet_model.dart';
 import 'package:pet_shop/domain/repositories/viewed_pets/recent_pets_repository.dart';
 
 class RecentPetsRepositoryImpl implements RecentPetsRepository {
   final FirebaseFirestore _firestore;
   final UserManager _userManager;
+  final SettingsService _settingsService;
 
   RecentPetsRepositoryImpl({
     FirebaseFirestore? firestore,
     UserManager? userManager,
+    SettingsService? settingsService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _userManager = userManager ?? UserManager();
+        _userManager = userManager ?? UserManager(),
+        _settingsService = settingsService ?? SettingsService();
 
   @override
   Future<void> add(ViewedPetModel pet) async {
     try {
+      // Check if viewed pets history is enabled
+      final isHistoryEnabled = await _settingsService.getViewedPetsHistoryEnabled();
+      if (!isHistoryEnabled) {
+        print('📺 Viewed pets history is disabled, skipping save');
+        return;
+      }
+
       print('📺 Adding viewed pet: ${pet.name} (${pet.id})');
       await _userManager.initialize();
       final userId = await _userManager.getUserIdentifier();

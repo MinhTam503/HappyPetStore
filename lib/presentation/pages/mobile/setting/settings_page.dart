@@ -15,6 +15,8 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool _showChatBubble = true;
   String _selectedLanguage = 'vi';
+  bool _searchHistoryEnabled = true;
+  bool _viewedPetsHistoryEnabled = true;
   bool _isLoading = true;
   
   final SettingsService _settingsService = SettingsService();
@@ -29,6 +31,8 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final chatBubbleVisible = await _settingsService.getChatBubbleVisibility();
       final selectedLanguage = await _settingsService.getSelectedLanguage();
+      final searchHistoryEnabled = await _settingsService.getSearchHistoryEnabled();
+      final viewedPetsHistoryEnabled = await _settingsService.getViewedPetsHistoryEnabled();
       
       if (mounted) {
         // Sync with LocaleProvider
@@ -41,6 +45,8 @@ class _SettingsPageState extends State<SettingsPage> {
         setState(() {
           _showChatBubble = chatBubbleVisible;
           _selectedLanguage = finalLanguage;
+          _searchHistoryEnabled = searchHistoryEnabled;
+          _viewedPetsHistoryEnabled = viewedPetsHistoryEnabled;
           _isLoading = false;
         });
         
@@ -136,6 +142,76 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _saveSearchHistorySetting(bool value) async {
+    try {
+      await _settingsService.setSearchHistoryEnabled(value);
+      setState(() {
+        _searchHistoryEnabled = value;
+      });
+      
+      // Show feedback to user
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value ? (l10n?.searchHistoryEnabled ?? 'Đã bật lưu lịch sử tìm kiếm') 
+                    : (l10n?.searchHistoryDisabled ?? 'Đã tắt lưu lịch sử tìm kiếm'),
+            ),
+            backgroundColor: value ? Colors.green : Colors.orange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving search history setting: $e');
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n?.errorSavingSetting ?? 'Lỗi khi lưu cài đặt'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveViewedPetsHistorySetting(bool value) async {
+    try {
+      await _settingsService.setViewedPetsHistoryEnabled(value);
+      setState(() {
+        _viewedPetsHistoryEnabled = value;
+      });
+      
+      // Show feedback to user
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value ? (l10n?.viewedPetsHistoryEnabled ?? 'Đã bật lưu lịch sử xem thú cưng') 
+                    : (l10n?.viewedPetsHistoryDisabled ?? 'Đã tắt lưu lịch sử xem thú cưng'),
+            ),
+            backgroundColor: value ? Colors.green : Colors.orange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving viewed pets history setting: $e');
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n?.errorSavingSetting ?? 'Lỗi khi lưu cài đặt'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -205,6 +281,38 @@ class _SettingsPageState extends State<SettingsPage> {
                     _LanguageSelector(
                       selectedLanguage: _selectedLanguage,
                       onLanguageChanged: _saveLanguageSetting,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Privacy Settings Section
+                _SectionHeader(
+                  title: l10n?.privacySettings ?? 'Cài đặt riêng tư',
+                  icon: Icons.privacy_tip_outlined,
+                ),
+                const SizedBox(height: 12),
+                _SettingsCard(
+                  children: [
+                    _SettingsToggle(
+                      icon: Icons.search,
+                      iconBg: const Color(0xffe8f5e8),
+                      iconColor: Colors.green,
+                      title: l10n?.saveSearchHistory ?? 'Lưu lịch sử tìm kiếm',
+                      subtitle: l10n?.searchHistoryDescription ?? 'Lưu các truy vấn tìm kiếm để truy cập nhanh',
+                      value: _searchHistoryEnabled,
+                      onChanged: _saveSearchHistorySetting,
+                    ),
+                    const Divider(height: 0, indent: 16 + 44 + 12, endIndent: 12),
+                    _SettingsToggle(
+                      icon: Icons.pets,
+                      iconBg: const Color(0xfff3e5f5),
+                      iconColor: Colors.purple,
+                      title: l10n?.saveViewedPetsHistory ?? 'Lưu lịch sử xem thú cưng',
+                      subtitle: l10n?.viewedPetsHistoryDescription ?? 'Theo dõi các thú cưng bạn đã xem gần đây',
+                      value: _viewedPetsHistoryEnabled,
+                      onChanged: _saveViewedPetsHistorySetting,
                     ),
                   ],
                 ),

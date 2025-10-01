@@ -1,19 +1,30 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/core/services/settings_service.dart';
 import 'package:pet_shop/data/models/search_history_model.dart';
 
 class SearchHistoryRepository {
   final FirebaseFirestore _firestore;
   final UserManager _userManager;
+  final SettingsService _settingsService;
 
   SearchHistoryRepository({
     FirebaseFirestore? firestore,
     UserManager? userManager,
+    SettingsService? settingsService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _userManager = userManager ?? UserManager();
+        _userManager = userManager ?? UserManager(),
+        _settingsService = settingsService ?? SettingsService();
 
   Future<void> addSearchQuery(String query, {bool isImageSearch = false, String? imageUrl}) async {
     try {
+      // Check if search history is enabled
+      final isHistoryEnabled = await _settingsService.getSearchHistoryEnabled();
+      if (!isHistoryEnabled) {
+        print('Search history is disabled, skipping save');
+        return;
+      }
+
       await _userManager.initialize();
       final userId = await _userManager.getUserIdentifier();
       
