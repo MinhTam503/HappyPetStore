@@ -2,6 +2,7 @@
 import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/domain/repositories/recommendation_repository.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/core/utils/recommendation_logger.dart';
 
 class RecommendationRepositoryImpl implements RecommendationRepository {
   final FirebaseFirestore firestore;
@@ -36,7 +37,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   @override
   Future<RecommendationResponse> getRecommendations(RecommendationRequest request) async {
     try {
-      print('🎯 Getting recommendations for user: ${request.userId}');
+      // Initialize comprehensive logging
+      await RecommendationLogger.initialize();
+      await RecommendationLogger.log('🎯 Getting recommendations for user: ${request.userId}');
+      final startTime = DateTime.now();
       
       // Debug: Check what categories exist in database
       final allPetsSnapshot = await firestore.collection('Pets').limit(50).get();
@@ -47,12 +51,12 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           availableCategories.add(category);
         }
       }
-      print('📊 Available categories in database: $availableCategories');
+      await RecommendationLogger.log('📊 Available categories in database: $availableCategories');
       
-      // Get user preferences first
+      // Get user preferences with comprehensive analysis
       final userPreferences = await _analyzeUserPreferences(request.userId);
       final favoriteCategories = userPreferences['favoriteCategories'] as List<String>;
-      print('🎯 User preferences: $favoriteCategories');
+      await RecommendationLogger.log('🎯 User preferences: $favoriteCategories');
       
       List<RecommendationItem> items = [];
 
@@ -178,7 +182,44 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
 
+      await RecommendationLogger.log('✅ Generated ${items.length} recommendations (${favoriteCategories.isNotEmpty ? "personalized" : "general"})');
+      
+      // Log comprehensive analysis
+      final endTime = DateTime.now();
+      final processingTime = endTime.difference(startTime).inMilliseconds;
+      
+      await RecommendationLogger.logPerformance({
+        'Processing Time': '${processingTime}ms',
+        'Total Recommendations': items.length,
+        'User Has Preferences': favoriteCategories.isNotEmpty,
+        'Categories Found': availableCategories.length,
+      });
+      
+      // Log final recommendations
+      final recommendationsData = items.map((item) => {
+        'name': item.name,
+        'category': item.category,
+        'breed': item.breed,
+        'score': item.score,
+        'reason': item.reason,
+        'type': item.type.toString(),
+      }).toList();
+      
+      await RecommendationLogger.logRecommendations(recommendationsData);
+      
+      // Final analysis
+      await RecommendationLogger.logConclusion({
+        'userPreferences': favoriteCategories,
+        'accuracy': favoriteCategories.isNotEmpty ? 'Personalized' : 'General',
+        'improvements': [
+          'Add more user interaction data',
+          'Implement collaborative filtering',
+          'Add price range preferences',
+        ],
+      });
+      
       print('✅ Generated ${items.length} recommendations (${favoriteCategories.isNotEmpty ? "personalized" : "general"})');
+      print('📄 Comprehensive analysis saved to: ${RecommendationLogger.getLogFilePath()}');
       
       return RecommendationResponse(
         userId: request.userId,
@@ -429,10 +470,18 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
     return await _analyzeUserPreferences(userId);
   }
 
-  /// Analyze user preferences from multiple data sources
+  /// Analyze user preferences from multiple data sources including Orders
   Future<Map<String, dynamic>> _analyzeUserPreferences(String userId) async {
     try {
       print('🔍 Analyzing user preferences for: $userId');
+      
+      // Get user orders (HIGHEST priority)
+      final ordersSnapshot = await firestore
+          .collection('orders')
+          .where('userId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .limit(10)
+          .get();
       
       // Get user viewed pets
       final viewedPetsSnapshot = await firestore
@@ -463,25 +512,68 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           .limit(20)
           .get();
       
-      // Analyze categories from viewed pets
+      // Analyze categories with weighted scoring and recency
       Map<String, int> categoryCount = {};
       Map<String, int> breedCount = {};
+      final now = DateTime.now();
       
-      print('📊 Viewed pets: ${viewedPetsSnapshot.docs.length}');
+      // 1. ORDERS (Highest weight + recency bonus)
+      print('� Orders: ${ordersSnapshot.docs.length}');
+      for (final doc in ordersSnapshot.docs) {
+        final data = doc.data();
+        final items = data['items'] as List<dynamic>? ?? [];
+        final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+        
+        // Calculate recency bonus
+        final daysSinceOrder = timestamp != null ? now.difference(timestamp).inDays : 365;
+        final recencyMultiplier = daysSinceOrder <= 30 ? 2.0 : 
+                                daysSinceOrder <= 90 ? 1.5 : 1.0;
+        
+        for (final item in items) {
+          final itemData = item as Map<String, dynamic>;
+          final category = itemData['category']?.toString() ?? '';
+          final breed = itemData['breed']?.toString() ?? '';
+          
+          if (category.isNotEmpty) {
+            final weightedScore = (5 * recencyMultiplier).round();
+            categoryCount[category] = (categoryCount[category] ?? 0) + weightedScore;
+            print('💰 Purchased $category (${daysSinceOrder}d ago): +$weightedScore points');
+          }
+          if (breed.isNotEmpty) {
+            final weightedScore = (5 * recencyMultiplier).round();
+            breedCount[breed] = (breedCount[breed] ?? 0) + weightedScore;
+          }
+        }
+      }
+      
+      // 2. VIEWED PETS (Medium weight)
+      print('👀 Viewed pets: ${viewedPetsSnapshot.docs.length}');
       for (final doc in viewedPetsSnapshot.docs) {
         final data = doc.data();
         final category = data['category']?.toString() ?? '';
         final breed = data['breed']?.toString() ?? '';
+        final viewedAtMillis = data['viewedAtMillis'] as int?;
+        
+        // Calculate recency bonus for views
+        final viewedAt = viewedAtMillis != null 
+            ? DateTime.fromMillisecondsSinceEpoch(viewedAtMillis)
+            : DateTime.now().subtract(Duration(days: 30));
+        final daysSinceView = now.difference(viewedAt).inDays;
+        final recencyMultiplier = daysSinceView <= 7 ? 1.5 : 
+                                daysSinceView <= 14 ? 1.2 : 1.0;
         
         if (category.isNotEmpty) {
-          categoryCount[category] = (categoryCount[category] ?? 0) + 2; // Higher weight for views
+          final weightedScore = (2 * recencyMultiplier).round();
+          categoryCount[category] = (categoryCount[category] ?? 0) + weightedScore;
         }
         if (breed.isNotEmpty) {
-          breedCount[breed] = (breedCount[breed] ?? 0) + 2;
+          final weightedScore = (2 * recencyMultiplier).round();
+          breedCount[breed] = (breedCount[breed] ?? 0) + weightedScore;
         }
       }
       
-      print('📊 Favorites: ${favoritesItems.length}');
+      // 3. FAVORITES (High weight with createdAt support)
+      print('� Favorites: ${favoritesItems.length}');
       for (final item in favoritesItems) {
         final data = item as Map<String, dynamic>;
         
@@ -495,11 +587,23 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               final category = petData['category']?.toString() ?? '';
               final breed = petData['breed']?.toString() ?? '';
               
+              // Calculate recency bonus for favorites (with createdAt support)
+              final createdAt = data['createdAt'] as Timestamp?;
+              double recencyMultiplier = 1.0;
+              if (createdAt != null) {
+                final daysSinceFavorite = now.difference(createdAt.toDate()).inDays;
+                recencyMultiplier = daysSinceFavorite <= 14 ? 1.3 : 
+                                  daysSinceFavorite <= 30 ? 1.1 : 1.0;
+              }
+              
               if (category.isNotEmpty) {
-                categoryCount[category] = (categoryCount[category] ?? 0) + 3; // Highest weight for favorites
+                final weightedScore = (3 * recencyMultiplier).round();
+                categoryCount[category] = (categoryCount[category] ?? 0) + weightedScore;
+                print('💖 Favorited $category (${createdAt != null ? "${now.difference(createdAt.toDate()).inDays}d ago" : "no timestamp"}): +$weightedScore points');
               }
               if (breed.isNotEmpty) {
-                breedCount[breed] = (breedCount[breed] ?? 0) + 3;
+                final weightedScore = (3 * recencyMultiplier).round();
+                breedCount[breed] = (breedCount[breed] ?? 0) + weightedScore;
               }
             }
           } catch (e) {
@@ -508,7 +612,8 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
       
-      print('📊 Search history: ${searchHistorySnapshot.docs.length}');
+      // 4. SEARCH HISTORY (Lower weight)
+      print('� Search history: ${searchHistorySnapshot.docs.length}');
       for (final doc in searchHistorySnapshot.docs) {
         final data = doc.data();
         final query = data['query']?.toString().toLowerCase() ?? '';
