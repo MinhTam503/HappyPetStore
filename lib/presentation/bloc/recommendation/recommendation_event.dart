@@ -16,7 +16,7 @@ class LoadRecommendations extends RecommendationEvent {
   const LoadRecommendations({
     required this.userId,
     this.types,
-    this.limit = 10,
+    this.limit = 1000, // Increased limit to show all pets
   });
 
   @override
@@ -31,7 +31,7 @@ class LoadRecommendationsByType extends RecommendationEvent {
   const LoadRecommendationsByType({
     required this.userId,
     required this.type,
-    this.limit = 10,
+    this.limit = 1000, // Increased limit to show all pets
   });
 
   @override
@@ -70,7 +70,7 @@ class LoadHybridRecommendations extends RecommendationEvent {
 
   const LoadHybridRecommendations({
     required this.userId,
-    this.limit = 10,
+    this.limit = 1000, // Increased limit to show all pets
   });
 
   @override
@@ -83,7 +83,7 @@ class LoadSimilarUsers extends RecommendationEvent {
 
   const LoadSimilarUsers({
     required this.userId,
-    this.limit = 10,
+    this.limit = 1000, // Increased limit to show all pets
   });
 
   @override
@@ -105,7 +105,7 @@ class LoadPersonalizedRecommendations extends RecommendationEvent {
 
   const LoadPersonalizedRecommendations({
     required this.userId,
-    this.limit = 10,
+    this.limit = 1000, // Increased limit to show all pets
   });
 
   @override

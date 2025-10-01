@@ -18,7 +18,7 @@ class RecommendationSection extends StatefulWidget {
     super.key,
     required this.title,
     this.type,
-    this.limit = 10,
+    this.limit = 1000, // Increased limit to show all pets
     this.showViewAll = true,
   });
 

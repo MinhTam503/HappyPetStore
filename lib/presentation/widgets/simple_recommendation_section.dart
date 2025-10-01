@@ -10,7 +10,7 @@ class SimpleRecommendationSection extends StatefulWidget {
   const SimpleRecommendationSection({
     super.key,
     required this.title,
-    this.limit = 10,
+    this.limit = 1000, // Increased limit to show all pets
   });
 
   @override

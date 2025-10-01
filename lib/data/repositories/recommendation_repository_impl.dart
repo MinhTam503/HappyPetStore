@@ -11,6 +11,19 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
     required this.firestore,
     required this.userManager,
   });
+
+  /// Helper function to safely parse price from Firestore data
+  double _parsePrice(dynamic priceData) {
+    if (priceData == null) return 0.0;
+    
+    if (priceData is num) {
+      return priceData.toDouble();
+    } else if (priceData is String) {
+      return double.tryParse(priceData) ?? 0.0;
+    }
+    
+    return 0.0;
+  }
   
   @override
   Future<UserProfile> getUserProfile(String userId) async {
@@ -88,7 +101,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 name: data['name'] ?? 'Unknown Pet',
                 category: data['category'] ?? 'Unknown',
                 breed: data['breed'] ?? 'Mixed',
-                price: (data['price'] ?? 0.0).toDouble(),
+                price: _parsePrice(data['price']),
                 imageUrl: data['imageUrl'] ?? '',
                 score: recommendationScore,
                 reason: 'Dựa trên sở thích ${category.toLowerCase()} của bạn (điểm: $score)',
@@ -123,7 +136,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                   name: data['name'] ?? 'Unknown Pet',
                   category: data['category'] ?? 'Unknown',
                   breed: data['breed'] ?? 'Mixed',
-                  price: (data['price'] ?? 0.0).toDouble(),
+                  price: _parsePrice(data['price']),
                   imageUrl: data['imageUrl'] ?? '',
                   score: 0.85, // High score for favorite categories
                   reason: 'Phù hợp với sở thích $category của bạn',
@@ -137,37 +150,32 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
       
-      // If we don't have enough items, add some general recommendations
-      if (items.length < request.limit) {
-        final remaining = request.limit - items.length;
-        final existingPetIds = items.map((item) => item.petId).toSet();
+      // Add more general recommendations from all categories
+      final existingPetIds = items.map((item) => item.petId).toSet();
+      
+      final snapshot = await firestore
+          .collection('Pets')
+          .get(); // Get all pets, no limit
+      
+      for (final doc in snapshot.docs) {
+        if (existingPetIds.contains(doc.id)) continue;
         
-        final snapshot = await firestore
-            .collection('Pets')
-            .limit(remaining + 10) // Get extra to account for filtering
-            .get();
+        final data = doc.data();
+        final isAlreadyViewed = await _isPetAlreadyInteractedWith(request.userId, doc.id);
         
-        for (final doc in snapshot.docs) {
-          if (items.length >= request.limit) break;
-          if (existingPetIds.contains(doc.id)) continue;
-          
-          final data = doc.data();
-          final isAlreadyViewed = await _isPetAlreadyInteractedWith(request.userId, doc.id);
-          
-          if (!isAlreadyViewed) {
-            final item = RecommendationItem(
-              petId: doc.id,
-              name: data['name'] ?? 'Unknown Pet',
-              category: data['category'] ?? 'Unknown',
-              breed: data['breed'] ?? 'Mixed',
-              price: (data['price'] ?? 0.0).toDouble(),
-              imageUrl: data['imageUrl'] ?? '',
-              score: 0.6, // Lower score for general recommendations
-              reason: 'Khám phá thú cưng mới',
-              type: RecommendationType.hybrid,
-            );
-            items.add(item);
-          }
+        if (!isAlreadyViewed) {
+          final item = RecommendationItem(
+            petId: doc.id,
+            name: data['name'] ?? 'Unknown Pet',
+            category: data['category'] ?? 'Unknown',
+            breed: data['breed'] ?? 'Mixed',
+            price: _parsePrice(data['price']),
+            imageUrl: data['imageUrl'] ?? '',
+            score: 0.6, // Lower score for general recommendations
+            reason: 'Khám phá thú cưng mới',
+            type: RecommendationType.hybrid,
+          );
+          items.add(item);
         }
       }
 
@@ -192,12 +200,12 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   }
   
   @override
-  Future<List<SimilarUser>> findSimilarUsers(String userId, {int limit = 10}) async {
+  Future<List<SimilarUser>> findSimilarUsers(String userId, {int? limit}) async {
     return [];
   }
   
   @override
-  Future<List<RecommendationItem>> getContentBasedRecommendations(String userId, {int limit = 10}) async {
+  Future<List<RecommendationItem>> getContentBasedRecommendations(String userId, {int? limit}) async {
     try {
       // Analyze user preferences from multiple sources
       final userPreferences = await _analyzeUserPreferences(userId);
@@ -213,8 +221,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           final snapshot = await firestore
               .collection('Pets')
               .where('category', isEqualTo: category)
-              .limit(limit ~/ favoriteCategories.length + 1)
-              .get();
+              .get(); // Get all pets in this category
           
           for (final doc in snapshot.docs) {
             final data = doc.data();
@@ -223,7 +230,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               name: data['name'] ?? 'Unknown Pet',
               category: data['category'] ?? 'Unknown',
               breed: data['breed'] ?? 'Mixed',
-              price: (data['price'] ?? 0.0).toDouble(),
+              price: _parsePrice(data['price']),
               imageUrl: data['imageUrl'] ?? '',
               score: 0.9, // High score for category match
               reason: 'Dựa trên sở thích $category của bạn',
@@ -234,7 +241,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       } else {
         // Fallback: get some general pets
-        final snapshot = await firestore.collection('Pets').limit(limit).get();
+        final snapshot = await firestore.collection('Pets').get(); // Get all pets
         
         for (final doc in snapshot.docs) {
           final data = doc.data();
@@ -243,7 +250,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
             name: data['name'] ?? 'Unknown Pet',
             category: data['category'] ?? 'Unknown',
             breed: data['breed'] ?? 'Mixed',
-            price: (data['price'] ?? 0.0).toDouble(),
+            price: _parsePrice(data['price']),
             imageUrl: data['imageUrl'] ?? '',
             score: 0.6, // Lower score for general recommendations
             reason: 'Khám phá các loại thú cưng mới',
@@ -253,13 +260,13 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
       
-      // Remove duplicates and limit results
+      // Remove duplicates - no limit
       final uniqueItems = <String, RecommendationItem>{};
       for (final item in items) {
         uniqueItems[item.petId] = item;
       }
       
-      final result = uniqueItems.values.take(limit).toList();
+      final result = uniqueItems.values.toList(); // Return all unique items
       print('📝 Generated ${result.length} content-based recommendations based on preferences: ${userPreferences['favoriteCategories']}');
       return result;
     } catch (e) {
@@ -269,7 +276,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   }
   
   @override
-  Future<List<RecommendationItem>> getCollaborativeRecommendations(String userId, {int limit = 10}) async {
+  Future<List<RecommendationItem>> getCollaborativeRecommendations(String userId, {int? limit}) async {
     try {
       // Get user preferences to find similar users
       final userPreferences = await _analyzeUserPreferences(userId);
@@ -284,8 +291,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           final snapshot = await firestore
               .collection('Pets')
               .where('category', isEqualTo: category)
-              .limit(limit ~/ userFavoriteCategories.length + 2)
-              .get();
+              .get(); // Get all pets in this category
           
           for (final doc in snapshot.docs) {
             final data = doc.data();
@@ -298,7 +304,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 name: data['name'] ?? 'Unknown Pet',
                 category: data['category'] ?? 'Unknown',
                 breed: data['breed'] ?? 'Mixed',
-                price: (data['price'] ?? 0.0).toDouble(),
+                price: _parsePrice(data['price']),
                 imageUrl: data['imageUrl'] ?? '',
                 score: 0.8, // Good score for collaborative
                 reason: 'Người có sở thích tương tự đã thích $category',
@@ -310,7 +316,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       } else {
         // Fallback: get some general pets
-        final snapshot = await firestore.collection('Pets').limit(limit).get();
+        final snapshot = await firestore.collection('Pets').get(); // Get all pets
         
         for (final doc in snapshot.docs) {
           final data = doc.data();
@@ -319,7 +325,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
             name: data['name'] ?? 'Unknown Pet',
             category: data['category'] ?? 'Unknown',
             breed: data['breed'] ?? 'Mixed',
-            price: (data['price'] ?? 0.0).toDouble(),
+            price: _parsePrice(data['price']),
             imageUrl: data['imageUrl'] ?? '',
             score: 0.5, // Lower score for general recommendations
             reason: 'Khám phá thú cưng mới',
@@ -329,13 +335,13 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
       
-      // Remove duplicates and limit results
+      // Remove duplicates - no limit
       final uniqueItems = <String, RecommendationItem>{};
       for (final item in items) {
         uniqueItems[item.petId] = item;
       }
       
-      final result = uniqueItems.values.take(limit).toList();
+      final result = uniqueItems.values.toList(); // Return all unique items
       print('🤝 Generated ${result.length} collaborative recommendations for categories: $userFavoriteCategories');
       return result;
     } catch (e) {
@@ -345,10 +351,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   }
   
   @override
-  Future<List<RecommendationItem>> getTrendingPets({int limit = 10}) async {
+  Future<List<RecommendationItem>> getTrendingPets({int? limit}) async {
     try {
       // Get some pets for trending recommendations
-      final snapshot = await firestore.collection('Pets').limit(limit).get();
+      final snapshot = await firestore.collection('Pets').get(); // Get all pets
       
       List<RecommendationItem> items = [];
       for (final doc in snapshot.docs) {
@@ -358,7 +364,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           name: data['name'] ?? 'Unknown Pet',
           category: data['category'] ?? 'Unknown',
           breed: data['breed'] ?? 'Mixed',
-          price: (data['price'] ?? 0.0).toDouble(),
+          price: _parsePrice(data['price']),
           imageUrl: data['imageUrl'] ?? '',
           score: 0.7, // Good score for trending
           reason: 'Đang được yêu thích',
@@ -376,10 +382,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   }
   
   @override
-  Future<List<RecommendationItem>> getAssociationRecommendations(String userId, {int limit = 10}) async {
+  Future<List<RecommendationItem>> getAssociationRecommendations(String userId, {int? limit}) async {
     try {
       // Get some pets for association recommendations
-      final snapshot = await firestore.collection('Pets').limit(limit).get();
+      final snapshot = await firestore.collection('Pets').get(); // Get all pets
       
       List<RecommendationItem> items = [];
       for (final doc in snapshot.docs) {
@@ -389,7 +395,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           name: data['name'] ?? 'Unknown Pet',
           category: data['category'] ?? 'Unknown',
           breed: data['breed'] ?? 'Mixed',
-          price: (data['price'] ?? 0.0).toDouble(),
+          price: _parsePrice(data['price']),
           imageUrl: data['imageUrl'] ?? '',
           score: 0.6, // Decent score for association
           reason: 'Thường được mua cùng nhau',
