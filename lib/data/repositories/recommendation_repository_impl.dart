@@ -1,4 +1,5 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'dart:math' as math;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/domain/repositories/recommendation_repository.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
@@ -153,34 +154,52 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
       
-      // Add more general recommendations from all categories
+      // Add limited general recommendations from various categories (like real recommendation systems)
       final existingPetIds = items.map((item) => item.petId).toSet();
+      final remainingLimit = math.max(0, request.limit - items.length);
       
-      final snapshot = await firestore
-          .collection('Pets')
-          .get(); // Get all pets, no limit
-      
-      for (final doc in snapshot.docs) {
-        if (existingPetIds.contains(doc.id)) continue;
+      if (remainingLimit > 0) {
+        // Get diverse recommendations from different categories (not all pets)
+        final categories = ['Dogs', 'Cats', 'Birds', 'Fish'];
+        final itemsPerCategory = (remainingLimit / categories.length).ceil();
         
-        final data = doc.data();
-        final isAlreadyViewed = await _isPetAlreadyInteractedWith(request.userId, doc.id);
-        
-        if (!isAlreadyViewed) {
-          final item = RecommendationItem(
-            petId: doc.id,
-            name: data['name'] ?? 'Unknown Pet',
-            category: data['category'] ?? 'Unknown',
-            breed: data['breed'] ?? 'Mixed',
-            price: _parsePrice(data['price']),
-            imageUrl: data['imageUrl'] ?? '',
-            score: 0.6, // Lower score for general recommendations
-            reason: 'Khám phá thú cưng mới',
-            type: RecommendationType.hybrid,
-          );
-          items.add(item);
+        for (final category in categories) {
+          if (items.length >= request.limit) break;
+          
+          final snapshot = await firestore
+              .collection('Pets')
+              .where('category', isEqualTo: category)
+              .limit(itemsPerCategory)
+              .get();
+          
+          for (final doc in snapshot.docs) {
+            if (items.length >= request.limit) break;
+            if (existingPetIds.contains(doc.id)) continue;
+            
+            final data = doc.data();
+            final isAlreadyViewed = await _isPetAlreadyInteractedWith(request.userId, doc.id);
+            
+            if (!isAlreadyViewed) {
+              final item = RecommendationItem(
+                petId: doc.id,
+                name: data['name'] ?? 'Unknown Pet',
+                category: data['category'] ?? 'Unknown',
+                breed: data['breed'] ?? 'Mixed',
+                price: _parsePrice(data['price']),
+                imageUrl: data['imageUrl'] ?? '',
+                score: 0.6, // Lower score for general recommendations
+                reason: 'Khám phá thú cưng mới',
+                type: RecommendationType.hybrid,
+              );
+              items.add(item);
+              existingPetIds.add(doc.id);
+            }
+          }
         }
       }
+      
+      // Limit final results (like Netflix, Amazon)
+      items = items.take(request.limit).toList();
 
       await RecommendationLogger.log('✅ Generated ${items.length} recommendations (${favoriteCategories.isNotEmpty ? "personalized" : "general"})');
       
@@ -218,8 +237,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         ],
       });
       
+      // Save analysis to workspace for easy access
+      await RecommendationLogger.saveToWorkspace();
+      
       print('✅ Generated ${items.length} recommendations (${favoriteCategories.isNotEmpty ? "personalized" : "general"})');
-      print('📄 Comprehensive analysis saved to: ${RecommendationLogger.getLogFilePath()}');
       
       return RecommendationResponse(
         userId: request.userId,
@@ -355,33 +376,45 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           }
         }
       } else {
-        // Fallback: get some general pets
-        final snapshot = await firestore.collection('Pets').get(); // Get all pets
+        // Fallback: get limited general pets (like real systems)
+        final categories = ['Dogs', 'Cats', 'Birds', 'Fish'];
+        final limitPerCategory = math.max(1, (limit ?? 20) ~/ categories.length);
         
-        for (final doc in snapshot.docs) {
-          final data = doc.data();
-          final item = RecommendationItem(
-            petId: doc.id,
-            name: data['name'] ?? 'Unknown Pet',
-            category: data['category'] ?? 'Unknown',
-            breed: data['breed'] ?? 'Mixed',
-            price: _parsePrice(data['price']),
-            imageUrl: data['imageUrl'] ?? '',
-            score: 0.5, // Lower score for general recommendations
-            reason: 'Khám phá thú cưng mới',
-            type: RecommendationType.collaborative,
-          );
-          items.add(item);
+        for (final category in categories) {
+          if (items.length >= (limit ?? 20)) break;
+          
+          final snapshot = await firestore
+              .collection('Pets')
+              .where('category', isEqualTo: category)
+              .limit(limitPerCategory)
+              .get();
+          
+          for (final doc in snapshot.docs) {
+            if (items.length >= (limit ?? 20)) break;
+            final data = doc.data();
+            final item = RecommendationItem(
+              petId: doc.id,
+              name: data['name'] ?? 'Unknown Pet',
+              category: data['category'] ?? 'Unknown',
+              breed: data['breed'] ?? 'Mixed',
+              price: _parsePrice(data['price']),
+              imageUrl: data['imageUrl'] ?? '',
+              score: 0.5, // Lower score for general recommendations
+              reason: 'Khám phá thú cưng mới',
+              type: RecommendationType.collaborative,
+            );
+            items.add(item);
+          }
         }
       }
       
-      // Remove duplicates - no limit
+      // Remove duplicates and limit results (like Netflix, Amazon)
       final uniqueItems = <String, RecommendationItem>{};
       for (final item in items) {
         uniqueItems[item.petId] = item;
       }
       
-      final result = uniqueItems.values.toList(); // Return all unique items
+      final result = uniqueItems.values.take(limit ?? 20).toList();
       print('🤝 Generated ${result.length} collaborative recommendations for categories: $userFavoriteCategories');
       return result;
     } catch (e) {
@@ -393,24 +426,36 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   @override
   Future<List<RecommendationItem>> getTrendingPets({int? limit}) async {
     try {
-      // Get some pets for trending recommendations
-      final snapshot = await firestore.collection('Pets').get(); // Get all pets
+      // Get diverse trending pets from different categories (like real systems)
+      final categories = ['Dogs', 'Cats', 'Birds', 'Fish'];
+      final limitPerCategory = math.max(1, (limit ?? 20) ~/ categories.length);
       
       List<RecommendationItem> items = [];
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        final item = RecommendationItem(
-          petId: doc.id,
-          name: data['name'] ?? 'Unknown Pet',
-          category: data['category'] ?? 'Unknown',
-          breed: data['breed'] ?? 'Mixed',
-          price: _parsePrice(data['price']),
-          imageUrl: data['imageUrl'] ?? '',
-          score: 0.7, // Good score for trending
-          reason: 'Đang được yêu thích',
-          type: RecommendationType.trending,
-        );
-        items.add(item);
+      for (final category in categories) {
+        if (items.length >= (limit ?? 20)) break;
+        
+        final snapshot = await firestore
+            .collection('Pets')
+            .where('category', isEqualTo: category)
+            .limit(limitPerCategory)
+            .get();
+        
+        for (final doc in snapshot.docs) {
+          if (items.length >= (limit ?? 20)) break;
+          final data = doc.data();
+          final item = RecommendationItem(
+            petId: doc.id,
+            name: data['name'] ?? 'Unknown Pet',
+            category: data['category'] ?? 'Unknown',
+            breed: data['breed'] ?? 'Mixed',
+            price: _parsePrice(data['price']),
+            imageUrl: data['imageUrl'] ?? '',
+            score: 0.7, // Good score for trending
+            reason: 'Đang được yêu thích',
+            type: RecommendationType.trending,
+          );
+          items.add(item);
+        }
       }
       
       print('📈 Generated ${items.length} trending recommendations');
@@ -424,24 +469,36 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   @override
   Future<List<RecommendationItem>> getAssociationRecommendations(String userId, {int? limit}) async {
     try {
-      // Get some pets for association recommendations
-      final snapshot = await firestore.collection('Pets').get(); // Get all pets
+      // Get diverse association recommendations (like "customers who bought this also bought")
+      final categories = ['Dogs', 'Cats', 'Birds', 'Fish'];
+      final limitPerCategory = math.max(1, (limit ?? 20) ~/ categories.length);
       
       List<RecommendationItem> items = [];
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        final item = RecommendationItem(
-          petId: doc.id,
-          name: data['name'] ?? 'Unknown Pet',
-          category: data['category'] ?? 'Unknown',
-          breed: data['breed'] ?? 'Mixed',
-          price: _parsePrice(data['price']),
-          imageUrl: data['imageUrl'] ?? '',
-          score: 0.6, // Decent score for association
-          reason: 'Thường được mua cùng nhau',
-          type: RecommendationType.association,
-        );
-        items.add(item);
+      for (final category in categories) {
+        if (items.length >= (limit ?? 20)) break;
+        
+        final snapshot = await firestore
+            .collection('Pets')
+            .where('category', isEqualTo: category)
+            .limit(limitPerCategory)
+            .get();
+        
+        for (final doc in snapshot.docs) {
+          if (items.length >= (limit ?? 20)) break;
+          final data = doc.data();
+          final item = RecommendationItem(
+            petId: doc.id,
+            name: data['name'] ?? 'Unknown Pet',
+            category: data['category'] ?? 'Unknown',
+            breed: data['breed'] ?? 'Mixed',
+            price: _parsePrice(data['price']),
+            imageUrl: data['imageUrl'] ?? '',
+            score: 0.6, // Decent score for association
+            reason: 'Thường được mua cùng nhau',
+            type: RecommendationType.association,
+          );
+          items.add(item);
+        }
       }
       
       print('🔗 Generated ${items.length} association recommendations');

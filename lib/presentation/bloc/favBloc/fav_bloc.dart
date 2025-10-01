@@ -43,9 +43,14 @@ class FavBloc extends Bloc<FavEvent, FavState> {
         emit(FavLoaded(items, message: 'Sản phẩm đã có trong trang yêu thích'));
         return;
       } else {
-        items.add(event.item);
+        // Add createdAt timestamp (like real recommendation systems)
+        final favoriteItem = Map<String, dynamic>.from(event.item);
+        favoriteItem['createdAt'] = FieldValue.serverTimestamp();
+        favoriteItem['createdAtMillis'] = DateTime.now().millisecondsSinceEpoch;
+        
+        items.add(favoriteItem);
         await docRef.set({'items': items});
-        print("💖 Added to favorites successfully");
+        print("💖 Added to favorites with timestamp: ${DateTime.now()}");
         emit(FavLoaded(items, message: 'Đã thêm vào yêu thích'));
       }
 

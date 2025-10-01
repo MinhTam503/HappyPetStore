@@ -16,7 +16,7 @@ class LoadRecommendations extends RecommendationEvent {
   const LoadRecommendations({
     required this.userId,
     this.types,
-    this.limit = 1000, // Increased limit to show all pets
+    this.limit = 15, // Realistic limit like Netflix/Amazon (10-20 items)
   });
 
   @override
@@ -31,7 +31,7 @@ class LoadRecommendationsByType extends RecommendationEvent {
   const LoadRecommendationsByType({
     required this.userId,
     required this.type,
-    this.limit = 1000, // Increased limit to show all pets
+    this.limit = 10, // Realistic limit for category-specific recommendations
   });
 
   @override

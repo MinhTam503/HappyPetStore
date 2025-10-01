@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 /// Comprehensive logging utility for recommendation system analysis
 class RecommendationLogger {
   static File? _logFile;
+  static File? _workspaceFile;
   
   /// Initialize the logger with file path
   static Future<void> initialize() async {
@@ -11,8 +12,20 @@ class RecommendationLogger {
       final directory = await getApplicationDocumentsDirectory();
       _logFile = File('${directory.path}/recommendation_analysis.txt');
       
+      // Create file in project workspace using full path
+      _workspaceFile = File('d:\\Subjects\\FinalReport\\project\\pet_shop\\RECOMMENDATION_ANALYSIS_RESULTS.txt');
+      
       // Clear previous logs and add header
       await _logFile!.writeAsString('');
+      
+      // Only write to workspace if writable
+      try {
+        await _workspaceFile!.writeAsString('');
+      } catch (e) {
+        print('⚠️ Cannot write to workspace file (read-only), will only log to console and app documents');
+        _workspaceFile = null;
+      }
+      
       await log('=' * 80);
       await log('RECOMMENDATION SYSTEM COMPREHENSIVE ANALYSIS');
       await log('Generated at: ${DateTime.now()}');
@@ -23,16 +36,22 @@ class RecommendationLogger {
     }
   }
   
-  /// Log a message to both console and file
+  /// Log a message to both console and files
   static Future<void> log(String message) async {
     print(message);
     
-    if (_logFile != null) {
-      try {
+    try {
+      // Write to app documents
+      if (_logFile != null) {
         await _logFile!.writeAsString('$message\n', mode: FileMode.append);
-      } catch (e) {
-        print('❌ Failed to write to log file: $e');
       }
+      
+      // Write to workspace only if available
+      if (_workspaceFile != null) {
+        await _workspaceFile!.writeAsString('$message\n', mode: FileMode.append);
+      }
+    } catch (e) {
+      // Silently ignore file write errors to avoid spam
     }
   }
   
@@ -171,8 +190,24 @@ class RecommendationLogger {
     await log('=' * 80);
   }
   
-  /// Get the log file path for reading
-  static String? getLogFilePath() {
-    return _logFile?.path;
+  /// Get the log file paths for reading
+  static Map<String, String?> getLogFilePaths() {
+    return {
+      'appDocuments': _logFile?.path,
+      'workspace': _workspaceFile?.path,
+    };
+  }
+  
+  /// Copy final results to workspace
+  static Future<void> saveToWorkspace() async {
+    try {
+      if (_logFile != null && _workspaceFile != null && await _logFile!.exists()) {
+        final content = await _logFile!.readAsString();
+        await _workspaceFile!.writeAsString(content);
+        await log('📄 Comprehensive analysis saved to: ${_workspaceFile!.absolute.path}');
+      }
+    } catch (e) {
+      print('❌ Failed to save analysis to workspace: $e');
+    }
   }
 }
