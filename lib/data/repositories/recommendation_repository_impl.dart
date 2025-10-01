@@ -62,43 +62,43 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       List<RecommendationItem> items = [];
 
       if (favoriteCategories.isNotEmpty) {
-        print('🎯 User has preferences: $favoriteCategories');
+        print('🎯 User has preferences - BREED-FIRST targeting approach');
         
-        // Get category scores to determine priority order
+        // Get preference scores for both categories and breeds
         final categoryScores = userPreferences['categoryScores'] as Map<String, int>;
-        final sortedCategories = categoryScores.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value)); // Sort by score descending
+        final breedScores = userPreferences['breedScores'] as Map<String, int>;
+        final favoriteBreeds = userPreferences['favoriteBreeds'] as List<String>;
         
-        print('🎯 Category scores sorted: ${sortedCategories.map((e) => '${e.key}: ${e.value}').toList()}');
+        print('🎯 Category scores: ${categoryScores.entries.map((e) => '${e.key}: ${e.value}').toList()}');
+        print('🎯 Breed scores: ${breedScores.entries.map((e) => '${e.key}: ${e.value}').toList()}');
         
-        // Process top 2 categories based on actual preference scores
-        for (final categoryEntry in sortedCategories.take(2)) {
-          final category = categoryEntry.key;
-          final score = categoryEntry.value;
+        // PHASE 1: BREED-SPECIFIC RECOMMENDATIONS (Highest Priority)
+        if (favoriteBreeds.isNotEmpty) {
+          await RecommendationLogger.log('🎯 PHASE 1: Targeting specific breeds: ${favoriteBreeds.take(2).toList()}');
           
-          if (items.length >= request.limit) break;
-          
-          print('� Processing top category: $category (score: $score)');
-          
-          final snapshot = await firestore
-              .collection('Pets')
-              .where('category', isEqualTo: category)
-              .limit((request.limit * 0.7).round()) // Give more slots to top categories
-              .get();
-          
-          print('🔍 Found ${snapshot.docs.length} pets in $category category');
-          
-          for (final doc in snapshot.docs) {
-            if (items.length >= request.limit) break;
+          for (final breed in favoriteBreeds.take(2)) { // Top 2 favorite breeds
+            if (items.length >= (request.limit * 0.6).round()) break; // 60% for breed-specific
             
-            final data = doc.data();
-            // Include ALL pets to show more variety (no exclusions for viewed pets)
-            {
-              // Score based on category preference strength
-              final recommendationScore = score > 20 ? 0.95 : // Very high preference (Dogs: 29)
-                                        score > 10 ? 0.85 : // High preference  
-                                        score > 5 ? 0.75 :  // Medium preference
-                                        0.65; // Lower preference (Birds: 2)
+            final breedScore = breedScores[breed] ?? 0;
+            
+            final breedSnapshot = await firestore
+                .collection('Pets')
+                .where('breed', isEqualTo: breed)
+                .limit(8) // More pets per specific breed
+                .get();
+            
+            print('🎯 BREED-SPECIFIC: "$breed" (score: $breedScore) -> ${breedSnapshot.docs.length} pets found');
+            
+            for (final doc in breedSnapshot.docs) {
+              if (items.length >= (request.limit * 0.6).round()) break;
+              
+              final data = doc.data();
+              
+              // BREED TARGETING: Higher scores for specific breed matches
+              final recommendationScore = breedScore > 15 ? 0.98 : // Very high breed preference
+                                        breedScore > 10 ? 0.92 : // High breed preference  
+                                        breedScore > 5 ? 0.85 :  // Medium breed preference
+                                        0.75; // Lower breed preference
               
               final item = RecommendationItem(
                 petId: doc.id,
@@ -108,47 +108,76 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 price: _parsePrice(data['price']),
                 imageUrl: data['imageUrl'] ?? '',
                 score: recommendationScore,
-                reason: 'Dựa trên sở thích ${category.toLowerCase()} của bạn (điểm: $score)',
+                reason: 'Chính xác giống "${breed}" bạn yêu thích (điểm breed: $breedScore)',
                 type: RecommendationType.hybrid,
               );
               items.add(item);
-              print('✅ Added ${category.toLowerCase()}: ${data['name']} (score: $recommendationScore)');
+              print('✅ BREED-MATCH: "${breed}" -> ${data['name']} (score: $recommendationScore)');
             }
           }
         }
         
-        // Add some variety from other favorite categories
-        for (String category in favoriteCategories.take(3)) {
-          if (category != 'Birds' && items.length < request.limit) {
+        // PHASE 2: CATEGORY-LEVEL RECOMMENDATIONS (Lower Priority)
+        if (items.length < request.limit) {
+          await RecommendationLogger.log('🎯 PHASE 2: Category-level recommendations for remaining slots');
+          
+          final sortedCategories = categoryScores.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
+          
+          // Skip pets already recommended by breed
+          final existingPetIds = items.map((item) => item.petId).toSet();
+          
+          // SMART CATEGORY FILTERING: Strongly prioritize breed matches
+          final breedCategoriesUsed = items.map((item) => item.category).toSet();
+          final hasGoodBreedMatches = items.where((item) => item.type == RecommendationType.hybrid && item.score > 0.8).length >= 2;
+          
+          final categoriesToSearch = sortedCategories
+              .where((entry) => 
+                (!breedCategoriesUsed.contains(entry.key) || !hasGoodBreedMatches) && // Skip same categories if we have good breed matches
+                items.length < (request.limit * 0.9).round() // Only if we really need more
+              )
+              .take(hasGoodBreedMatches ? 0 : 1); // No category matches if we have 2+ good breed matches
+          
+          for (final categoryEntry in categoriesToSearch) {
+            final category = categoryEntry.key;
+            final score = categoryEntry.value;
+            
+            if (items.length >= request.limit) break;
+            
             final snapshot = await firestore
                 .collection('Pets')
                 .where('category', isEqualTo: category)
-                .limit(3)
+                .limit(3) // Even fewer category-level recommendations
                 .get();
             
-            print('🔍 Searching category: $category, found: ${snapshot.docs.length} pets');
+            print('� CATEGORY-LEVEL: "$category" (score: $score) -> ${snapshot.docs.length} pets found');
             
             for (final doc in snapshot.docs) {
               if (items.length >= request.limit) break;
+              if (existingPetIds.contains(doc.id)) continue; // Skip breed-specific duplicates
               
               final data = doc.data();
-              final isAlreadyViewed = await _isPetAlreadyInteractedWith(request.userId, doc.id);
               
-              if (!isAlreadyViewed) {
-                final item = RecommendationItem(
-                  petId: doc.id,
-                  name: data['name'] ?? 'Unknown Pet',
-                  category: data['category'] ?? 'Unknown',
-                  breed: data['breed'] ?? 'Mixed',
-                  price: _parsePrice(data['price']),
-                  imageUrl: data['imageUrl'] ?? '',
-                  score: 0.85, // High score for favorite categories
-                  reason: 'Phù hợp với sở thích $category của bạn',
-                  type: RecommendationType.hybrid,
-                );
-                items.add(item);
-                print('✅ Added ${category}: ${data['name']} (${data['breed']})');
-              }
+              // CATEGORY TARGETING: Much lower scores than breed-specific
+              final recommendationScore = score > 20 ? 0.65 : // Reduced from 0.75
+                                        score > 10 ? 0.55 : // Reduced from 0.65
+                                        score > 5 ? 0.45 :  // Reduced from 0.55
+                                        0.35; // Reduced from 0.45
+              
+              final item = RecommendationItem(
+                petId: doc.id,
+                name: data['name'] ?? 'Unknown Pet',
+                category: data['category'] ?? 'Unknown',
+                breed: data['breed'] ?? 'Mixed',
+                price: _parsePrice(data['price']),
+                imageUrl: data['imageUrl'] ?? '',
+                score: recommendationScore,
+                reason: 'Khám phá thêm trong danh mục ${category.toLowerCase()}',
+                type: RecommendationType.hybrid,
+              );
+              items.add(item);
+              existingPetIds.add(doc.id);
+              print('✅ CATEGORY-MATCH: "${category}" -> ${data['name']} (score: $recommendationScore)');
             }
           }
         }
