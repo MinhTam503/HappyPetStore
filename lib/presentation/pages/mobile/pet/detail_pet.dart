@@ -329,7 +329,7 @@ class _DetailPetState extends State<DetailPet> {
                             _buildInfoRow('Tuổi',
                                 data['age']?.toString() ?? 'Không xác định'),
                             _buildInfoRow('Cân nặng',
-                                data['weight']?.toString() ?? 'Không xác định'),
+                                "${data['weight']} kg"?.toString() ?? 'Không xác định'),
                             _buildInfoRow(
                                 'Giới tính',
                                 (data['sex'] ?? data['color'])?.toString() ??

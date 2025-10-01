@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
@@ -59,6 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final theme = Theme.of(context);
     final width = MediaQuery.of(context).size.width;
     final isWide = width >= 900;
+    final l10n = AppLocalizations.of(context);
 
     String displayName =
         (userInfo?['displayName'] as String?)?.trim().isNotEmpty == true
@@ -110,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.favorite,
                           iconBg: const Color(0xfffde2e2),
                           iconColor: Colors.red,
-                          title: 'Favorites',
+                          title: l10n?.favorites ?? 'Favorites',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -125,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.production_quantity_limits,
                           iconBg: const Color(0xffe6f5ea),
                           iconColor: Colors.teal,
-                          title: 'Your order',
+                          title: l10n?.yourOrder ?? 'Your order',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -140,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.location_on,
                           iconBg: const Color(0xffe8f5e8),
                           iconColor: Colors.green,
-                          title: 'Manage Addresses',
+                          title: l10n?.manageAddresses ?? 'Manage Addresses',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -155,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.pets,
                           iconBg: const Color(0xfffde2e2),
                           iconColor: primaryColor,
-                          title: 'Viewed Pets',
+                          title:l10n?.viewedPets ??  'Viewed Pets',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -172,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.edit,
                           iconBg: const Color(0xffe9ecff),
                           iconColor: Colors.indigo,
-                          title: 'Edit Profile',
+                          title: l10n?.editProfile ?? 'Edit Profile',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -187,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.message_outlined,
                           iconBg: const Color(0xfff0ecff),
                           iconColor: Colors.deepPurple,
-                          title: 'Inbox',
+                          title: l10n?.inbox ?? 'Inbox',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -202,7 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.password_rounded,
                           iconBg: const Color(0xfffff2e5),
                           iconColor: Colors.orange,
-                          title: 'Change Password',
+                          title: l10n?.changePasswordMenu ?? 'Change Password',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -219,7 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.settings,
                             iconBg: const Color(0xfffdeefe),
                             iconColor: Colors.grey,
-                            title: 'Setting',
+                            title: l10n?.setting ?? 'Setting',
                             titleColor: Colors.black,
                             onTap: () {
                               Navigator.push(
@@ -236,7 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.logout_rounded,
                             iconBg: const Color(0xfffdeefe),
                             iconColor: Colors.pink,
-                            title: 'Logout',
+                            title: l10n?.logout ?? 'Logout',
                             titleColor: Colors.red.shade600,
                             onTap: () {
                               _showLogoutDialog(context);
@@ -255,6 +257,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 void _showLogoutDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
+  
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -299,9 +303,9 @@ void _showLogoutDialog(BuildContext context) {
               const SizedBox(height: 20),
 
               // Title
-              const Text(
-                'Đăng xuất',
-                style: TextStyle(
+              Text(
+                l10n?.logout ?? 'Đăng xuất',
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -310,10 +314,10 @@ void _showLogoutDialog(BuildContext context) {
               const SizedBox(height: 12),
 
               // Message
-              const Text(
-                'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
+              Text(
+                l10n?.logoutConfirm ?? 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   color: Colors.black54,
                   height: 1.4,
@@ -334,9 +338,9 @@ void _showLogoutDialog(BuildContext context) {
                           side: BorderSide(color: Colors.grey.shade300),
                         ),
                       ),
-                      child: const Text(
-                        'Hủy',
-                        style: TextStyle(
+                      child: Text(
+                        l10n?.cancel ?? 'Hủy',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.black54,
@@ -360,9 +364,9 @@ void _showLogoutDialog(BuildContext context) {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Đăng xuất',
-                        style: TextStyle(
+                      child: Text(
+                        l10n?.logout ?? 'Đăng xuất',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),

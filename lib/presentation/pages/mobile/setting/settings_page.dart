@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/settings_service.dart';
+import 'package:pet_shop/core/providers/locale_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -27,11 +30,25 @@ class _SettingsPageState extends State<SettingsPage> {
       final chatBubbleVisible = await _settingsService.getChatBubbleVisibility();
       final selectedLanguage = await _settingsService.getSelectedLanguage();
       
-      setState(() {
-        _showChatBubble = chatBubbleVisible;
-        _selectedLanguage = selectedLanguage;
-        _isLoading = false;
-      });
+      if (mounted) {
+        // Sync with LocaleProvider
+        final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+        final currentLocale = localeProvider.locale.languageCode;
+        
+        // If there's a mismatch, update SettingsService to match LocaleProvider
+        final finalLanguage = currentLocale != selectedLanguage ? currentLocale : selectedLanguage;
+        
+        setState(() {
+          _showChatBubble = chatBubbleVisible;
+          _selectedLanguage = finalLanguage;
+          _isLoading = false;
+        });
+        
+        // Update SettingsService if there was a mismatch
+        if (currentLocale != selectedLanguage) {
+          await _settingsService.setSelectedLanguage(finalLanguage);
+        }
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -49,10 +66,12 @@ class _SettingsPageState extends State<SettingsPage> {
       
       // Show feedback to user
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value ? 'Chatbot bubble đã được bật' : 'Chatbot bubble đã được tắt',
+              value ? (l10n?.chatbotEnabled ?? 'Chatbot bubble đã được bật') 
+                    : (l10n?.chatbotDisabled ?? 'Chatbot bubble đã được tắt'),
             ),
             backgroundColor: value ? Colors.green : Colors.orange,
             duration: const Duration(seconds: 2),
@@ -62,9 +81,10 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       debugPrint('Error saving chat bubble setting: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lỗi khi lưu cài đặt'),
+          SnackBar(
+            content: Text(l10n?.errorSavingSetting ?? 'Lỗi khi lưu cài đặt'),
             backgroundColor: Colors.red,
           ),
         );
@@ -74,17 +94,28 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _saveLanguageSetting(String value) async {
     try {
+      // Update both SettingsService and LocaleProvider
       await _settingsService.setSelectedLanguage(value);
+      
+      // Use LocaleProvider to change the app's locale
+      if (mounted) {
+        final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+        localeProvider.setLocale(Locale(value));
+      }
+      
       setState(() {
         _selectedLanguage = value;
       });
       
-      // Show feedback to user
+      // Show feedback to user using localized strings
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value == 'vi' ? 'Đã chuyển sang Tiếng Việt' : 'Switched to English',
+              value == 'vi' 
+                ? (l10n?.switchedToVietnamese ?? 'Đã chuyển sang Tiếng Việt')
+                : (l10n?.switchedToEnglish ?? 'Switched to English'),
             ),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
@@ -94,9 +125,10 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       debugPrint('Error saving language setting: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lỗi khi lưu cài đặt ngôn ngữ'),
+          SnackBar(
+            content: Text(l10n?.errorSavingLanguage ?? 'Lỗi khi lưu cài đặt ngôn ngữ'),
             backgroundColor: Colors.red,
           ),
         );
@@ -110,6 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final width = MediaQuery.of(context).size.width;
     final isWide = width >= 900;
     final horizontal = isWide ? width * 0.12 : 16.0;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: secondaryColor,
@@ -122,7 +155,7 @@ class _SettingsPageState extends State<SettingsPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Settings',
+          l10n?.settings ?? 'Settings',
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -141,7 +174,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 // App Settings Section
                 _SectionHeader(
-                  title: 'Cài đặt ứng dụng',
+                  title: l10n?.appSettings ?? 'Cài đặt ứng dụng',
                   icon: Icons.settings,
                 ),
                 const SizedBox(height: 12),
@@ -151,8 +184,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.chat_bubble_outline,
                       iconBg: const Color(0xffe3f2fd),
                       iconColor: Colors.blue,
-                      title: 'Hiển thị Chatbot',
-                      subtitle: 'Bật/tắt biểu tượng chatbot trên màn hình',
+                      title: l10n?.showChatbot ?? 'Hiển thị Chatbot',
+                      subtitle: l10n?.chatbotToggleSubtitle ?? 'Bật/tắt biểu tượng chatbot trên màn hình',
                       value: _showChatBubble,
                       onChanged: _saveChatBubbleSetting,
                     ),
@@ -163,7 +196,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 // Language Settings Section
                 _SectionHeader(
-                  title: 'Ngôn ngữ',
+                  title: l10n?.language ?? 'Ngôn ngữ',
                   icon: Icons.language,
                 ),
                 const SizedBox(height: 12),
@@ -180,7 +213,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 // About Section
                 _SectionHeader(
-                  title: 'Thông tin',
+                  title: l10n?.about ?? 'Thông tin',
                   icon: Icons.info_outline,
                 ),
                 const SizedBox(height: 12),
@@ -190,7 +223,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.info,
                       iconBg: const Color(0xfff3e5f5),
                       iconColor: Colors.purple,
-                      title: 'Phiên bản ứng dụng',
+                      title: l10n?.appVersion ?? 'Phiên bản ứng dụng',
                       subtitle: '1.0.0',
                       onTap: () {},
                       trailing: Container(
@@ -405,12 +438,13 @@ class _LanguageSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     
     return Column(
       children: [
         _LanguageOption(
           flag: '🇻🇳',
-          title: 'Tiếng Việt',
+          title: l10n?.vietnamese ?? 'Tiếng Việt',
           subtitle: 'Vietnamese',
           value: 'vi',
           groupValue: selectedLanguage,
@@ -423,7 +457,7 @@ class _LanguageSelector extends StatelessWidget {
         ),
         _LanguageOption(
           flag: '🇺🇸',
-          title: 'English',
+          title: l10n?.english ?? 'English',
           subtitle: 'English (US)',
           value: 'en',
           groupValue: selectedLanguage,

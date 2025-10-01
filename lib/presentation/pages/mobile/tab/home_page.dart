@@ -22,8 +22,6 @@ import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.da
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_event.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_state.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
-import 'package:pet_shop/presentation/pages/mobile/analytics/recommendation_analytics_page.dart';
-import 'package:pet_shop/demo/sample_interactions_demo_page.dart';
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
 
@@ -671,22 +669,39 @@ class _HomePageState extends State<HomePage> {
                 child: Card(
                   elevation: 2,
                   child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DetailPet(
-                            pet: {
-                              'id': item.petId,
-                              'name': item.name,
-                              'category': item.category,
-                              'breed': item.breed,
-                              'price': item.price,
-                              'image': item.imageUrl,
-                            },
-                          ),
-                        ),
-                      );
+                    onTap: () async {
+                      if (item.petId != null) {
+                        try {
+                          // Query Firestore directly to get Map<String, dynamic>
+                          final doc = await FirebaseFirestore.instance
+                              .collection('Pets')
+                              .doc(item.petId)
+                              .get();
+                          
+                          if (doc.exists) {
+                            final petData = doc.data()!;
+                            petData['id'] = doc.id; // Add document ID
+                            
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DetailPet(
+                                  pet: petData,
+                                ),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Không tìm thấy thú cưng')),
+                            );
+                          }
+                        } catch (e) {
+                          print('Error fetching pet: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lỗi tải thông tin thú cưng')),
+                          );
+                        }
+                      }
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

@@ -5,11 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
+import 'package:pet_shop/core/utils/search_navigation_helper.dart';
 import 'package:pet_shop/data/repositories/search_history_repository.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
 import 'package:pet_shop/presentation/bloc/search/search_event.dart';
 import 'package:pet_shop/presentation/bloc/search/search_state.dart';
-import 'package:pet_shop/presentation/pages/mobile/search/search_results_page.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -164,18 +164,14 @@ class _NewSearchPageState extends State<SearchPage> {
                 searchQuery = _searchController.text.trim();
               }
               
-              // Use pushReplacement to avoid stack buildup - always replace current screen
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SearchResultsPage(
-                    searchQuery: searchQuery,
-                    initialResults: state.searchResults,
-                    searchImage: searchImage,
-                    searchBloc: _searchBloc,
-                    originalSearchText: _searchController.text.trim(),
-                  ),
-                ),
+              // Use SearchNavigationHelper to avoid stack buildup
+              SearchNavigationHelper.navigateToResults(
+                context: context,
+                searchQuery: searchQuery,
+                results: state.searchResults,
+                searchBloc: _searchBloc,
+                originalSearchText: _searchController.text.trim(),
+                searchImage: searchImage,
               );
             }
           }

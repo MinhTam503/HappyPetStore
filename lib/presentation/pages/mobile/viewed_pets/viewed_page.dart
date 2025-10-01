@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/data/models/viewed_pet_model.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
@@ -30,14 +31,16 @@ class _ViewedPageState extends State<ViewedPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
         backgroundColor: secondaryColor,
         centerTitle: true,
-        title: const Text(
-          'Đã xem gần đây',
-          style: TextStyle(color: Colors.black),
+        title: Text(
+          l10n?.recentlyViewed ?? 'Đã xem gần đây',
+          style: const TextStyle(color: Colors.black),
         ),
         actions: [
           IconButton(
@@ -59,15 +62,15 @@ class _ViewedPageState extends State<ViewedPage> {
           }
 
           if (state is RecentPetsEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
+                  const Icon(Icons.history, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
                   Text(
-                    'Chưa có thú cưng nào được xem',
-                    style: TextStyle(color: Colors.grey),
+                    l10n?.noRecentlyViewed ?? 'Chưa có thú cưng nào được xem',
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),

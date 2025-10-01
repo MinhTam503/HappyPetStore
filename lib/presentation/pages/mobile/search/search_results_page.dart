@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
+import 'package:pet_shop/core/utils/search_navigation_helper.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
 import 'package:pet_shop/presentation/bloc/search/search_state.dart';
-import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
-import 'package:pet_shop/presentation/pages/mobile/search/search_page.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
 import 'dart:io';
 
@@ -41,12 +40,10 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
   }
 
   void _navigateBackToSearch() {
-    // Create a new SearchPage with fresh state to ensure clean history
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SearchPage(),
-      ),
+    // Use SearchNavigationHelper for consistent navigation
+    SearchNavigationHelper.navigateBackToSearch(
+      context: context,
+      preserveQuery: widget.searchQuery,
     );
   }
 
@@ -81,15 +78,11 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 if (currentQuery != originalQuery && currentQuery.isNotEmpty) {
                   // This is a new search from within results page, replace current page
                   setState(() => _isNavigatingToNewResults = true);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SearchResultsPage(
-                        searchQuery: currentQuery,
-                        initialResults: state.searchResults,
-                        searchBloc: widget.searchBloc,
-                      ),
-                    ),
+                  SearchNavigationHelper.replaceResults(
+                    context: context,
+                    newSearchQuery: currentQuery,
+                    newResults: state.searchResults,
+                    searchBloc: widget.searchBloc,
                   );
                   return;
                 }
@@ -382,11 +375,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                             const SizedBox(height: 24),
                             ElevatedButton.icon(
                               onPressed: () {
-                                Navigator.of(context).pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                    builder: (context) => const SearchPage(),
-                                  ),
-                                  (route) => false, // Remove all previous routes
+                                SearchNavigationHelper.clearSearchStack(
+                                  context: context,
                                 );
                               },
                               icon: const Icon(Icons.search),
@@ -414,11 +404,11 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                           final pet = results[index];
                           return GestureDetector(
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DetailPet(pet: pet),
-                                ),
+                              SearchNavigationHelper.navigateToDetail(
+                                context: context,
+                                pet: pet,
+                                fromSearchQuery: widget.searchQuery,
+                                searchBloc: widget.searchBloc,
                               );
                             },
                             child: PetItemsAll(pet: pet),

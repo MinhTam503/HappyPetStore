@@ -917,5 +917,245 @@
   "unknown": "Unknown",
   "@unknown": {
     "description": "Unknown value"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings page title"
+  },
+  "appSettings": "App Settings",
+  "@appSettings": {
+    "description": "App settings section title"
+  },
+  "showChatbot": "Show Chatbot",
+  "@showChatbot": {
+    "description": "Chatbot visibility setting title"
+  },
+  "chatbotToggleSubtitle": "Turn on/off chatbot icon on screen",
+  "@chatbotToggleSubtitle": {
+    "description": "Chatbot toggle setting subtitle"
+  },
+  "chatbotEnabled": "Chatbot bubble has been enabled",
+  "@chatbotEnabled": {
+    "description": "Chatbot enabled message"
+  },
+  "chatbotDisabled": "Chatbot bubble has been disabled",
+  "@chatbotDisabled": {
+    "description": "Chatbot disabled message"
+  },
+  "errorSavingSetting": "Error saving setting",
+  "@errorSavingSetting": {
+    "description": "Error saving setting message"
+  },
+  "errorSavingLanguage": "Error saving language setting",
+  "@errorSavingLanguage": {
+    "description": "Error saving language setting message"
+  },
+  "about": "About",
+  "@about": {
+    "description": "About section title"
+  },
+  "appVersion": "App Version",
+  "@appVersion": {
+    "description": "App version label"
+  },
+  "switchedToVietnamese": "Switched to Vietnamese",
+  "@switchedToVietnamese": {
+    "description": "Switched to Vietnamese message"
+  },
+  "switchedToEnglish": "Switched to English",
+  "@switchedToEnglish": {
+    "description": "Switched to English message"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Home tab label"
+  },
+  "favorite": "Favorite",
+  "@favorite": {
+    "description": "Favorite tab label"
+  },
+  "cart": "Cart",
+  "@cart": {
+    "description": "Cart tab label"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Profile tab label"
+  },
+  "editProfile": "Edit Profile",
+  "@editProfile": {
+    "description": "Edit profile page title"
+  },
+  "changePassword": "Change Password",
+  "@changePassword": {
+    "description": "Change password page title"
+  },
+  "yourOrders": "Your Orders",
+  "@yourOrders": {
+    "description": "Your orders page title"
+  },
+  "addresses": "Addresses",
+  "@addresses": {
+    "description": "Addresses page title"
+  },
+  "viewedPets": "Recently Viewed",
+  "@viewedPets": {
+    "description": "Recently viewed pets page title"
+  },
+  "chat": "Chat",
+  "@chat": {
+    "description": "Chat page title"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout button text"
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Loading indicator text"
+  },
+  "favorites": "Favorites",
+  "@favorites": {
+    "description": "Favorites menu item"
+  },
+  "yourOrder": "Your order",
+  "@yourOrder": {
+    "description": "Your order menu item"
+  },
+  "manageAddresses": "Manage Addresses",
+  "@manageAddresses": {
+    "description": "Manage addresses menu item"
+  },
+  "changePasswordMenu": "Change Password",
+  "@changePasswordMenu": {
+    "description": "Change password menu item"
+  },
+  "viewedPetsMenu": "Recently Viewed",
+  "@viewedPetsMenu": {
+    "description": "Recently viewed pets menu item"
+  },
+  "chatSupport": "Chat Support",
+  "@chatSupport": {
+    "description": "Chat support menu item"
+  },
+  "logoutConfirm": "Are you sure you want to logout?",
+  "@logoutConfirm": {
+    "description": "Logout confirmation message"
+  },
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "Confirm button text"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "inbox": "Inbox",
+  "@inbox": {
+    "description": "Inbox menu item"
+  },
+  "setting": "Setting",
+  "@setting": {
+    "description": "Setting menu item"
+  },
+  "searchPets": "Search pets...",
+  "@searchPets": {
+    "description": "Search pets placeholder"
+  },
+  "searching": "Searching...",
+  "@searching": {
+    "description": "Searching progress message"
+  },
+  "recentlyViewed": "Recently Viewed",
+  "@recentlyViewed": {
+    "description": "Recently viewed pets page title"
+  },
+  "noRecentlyViewed": "No recently viewed pets",
+  "@noRecentlyViewed": {
+    "description": "No recently viewed pets message"
+  },
+  "clearHistory": "Clear history",
+  "@clearHistory": {
+    "description": "Clear history button"
+  },
+  "searchHistory": "Search History",
+  "@searchHistory": {
+    "description": "Search history section title"
+  },
+  "imageSearch": "Image Search",
+  "@imageSearch": {
+    "description": "Image search button"
+  },
+  "chooseImage": "Choose Image",
+  "@chooseImage": {
+    "description": "Choose image option"
+  },
+  "camera": "Camera",
+  "@camera": {
+    "description": "Camera option"
+  },
+  "gallery": "Gallery",
+  "@gallery": {
+    "description": "Gallery option"
+  },
+  "hello": "Hello",
+  "@hello": {
+    "description": "Hello greeting"
+  },
+  "welcomeBack": "Welcome back!",
+  "@welcomeBack": {
+    "description": "Welcome back message"
+  },
+  "categories": "Categories",
+  "@categories": {
+    "description": "Categories section title"
+  },
+  "popular": "Popular",
+  "@popular": {
+    "description": "Popular section title"
+  },
+  "seeAll": "See All",
+  "@seeAll": {
+    "description": "See all button"
+  },
+  "bestSellers": "Best Sellers",
+  "@bestSellers": {
+    "description": "Best sellers section title"
+  },
+  "recommendations": "Recommendations",
+  "@recommendations": {
+    "description": "Recommendations section title"
+  },
+  "forYou": "For You",
+  "@forYou": {
+    "description": "For you section subtitle"
+  },
+  "allPets": "All Pets",
+  "@allPets": {
+    "description": "All pets page title"
+  },
+  "filter": "Filter",
+  "@filter": {
+    "description": "Filter button"
+  },
+  "sortBy": "Sort by",
+  "@sortBy": {
+    "description": "Sort by label"
+  },
+  "priceAsc": "Price: Low to High",
+  "@priceAsc": {
+    "description": "Price ascending sort option"
+  },
+  "priceDesc": "Price: High to Low",
+  "@priceDesc": {
+    "description": "Price descending sort option"
+  },
+  "noResults": "No results found",
+  "@noResults": {
+    "description": "No search results message"
+  },
+  "tryDifferentKeywords": "Try different keywords",
+  "@tryDifferentKeywords": {
+    "description": "Try different keywords suggestion"
   }
 }
