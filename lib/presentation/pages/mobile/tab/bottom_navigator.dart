@@ -5,7 +5,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/cart_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
-import 'package:pet_shop/presentation/pages/mobile/tab/home_page.dart'
+import 'package:pet_shop/presentation/pages/mobile/home/home_page.dart'
     show HomePage;
 import 'package:pet_shop/presentation/pages/mobile/tab/profile_screen.dart';
 import 'package:pet_shop/presentation/widgets/conditional_draggable_chat_bubble.dart';

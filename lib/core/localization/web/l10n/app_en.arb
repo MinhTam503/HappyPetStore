@@ -1201,5 +1201,45 @@
   "viewedPetsHistoryDisabled": "Viewed pets history disabled",
   "@viewedPetsHistoryDisabled": {
     "description": "Viewed pets history disabled feedback message"
+  },
+  "welcomeToHappyPets": "Welcome to Happy Pets Shop!",
+  "@welcomeToHappyPets": {
+    "description": "Welcome message"
+  },
+  "findPerfectCompanion": "Find the perfect companion for your family",
+  "@findPerfectCompanion": {
+    "description": "Hero text message"
+  },
+  "searchPetsPlaceholder": "Search for pets",
+  "@searchPetsPlaceholder": {
+    "description": "Search input placeholder"
+  },
+  "genderAll": "All",
+  "@genderAll": {
+    "description": "All gender filter option"
+  },
+  "male": "Male",
+  "@male": {
+    "description": "Male gender option"
+  },
+  "female": "Female",
+  "@female": {
+    "description": "Female gender option"
+  },
+  "age": "Age",
+  "@age": {
+    "description": "Age label"
+  },
+  "name": "Name",
+  "@name": {
+    "description": "Name label"
+  },
+  "ascending": "Ascending",
+  "@ascending": {
+    "description": "Ascending sort order"
+  },
+  "descending": "Descending",
+  "@descending": {
+    "description": "Descending sort order"
   }
 }

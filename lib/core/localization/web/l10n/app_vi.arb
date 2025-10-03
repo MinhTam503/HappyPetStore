@@ -303,5 +303,15 @@
   "searchHistoryEnabled": "Đã bật lưu lịch sử tìm kiếm",
   "searchHistoryDisabled": "Đã tắt lưu lịch sử tìm kiếm",
   "viewedPetsHistoryEnabled": "Đã bật lưu lịch sử xem thú cưng",
-  "viewedPetsHistoryDisabled": "Đã tắt lưu lịch sử xem thú cưng"
+  "viewedPetsHistoryDisabled": "Đã tắt lưu lịch sử xem thú cưng",
+  "welcomeToHappyPets": "Chào mừng đến với Happy Pets Shop!",
+  "findPerfectCompanion": "Hãy tìm người bạn đồng hành hoàn hảo cho gia đình bạn",
+  "searchPetsPlaceholder": "Tìm kiếm thú cưng",
+  "genderAll": "Tất cả",
+  "male": "Đực", 
+  "female": "Cái",
+  "age": "Tuổi",
+  "name": "Tên",
+  "ascending": "Tăng dần",
+  "descending": "Giảm dần"
 }
