@@ -46,7 +46,7 @@ class CategoriesSection extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(width: 1),
+                      border: Border.all(width: 2, color: primaryColor),
                       color: secondaryColor,
                     ),
                     child: Column(
