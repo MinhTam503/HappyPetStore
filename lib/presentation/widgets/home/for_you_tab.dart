@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/presentation/widgets/popular_pet_items.dart';
+import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_event.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_state.dart';
@@ -113,15 +114,34 @@ class _ForYouTabState extends State<ForYouTab> {
                   'imageUrl': recommendation.imageUrl,
                 };
                 return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DetailPet(pet: pet),
-                      ),
-                    );
+                  onTap: () async {
+                    try {
+                      final petId = pet['id'] ?? pet['productId'];
+                      Map<String, dynamic> fullData = Map<String, dynamic>.from(pet);
+                      if (petId != null) {
+                        final doc = await FirebaseFirestore.instance.collection('Pets').doc(petId as String).get();
+                        if (doc.exists) {
+                          fullData = doc.data() ?? fullData;
+                          fullData['id'] = doc.id;
+                        }
+                      }
+                      // ignore: use_build_context_synchronously
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DetailPet(pet: fullData),
+                        ),
+                      );
+                    } catch (e) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DetailPet(pet: pet),
+                        ),
+                      );
+                    }
                   },
-                  child: PopularPetItems(pet: pet),
+                  child: PetItemsAll(pet: pet),
                 );
               },
             ),

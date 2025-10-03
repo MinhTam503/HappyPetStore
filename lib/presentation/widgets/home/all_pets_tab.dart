@@ -31,7 +31,12 @@ class _AllPetsTabState extends State<AllPetsTab> {
       
       if (mounted) {
         setState(() {
-          allPets = snapshot.docs.map((doc) => doc.data()).toList();
+          allPets = snapshot.docs.map((doc) {
+            final data = doc.data();
+            // ensure id field exists for downstream detail fetch
+            data['id'] = doc.id;
+            return data;
+          }).toList();
           isLoading = false;
         });
       }

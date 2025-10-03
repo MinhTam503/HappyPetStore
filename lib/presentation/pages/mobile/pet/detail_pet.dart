@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
 import 'package:pet_shop/data/models/viewed_pet_model.dart';
-import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
@@ -34,28 +33,27 @@ class _DetailPetState extends State<DetailPet> {
   bool isExpand = false;
   List<Map<String, dynamic>> petItems = [];
   final UserManager userManager = UserManager();
-
-  
+  List<Map<String, dynamic>> similarPets = [];
 
   @override
   void initState() {
     super.initState();
     fetchPetData();
     final pet = widget.pet;
-    
+
     // Track pet view for recommendation system
     _trackPetView();
-    
+
     // Dispatch event to BLoC to handle both local state and Firestore
     context.read<RecentPetsBloc>().add(AddViewedPet(ViewedPetModel(
-      id: pet['id'],
-      name: pet['name'],
-      imageUrl: pet["imageUrl"],
-      category: pet['category'],
-      breed: pet['breed'],
-      price: pet['price'],
-      viewedAt: DateTime.now(),
-    )));
+          id: pet['id'],
+          name: pet['name'],
+          imageUrl: pet["imageUrl"],
+          category: pet['category'],
+          breed: pet['breed'],
+          price: pet['price'],
+          viewedAt: DateTime.now(),
+        )));
   }
 
   void _trackPetView() async {
@@ -108,15 +106,42 @@ class _DetailPetState extends State<DetailPet> {
 
   Future<void> fetchPetData() async {
     try {
-      QuerySnapshot<Map<String, dynamic>> snapshot =
-          await FirebaseFirestore.instance.collection("Pets").get();
+      final current = widget.pet;
+      final category = current['category'];
+      final breed = current['breed'];
+      // Query tất cả pet cùng category (không filter breed ở query để có cả 2 nhóm)
+      final snapshot = await FirebaseFirestore.instance
+          .collection("Pets")
+          .where('category', isEqualTo: category)
+          .limit(50)
+          .get();
+
+      final List<Map<String, dynamic>> sameBreed = [];
+      final List<Map<String, dynamic>> sameCategoryOtherBreed = [];
+
+      for (final doc in snapshot.docs) {
+        if (doc.id == current['id']) continue; // skip chính nó
+        final data = doc.data();
+        data['id'] = doc.id;
+        final docBreed = data['breed'];
+        if (breed != null &&
+            breed.toString().isNotEmpty &&
+            docBreed != null &&
+            docBreed == breed) {
+          sameBreed.add(data);
+        } else {
+          sameCategoryOtherBreed.add(data);
+        }
+      }
+
+      // Kết quả: ưu tiên cùng breed trước, sau đó các pet khác cùng category
+      final combined = <Map<String, dynamic>>[
+        ...sameBreed,
+        ...sameCategoryOtherBreed
+      ];
 
       setState(() {
-        petItems = snapshot.docs.map((doc) {
-          Map<String, dynamic> data = doc.data();
-          data['id'] = doc.id;
-          return data;
-        }).toList();
+        similarPets = combined.take(20).toList();
       });
     } catch (e) {
       print('Lỗi khi tải dữ liệu: $e');
@@ -159,10 +184,10 @@ class _DetailPetState extends State<DetailPet> {
 
       // Thêm vào giỏ hàng sử dụng BLoC
       context.read<CartBloc>().add(AddToCart(userIdentifier, cartItem));
-      
+
       // Track add to cart for recommendation system
       _trackAddToCart(cartItem['productId']);
-      
+
       // Không hiển thị message thủ công - để BlocListener xử lý
     } catch (e) {
       _showMessage('Có lỗi xảy ra: ${e.toString()}');
@@ -328,8 +353,11 @@ class _DetailPetState extends State<DetailPet> {
                                 data['breed']?.toString() ?? 'Không xác định'),
                             _buildInfoRow('Tuổi',
                                 data['age']?.toString() ?? 'Không xác định'),
-                            _buildInfoRow('Cân nặng',
-                                "${data['weight']} kg"?.toString() ?? 'Không xác định'),
+                            _buildInfoRow(
+                                'Cân nặng',
+                                (data['weight'] != null
+                                    ? "${data['weight']} kg"
+                                    : 'Không xác định')),
                             _buildInfoRow(
                                 'Giới tính',
                                 (data['sex'] ?? data['color'])?.toString() ??
@@ -398,39 +426,54 @@ class _DetailPetState extends State<DetailPet> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Sản phẩm tương tự
-                    const Text(
-                      'Sản phẩm tương tự',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    if (similarPets.isNotEmpty) ...[
+                      const Text(
+                        'Sản phẩm tương tự',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: petItems.length > 3 ? 400 : 400,
-                      child: GridView.builder(
-                        scrollDirection: Axis.vertical,
+                      const SizedBox(height: 22),
+                      GridView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.65,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.78,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 16,
                         ),
-                        itemCount: petItems.length > 6 ? 6 : petItems.length,
+                        itemCount: similarPets.length,
                         itemBuilder: (context, index) {
-                          final item = petItems[index];
-                          if (item['id'] == data['id'])
-                            return const SizedBox.shrink();
-
-                          return PetItemsAll(
-                            pet: item,
-                          );
+                          final item = similarPets[index];
+                          return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          DetailPet(pet: item),
+                                    ));
+                              },
+                              child: PetItemsAll(pet: item));
                         },
                       ),
-                    ),
-                    const SizedBox(height: 100), // Space for bottom button
+                      const SizedBox(height: 24),
+                    ] else ...[
+                      const Text(
+                        'Không tìm thấy sản phẩm tương tự',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    const SizedBox(height: 60), // Space for bottom button
                   ],
                 ),
               ),
