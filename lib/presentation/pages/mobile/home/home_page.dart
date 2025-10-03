@@ -38,19 +38,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   late TabController _tabController;
   int _selectedTabIndex = 0;
+  // Scroll + dynamic search appearance
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _searchSectionKey = GlobalKey();
+  double _searchRevealOffset = -1; // measured offset at which to show inline search
+  bool _showSearchInAppBar = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    
+    // Listener cho index changes
     _tabController.addListener(() {
-      // Update state immediately when tab changes
       if (_selectedTabIndex != _tabController.index) {
         setState(() {
           _selectedTabIndex = _tabController.index;
         });
       }
     });
+    
+    // Animation listener để catch swipe gestures
+    _tabController.animation?.addListener(() {
+      final animationValue = _tabController.animation?.value ?? 0;
+      final newIndex = animationValue.round();
+      if (_selectedTabIndex != newIndex) {
+        setState(() {
+          _selectedTabIndex = newIndex;
+        });
+      }
+    });
+
+    // Scroll listener for search reveal
+    _scrollController.addListener(_onScroll);
+    // Measure search bar position after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) => _calculateSearchOffset());
 
     _initializeData();
   }
@@ -66,6 +88,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _tabController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -128,9 +151,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       key: _scaffoldKey,
       drawer: const AppDrawer(),
       drawerEnableOpenDragGesture: true,
-      drawerEdgeDragWidth: 60,
+      drawerEdgeDragWidth: 50,
       body: SafeArea(
         child: NestedScrollView(
+          controller: _scrollController,
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
               // App Bar - Floating và Pinned  
@@ -140,9 +164,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 snap: true,
                 backgroundColor: secondaryColor,
                 elevation: 0,
-                toolbarHeight: 60,
+                toolbarHeight: 55,
+                expandedHeight: 55,
                 automaticallyImplyLeading: false,
-                flexibleSpace: _buildAppBarWithSearch(l10n, innerBoxIsScrolled),
+                flexibleSpace: _buildAppBarWithSearch(l10n),
               ),
 
               // Hero Section
@@ -150,9 +175,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: _buildHeroSection(l10n),
               ),
 
-              // Search Bar ở Hero Section
+              // Search Bar ở Hero Section (reference for reveal)
               SliverToBoxAdapter(
-                child: _buildSearchBar(l10n),
+                child: KeyedSubtree(
+                  key: _searchSectionKey,
+                  child: _buildSearchBar(l10n),
+                ),
               ),
 
               // Categories Section
@@ -168,6 +196,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 pinned: true,
                 delegate: _TabHeaderDelegate(
                   child: _buildTabBar(l10n),
+                  selectedIndex: _selectedTabIndex,
                 ),
               ),
             ];
@@ -185,7 +214,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildAppBarWithSearch(AppLocalizations? l10n, bool innerBoxIsScrolled) {
+  Widget _buildAppBarWithSearch(AppLocalizations? l10n) {
     return Container(
       color: secondaryColor,
       padding: const EdgeInsets.only(top: 12, right: 10, bottom: 10, left: 8),
@@ -205,8 +234,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
           
-          // Search bar ở giữa - chỉ hiện khi cuộn lên
-          if (innerBoxIsScrolled) 
+          // Search bar inline xuất hiện khi phần search gốc đã bị scroll qua
+          if (_showSearchInAppBar) 
             Expanded(
               child: Container(
                 height: 36,
@@ -255,8 +284,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ),
           
-          // Nếu không có search bar thì thêm Spacer
-          if (!innerBoxIsScrolled) const Spacer(),
+          // Nếu chưa show inline search => Spacer đẩy icons sang phải
+          if (!_showSearchInAppBar) const Spacer(),
           
           // Right icons - luôn ở bên phải cùng
           Row(
@@ -405,63 +434,75 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget _buildTabBar(AppLocalizations? l10n) {
     return Container(
       color: secondaryColor,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: TabIndicator(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            TabIndicator(
               title: l10n?.forYou ?? 'Dành cho bạn',
               isSelected: _selectedTabIndex == 0,
-              onTap: () {
-                _tabController.animateTo(0);
-              },
+              onTap: () => _tabController.animateTo(0),
             ),
-          ),
-          Expanded(
-            child: TabIndicator(
+            TabIndicator(
               title: l10n?.popular ?? 'Phổ biến',
               isSelected: _selectedTabIndex == 1,
-              onTap: () {
-                _tabController.animateTo(1);
-              },
+              onTap: () => _tabController.animateTo(1),
             ),
-          ),
-          Expanded(
-            child: TabIndicator(
+            TabIndicator(
               title: l10n?.allPets ?? 'Tất cả',
               isSelected: _selectedTabIndex == 2,
-              onTap: () {
-                _tabController.animateTo(2);
-              },
+              onTap: () => _tabController.animateTo(2),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  void _calculateSearchOffset() {
+    final ctx = _searchSectionKey.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final pos = box.localToGlobal(Offset.zero);
+    // When the original search bar top goes under the toolbar, show inline search
+    _searchRevealOffset = pos.dy - kToolbarHeight;
+    _onScroll();
+  }
+
+  void _onScroll() {
+    if (_searchRevealOffset < 0) return; // not measured yet
+    final offset = _scrollController.position.pixels;
+    final shouldShow = offset >= _searchRevealOffset;
+    if (shouldShow != _showSearchInAppBar) {
+      setState(() => _showSearchInAppBar = shouldShow);
+    }
   }
 }
 
 class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
+  final int selectedIndex;
 
-  _TabHeaderDelegate({required this.child});
+  _TabHeaderDelegate({required this.child, required this.selectedIndex});
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
+    return Material(
       color: secondaryColor,
       child: child,
     );
   }
 
   @override
-  double get maxExtent => 60.0;
+  double get maxExtent => 48.0;
 
   @override
-  double get minExtent => 60.0;
+  double get minExtent => 48.0;
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
-    return false;
+  bool shouldRebuild(covariant _TabHeaderDelegate oldDelegate) {
+    return oldDelegate.selectedIndex != selectedIndex;
   }
 }
