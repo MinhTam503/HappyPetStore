@@ -928,46 +928,83 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     }
 
     return Container(
-      height: 400,
-      padding: const EdgeInsets.all(24),
+      height: 450,
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 2,
           ),
         ],
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                l10n.revenue,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).textTheme.headlineSmall?.color,
+          Container(
+            padding: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor.withOpacity(0.1),
+                  width: 1,
                 ),
               ),
-              const Spacer(),
-              Text(
-                '(${_getChartUnit()})',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.color
-                      ?.withOpacity(0.7),
-                  fontStyle: FontStyle.italic,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF2196F3)
+                        : const Color(0xFF4CAF50)).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.trending_up,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF2196F3)
+                        : const Color(0xFF4CAF50),
+                    size: 20,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Text(
+                  l10n.revenue,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.headlineSmall?.color,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '(${_getChartUnit()})',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           Expanded(
@@ -1012,14 +1049,9 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                         horizontalInterval: _computeYInterval(),
                         verticalInterval: 1,
                         getDrawingHorizontalLine: (value) => FlLine(
-                          color:
-                              Theme.of(context).dividerColor.withOpacity(0.3),
-                          strokeWidth: 1,
-                        ),
-                        getDrawingVerticalLine: (value) => FlLine(
-                          color:
-                              Theme.of(context).dividerColor.withOpacity(0.3),
-                          strokeWidth: 1,
+                          color: Theme.of(context).dividerColor.withOpacity(0.1),
+                          strokeWidth: 0.8,
+                          dashArray: [5, 5],
                         ),
                       ),
                       titlesData: FlTitlesData(
@@ -1031,7 +1063,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 30,
+                            reservedSize: 40,
                             interval: 1,
                             getTitlesWidget: (value, meta) {
                               final idx = value.toInt();
@@ -1039,18 +1071,36 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                               if (idx < 0 || idx >= dates.length) {
                                 return const SizedBox.shrink();
                               }
-                              // Show every 3rd label or first/last to prevent clutter
-                              if (dates.length > 14 && idx % 3 != 0 && idx != 0 && idx != dates.length - 1) {
-                                return const SizedBox.shrink();
-                              }
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  dates[idx].split('/')[0], // show only day number
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Theme.of(context).textTheme.bodySmall?.color,
-                                  ),
+                              
+                              // Smart label display based on data density
+                              final shouldShow = _shouldShowLabel(idx, dates.length);
+                              if (!shouldShow) return const SizedBox.shrink();
+                              
+                              final parts = dates[idx].split('/');
+                              final day = parts[0];
+                              final month = parts[1];
+                              
+                              return Container(
+                                margin: const EdgeInsets.only(top: 8),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      day,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                                      ),
+                                    ),
+                                    Text(
+                                      month,
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -1059,17 +1109,19 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                         leftTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 50,
+                            reservedSize: 60,
                             interval: _computeYInterval(),
                             getTitlesWidget: (value, meta) {
-                              return Text(
-                                _formatChartCurrency(value),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.color,
+                              return Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                child: Text(
+                                  _formatChartCurrency(value),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Theme.of(context).textTheme.bodySmall?.color,
+                                  ),
+                                  textAlign: TextAlign.right,
                                 ),
                               );
                             },
@@ -1078,16 +1130,50 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                       ),
                       borderData: FlBorderData(
                         show: true,
-                        border: Border.all(
-                          color:
-                              Theme.of(context).dividerColor.withOpacity(0.5),
-                          width: 1,
+                        border: Border(
+                          left: BorderSide(
+                            color: Theme.of(context).dividerColor.withOpacity(0.3),
+                            width: 1,
+                          ),
+                          bottom: BorderSide(
+                            color: Theme.of(context).dividerColor.withOpacity(0.3),
+                            width: 1,
+                          ),
                         ),
                       ),
                       minX: 0,
                       maxX: (_revenueData.length - 1).toDouble(),
                       minY: 0,
             maxY: _computeMaxY(),
+                      lineTouchData: LineTouchData(
+                        enabled: true,
+                        touchTooltipData: LineTouchTooltipData(
+                          tooltipBgColor: Theme.of(context).cardColor.withOpacity(0.95),
+                          tooltipBorder: BorderSide(
+                            color: Theme.of(context).dividerColor.withOpacity(0.3),
+                            width: 1,
+                          ),
+                          tooltipRoundedRadius: 8,
+                          tooltipPadding: const EdgeInsets.all(8),
+                          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                            return touchedSpots.map((LineBarSpot touchedSpot) {
+                              final dates = _revenueData.keys.toList();
+                              final date = dates[touchedSpot.x.toInt()];
+                              final value = touchedSpot.y;
+                              return LineTooltipItem(
+                                '$date\n${_formatChartCurrency(value)} ${_getChartUnit()}',
+                                TextStyle(
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                        handleBuiltInTouches: true,
+                        touchSpotThreshold: 50,
+                      ),
                       lineBarsData: [
                         LineChartBarData(
                           spots: _revenueData.entries.map((entry) {
@@ -1096,13 +1182,24 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                             return FlSpot(index.toDouble(), entry.value);
                           }).toList(),
                           isCurved: true,
-                          curveSmoothness: 0.3,
+                          curveSmoothness: 0.35,
+                          preventCurveOverShooting: true,
                           gradient: LinearGradient(
                             colors: Theme.of(context).brightness == Brightness.dark
-                                ? [Colors.lightBlueAccent, Colors.cyanAccent]
-                                : const [Color(0xff08A045), Color(0xff5BC97A)],
+                                ? [
+                                    const Color(0xFF64B5F6),
+                                    const Color(0xFF42A5F5),
+                                    const Color(0xFF2196F3),
+                                  ]
+                                : [
+                                    const Color(0xFF4CAF50),
+                                    const Color(0xFF66BB6A),
+                                    const Color(0xFF81C784),
+                                  ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
                           ),
-                          barWidth: 3,
+                          barWidth: 3.5,
                           isStrokeCapRound: true,
                           belowBarData: BarAreaData(
                             show: true,
@@ -1110,24 +1207,31 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: Theme.of(context).brightness == Brightness.dark
-                                  ? [Colors.lightBlueAccent.withOpacity(.25), Colors.transparent]
-                                  : [const Color(0xff08A045).withOpacity(.25), Colors.transparent],
+                                  ? [
+                                      const Color(0xFF2196F3).withOpacity(0.25),
+                                      const Color(0xFF2196F3).withOpacity(0.1),
+                                      Colors.transparent,
+                                    ]
+                                  : [
+                                      const Color(0xFF4CAF50).withOpacity(0.25),
+                                      const Color(0xFF4CAF50).withOpacity(0.1),
+                                      Colors.transparent,
+                                    ],
                             ),
                           ),
                           dotData: FlDotData(
                             show: true,
                             getDotPainter: (spot, percent, barData, index) {
+                              final isHighlight = spot.y > 0;
                               return FlDotCirclePainter(
-                                radius: 5,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.lightBlueAccent
-                                    : const Color(0xff08A045),
-                                strokeWidth: 2,
-                                strokeColor: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.black54
-                                    : Colors.white,
+                                radius: isHighlight ? 5 : 3,
+                                color: isHighlight
+                                    ? (Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFF2196F3)
+                                        : const Color(0xFF4CAF50))
+                                    : Theme.of(context).dividerColor.withOpacity(0.5),
+                                strokeWidth: isHighlight ? 2.5 : 1,
+                                strokeColor: Colors.white,
                               );
                             },
                           ),
@@ -1523,5 +1627,19 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     final maxY = _computeMaxY();
     if (maxY <= 10) return 2;
     return (maxY / 5).ceilToDouble();
+  }
+
+  bool _shouldShowLabel(int index, int totalLength) {
+    // Always show first and last
+    if (index == 0 || index == totalLength - 1) return true;
+    
+    // For 7 days, show every other day
+    if (totalLength <= 7) return index % 2 == 0;
+    
+    // For longer periods, show every 3rd-4th day
+    if (totalLength <= 14) return index % 3 == 0;
+    
+    // For very long periods, show every 5th day
+    return index % 5 == 0;
   }
 }

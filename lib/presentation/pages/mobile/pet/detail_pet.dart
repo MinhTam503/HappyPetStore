@@ -354,7 +354,8 @@ class _DetailPetState extends State<DetailPet> {
               _buildInfoRow(l10n?.breed ?? 'Giống', data['breed']?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
               _buildInfoRow(l10n?.age ?? 'Tuổi', data['age']?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
               _buildInfoRow(l10n?.weight ?? 'Cân nặng', (data['weight'] != null ? "${data['weight']} kg" : (l10n?.unknown ?? 'Không xác định'))),
-              _buildInfoRow(l10n?.gender ?? 'Giới tính', (data['sex'] ?? data['color'])?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
+              _buildInfoRow(l10n?.gender ?? 'Giới tính', (data['sex'] ?? data['gender'])?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
+              _buildColorInfoRow(l10n?.color ?? 'Màu sắc', data['color'] ?? 'colorMixed'),
                           ],
                         ),
                       ),
@@ -574,5 +575,112 @@ class _DetailPetState extends State<DetailPet> {
         ],
       ),
     );
+  }
+
+  Widget _buildColorInfoRow(String label, String colorKey) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: _getColorFromKey(colorKey),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.grey.shade300,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _getLocalizedColor(l10n, colorKey),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getColorFromKey(String colorKey) {
+    switch (colorKey) {
+      case 'colorBrown':
+        return Colors.brown;
+      case 'colorBlack':
+        return Colors.black;
+      case 'colorWhite':
+        return Colors.white;
+      case 'colorGray':
+        return Colors.grey;
+      case 'colorGolden':
+        return Colors.amber;
+      case 'colorCream':
+        return const Color(0xFFF5DEB3);
+      case 'colorOrange':
+        return Colors.orange;
+      case 'colorBlue':
+        return Colors.blue;
+      case 'colorGreen':
+        return Colors.green;
+      case 'colorRed':
+        return Colors.red;
+      case 'colorMixed':
+        return Colors.grey.shade400;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getLocalizedColor(AppLocalizations? l10n, String colorKey) {
+    if (l10n == null) return colorKey;
+    
+    switch (colorKey) {
+      case 'colorBrown':
+        return l10n.colorBrown;
+      case 'colorBlack':
+        return l10n.colorBlack;
+      case 'colorWhite':
+        return l10n.colorWhite;
+      case 'colorGray':
+        return l10n.colorGray;
+      case 'colorGolden':
+        return l10n.colorGolden;
+      case 'colorCream':
+        return l10n.colorCream;
+      case 'colorOrange':
+        return l10n.colorOrange;
+      case 'colorBlue':
+        return l10n.colorBlue;
+      case 'colorGreen':
+        return l10n.colorGreen;
+      case 'colorRed':
+        return l10n.colorRed;
+      case 'colorMixed':
+        return l10n.colorMixed;
+      default:
+        return colorKey;
+    }
   }
 }
