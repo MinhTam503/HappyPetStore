@@ -28,8 +28,8 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   String? _role;
   bool _loading = true;
 
-  final List<Widget> _pages = [
-    const DashboardPage(),
+  late final List<Widget> _pages = [
+    DashboardPage(onNavigateToTab: _setIndex),
     const PetsAdmin(),
     const CategoryAdmin(),
     const AccountAdmin(),
@@ -40,6 +40,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     const PetAnalyticsPage(),
     const RevenuePage(),
   ];
+
+  void _setIndex(int i) {
+    if (i < 0 || i >= _pages.length) return;
+    setState(() => _selectedIndex = i);
+  }
 
   @override
   void initState() {

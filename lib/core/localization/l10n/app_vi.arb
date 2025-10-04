@@ -119,6 +119,8 @@
   "showingDetailedView": "Hiển thị chi tiết cho {title}",
   "loadingError": "Có lỗi khi tải dữ liệu",
   "startConversation": "Hãy bắt đầu cuộc trò chuyện...",
+  "dashboardTagline": "Theo dõi hiệu suất cửa hàng thú cưng theo thời gian thực",
+  "preparingAnalytics": "Đang chuẩn bị dữ liệu phân tích",
   "editCategory": "Chỉnh sửa",
   "manageCategories": "Quản lý Danh mục",
   "createNew": "Tạo mới",

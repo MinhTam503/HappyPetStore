@@ -530,6 +530,14 @@
   "@viewAll": {
     "description": "View all button"
   },
+  "dashboardTagline": "Monitor your pet store performance in real-time",
+  "@dashboardTagline": {
+    "description": "Tagline under dashboard title"
+  },
+  "preparingAnalytics": "Preparing your analytics data",
+  "@preparingAnalytics": {
+    "description": "Splash text while preparing analytics"
+  },
   "noRecentOrders": "No recent orders found",
   "@noRecentOrders": {
     "description": "No recent orders message"

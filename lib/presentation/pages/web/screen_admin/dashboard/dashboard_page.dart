@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
-import '../../../../widgets/language_selector.dart';
-import '../../../../widgets/theme_selector.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/order/orders_admin.dart';
 import 'widgets/loading_skeleton.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  final void Function(int index)? onNavigateToTab; // allow parent to switch NavigationRail tab
+  const DashboardPage({super.key, this.onNavigateToTab});
 
   @override
   State<DashboardPage> createState() => _OptimizedDashboardPageState();
@@ -103,9 +104,10 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   }
 
   double _getTodayRevenue() {
-    final today = DateTime.now();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final todayKey = '${today.day}/${today.month}';
-    return _revenueData[todayKey] ?? 0.0;
+    return _revenueData[todayKey] ?? 0.0; // already scaled to unit
   }
 
   // Format today revenue with proper unit
@@ -260,7 +262,15 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         // If sorting fails, just use the orders as-is
       }
 
-      final recentOrders = allOrders.take(5).toList();
+      // Prefer Completed orders; fallback to any if none
+      List<Map<String, dynamic>> ordered = List.from(allOrders);
+      ordered.sort((a, b) {
+        final at = a['timestamp'] as Timestamp;
+        final bt = b['timestamp'] as Timestamp;
+        return bt.compareTo(at);
+      });
+      final completed = ordered.where((o) => (o['status'] ?? '') == 'Completed').toList();
+      final recentOrders = (completed.isNotEmpty ? completed : ordered).take(5).toList();
       print('📋 Recent orders to display: ${recentOrders.length}');
 
       if (mounted) {
@@ -282,9 +292,23 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
 
     try {
       print('🔍 Loading revenue data for $_timeRange...');
-      DateTime endDate = DateTime.now();
-      DateTime startDate =
-          endDate.subtract(Duration(days: _timeRange == '7days' ? 7 : 30));
+      final now = DateTime.now();
+      DateTime startDate;
+      DateTime endDate;
+      if (_timeRange == '1month') {
+        // Previous full calendar month
+        final prevMonth = DateTime(now.year, now.month - 1, 1);
+        startDate = prevMonth;
+        endDate = DateTime(prevMonth.year, prevMonth.month + 1, 0); // last day prev month
+      } else {
+        // trailing 7 days including today
+        endDate = DateTime(now.year, now.month, now.day);
+        startDate = endDate.subtract(const Duration(days: 6));
+      }
+      bool inRange(DateTime d) {
+        final nd = DateTime(d.year, d.month, d.day);
+        return !nd.isBefore(startDate) && !nd.isAfter(endDate);
+      }
 
       // Simplified queries without complex where clauses
       final ordersQuery =
@@ -332,12 +356,10 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             }
           }
 
-          if (date != null &&
-              date.isAfter(startDate) &&
-              date.isBefore(endDate)) {
+          if (date != null && inRange(date)) {
             final dateKey = '${date.day}/${date.month}';
             revenue[dateKey] = (revenue[dateKey] ?? 0) + amount;
-            print('💰 Mobile order: ${dateKey} = \$${amount}');
+            print('💰 Mobile order: $dateKey = $amount');
           }
         }
       }
@@ -371,12 +393,10 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             }
           }
 
-          if (date != null &&
-              date.isAfter(startDate) &&
-              date.isBefore(endDate)) {
+          if (date != null && inRange(date)) {
             final dateKey = '${date.day}/${date.month}';
             revenue[dateKey] = (revenue[dateKey] ?? 0) + amount;
-            print('💰 Web order: ${dateKey} = \$${amount}');
+            print('💰 Web order: $dateKey = $amount');
           }
         }
       }
@@ -414,22 +434,21 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         convertedRevenue.addAll(revenue);
       }
 
-      // Use converted revenue data if no real data
       if (convertedRevenue.isEmpty) {
-        print('📊 Adding test revenue data...');
-        _revenueUnit = '₫'; // Set unit for test data
-        final now = DateTime.now();
-        for (int i = 6; i >= 0; i--) {
-          final date = now.subtract(Duration(days: i));
-          final dateKey = '${date.day}/${date.month}';
-          convertedRevenue[dateKey] =
-              (100.0 + (i * 50.0)).toDouble(); // More visible data
-        }
-        print('📊 Test revenue data: $convertedRevenue');
+        print('📊 No revenue found in range $startDate -> $endDate');
+      }
+
+      // Build full chronological window with zero-fill for missing days
+      final sortedMap = <String, double>{};
+      DateTime cursor = startDate;
+      while (!cursor.isAfter(endDate)) {
+        final key = '${cursor.day}/${cursor.month}';
+        sortedMap[key] = convertedRevenue[key] ?? 0.0;
+        cursor = cursor.add(const Duration(days: 1));
       }
 
       if (mounted) {
-        setState(() => _revenueData = convertedRevenue);
+        setState(() => _revenueData = sortedMap);
       }
     } catch (e) {
       print('❌ Error loading revenue: $e');
@@ -518,7 +537,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               ),
               const SizedBox(height: 24),
               Text(
-                'Loading Dashboard...',
+                AppLocalizations.of(context)!.dashboard,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -527,7 +546,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               ),
               const SizedBox(height: 8),
               Text(
-                'Preparing your analytics data',
+                AppLocalizations.of(context)!.preparingAnalytics,
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -584,16 +603,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       ),
       child: Column(
         children: [
-          // Language and Theme selectors row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              const ThemeSelector(),
-              const SizedBox(width: 12),
-              const LanguageSelector(),
-            ],
-          ),
-          const SizedBox(height: 16),
+         
           Row(
             children: [
               Container(
@@ -623,7 +633,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Monitor your pet store performance in real-time',
+                      l10n.dashboardTagline,
                       style: const TextStyle(
                         fontSize: 16,
                         color: Colors.white70,
@@ -727,14 +737,14 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                   fontSize: 14),
               icon:
                   const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
-              items: const [
+              items: [
                 DropdownMenuItem(
                   value: '7days',
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16),
-                      SizedBox(width: 8),
-                      Text('Last 7 Days'),
+                      const Icon(Icons.calendar_today, size: 16),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context)!.last7Days),
                     ],
                   ),
                 ),
@@ -742,9 +752,9 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                   value: '1month',
                   child: Row(
                     children: [
-                      Icon(Icons.date_range, size: 16),
-                      SizedBox(width: 8),
-                      Text('Last Month'),
+                      const Icon(Icons.date_range, size: 16),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context)!.lastMonth),
                     ],
                   ),
                 ),
@@ -998,8 +1008,8 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                     LineChartData(
                       gridData: FlGridData(
                         show: true,
-                        drawVerticalLine: true,
-                        horizontalInterval: 100,
+                        drawVerticalLine: false,
+                        horizontalInterval: _computeYInterval(),
                         verticalInterval: 1,
                         getDrawingHorizontalLine: (value) => FlLine(
                           color:
@@ -1024,21 +1034,25 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                             reservedSize: 30,
                             interval: 1,
                             getTitlesWidget: (value, meta) {
+                              final idx = value.toInt();
                               final dates = _revenueData.keys.toList();
-                              if (value.toInt() >= 0 &&
-                                  value.toInt() < dates.length) {
-                                return Text(
-                                  dates[value.toInt()],
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color,
-                                  ),
-                                );
+                              if (idx < 0 || idx >= dates.length) {
+                                return const SizedBox.shrink();
                               }
-                              return const Text('');
+                              // Show every 3rd label or first/last to prevent clutter
+                              if (dates.length > 14 && idx % 3 != 0 && idx != 0 && idx != dates.length - 1) {
+                                return const SizedBox.shrink();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  dates[idx].split('/')[0], // show only day number
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Theme.of(context).textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                              );
                             },
                           ),
                         ),
@@ -1046,7 +1060,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                           sideTitles: SideTitles(
                             showTitles: true,
                             reservedSize: 50,
-                            interval: 100,
+                            interval: _computeYInterval(),
                             getTitlesWidget: (value, meta) {
                               return Text(
                                 _formatChartCurrency(value),
@@ -1073,11 +1087,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                       minX: 0,
                       maxX: (_revenueData.length - 1).toDouble(),
                       minY: 0,
-                      maxY: _revenueData.values.isNotEmpty
-                          ? _revenueData.values
-                                  .reduce((a, b) => a > b ? a : b) *
-                              1.2
-                          : 500,
+            maxY: _computeMaxY(),
                       lineBarsData: [
                         LineChartBarData(
                           spots: _revenueData.entries.map((entry) {
@@ -1086,18 +1096,23 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                             return FlSpot(index.toDouble(), entry.value);
                           }).toList(),
                           isCurved: true,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.lightBlueAccent
-                              : const Color(0xff08A045),
-                          barWidth: 4,
+                          curveSmoothness: 0.3,
+                          gradient: LinearGradient(
+                            colors: Theme.of(context).brightness == Brightness.dark
+                                ? [Colors.lightBlueAccent, Colors.cyanAccent]
+                                : const [Color(0xff08A045), Color(0xff5BC97A)],
+                          ),
+                          barWidth: 3,
                           isStrokeCapRound: true,
                           belowBarData: BarAreaData(
                             show: true,
-                            color:
-                                (Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.lightBlueAccent
-                                        : const Color(0xff08A045))
-                                    .withOpacity(0.15),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: Theme.of(context).brightness == Brightness.dark
+                                  ? [Colors.lightBlueAccent.withOpacity(.25), Colors.transparent]
+                                  : [const Color(0xff08A045).withOpacity(.25), Colors.transparent],
+                            ),
                           ),
                           dotData: FlDotData(
                             show: true,
@@ -1265,8 +1280,17 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {},
-                child: const Text('View All'),
+                onPressed: () {
+                  if (widget.onNavigateToTab != null) {
+                    widget.onNavigateToTab!(4); // Orders tab index in HomePageAdmin
+                  } else {
+                    // fallback push
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const OrdersAdmin()),
+                    );
+                  }
+                },
+                child: Text(AppLocalizations.of(context)!.viewAll),
               ),
             ],
           ),
@@ -1473,5 +1497,31 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   // Get chart unit label
   String _getChartUnit() {
     return _revenueUnit;
+  }
+
+  double _computeMaxY() {
+    if (_revenueData.isEmpty) return 10;
+    final maxVal = _revenueData.values.reduce((a, b) => a > b ? a : b);
+    if (maxVal == 0) return 10;
+    // Round up to a nice step (1,2,5 * 10^n)
+  double magnitude = math.pow(10, (math.log(maxVal) / math.ln10).floor()).toDouble();
+  double normalized = maxVal / magnitude;
+    double nice;
+    if (normalized <= 1) {
+      nice = 1;
+    } else if (normalized <= 2) {
+      nice = 2;
+    } else if (normalized <= 5) {
+      nice = 5;
+    } else {
+      nice = 10;
+    }
+    return (nice * magnitude) * 1.1; // small headroom
+  }
+
+  double _computeYInterval() {
+    final maxY = _computeMaxY();
+    if (maxY <= 10) return 2;
+    return (maxY / 5).ceilToDouble();
   }
 }
