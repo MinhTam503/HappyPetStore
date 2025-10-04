@@ -110,6 +110,18 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     return _revenueData[todayKey] ?? 0.0; // already scaled to unit
   }
 
+  // Get total revenue for the current time period
+  double _getTotalRevenue() {
+    if (_revenueData.isEmpty) return 0.0;
+    return _revenueData.values.fold(0.0, (sum, value) => sum + value);
+  }
+
+  // Format total revenue with proper unit
+  String _getTotalRevenueFormatted() {
+    final convertedValue = _getTotalRevenue();
+    return '${_formatChartCurrency(convertedValue)} ${_getChartUnit()}';
+  }
+
   // Format today revenue with proper unit
   String _getTodayRevenueFormatted() {
     final convertedValue = _getTodayRevenue();
@@ -648,7 +660,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
           const SizedBox(height: 20),
           Row(
             children: [
-              _buildQuickStat(l10n.revenue, _getTodayRevenueFormatted(),
+              _buildQuickStat(l10n.revenue, _getTotalRevenueFormatted(),
                   Icons.attach_money, Colors.green),
               const SizedBox(width: 16),
               _buildQuickStat(l10n.orders, '${_statsData['orders'] ?? 0}',
