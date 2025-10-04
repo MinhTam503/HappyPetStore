@@ -42,7 +42,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       } else {
         items.add(event.item);
         await docRef.set({'items': items});
-        emit(CartLoaded(items, message: 'Đã thêm vào giỏ hàng'));
+  // Localization context not directly available here; keep key-like English fallback or integrate via UI.
+  emit(CartLoaded(items, message: 'added_to_cart'));
       }
     } catch (e) {
       emit(CartError(e.toString()));

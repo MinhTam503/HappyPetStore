@@ -24,6 +24,7 @@ class PetsAdmin extends StatefulWidget {
 
 class _PetsState extends State<PetsAdmin> {
   Uint8List? _imageBytes;
+  bool _imageError = false; // inline validation state for add dialog image
 
   final CollectionReference petsCollection =
       FirebaseFirestore.instance.collection('Pets');
@@ -47,31 +48,64 @@ class _PetsState extends State<PetsAdmin> {
 
   final List<String> genderOptions = const ['Male', 'Female'];
 
+  // Danh sách màu sắc thú cưng
+  final List<String> colorKeys = const [
+    'colorBrown',
+    'colorBlack',
+    'colorWhite',
+    'colorGray',
+    'colorGolden',
+    'colorCream',
+    'colorOrange',
+    'colorBlue',
+    'colorGreen',
+    'colorRed',
+    'colorMixed'
+  ];
+
+  String? selectedColor;
+
   // ===== Storage =====
   Future<String> uploadImage(Uint8List imageBytes, String fileName) async {
     try {
-      String ext = 'jpg';
-      if (fileName.contains('.')) {
-        ext = fileName.split('.').last.toLowerCase();
+      debugPrint('[uploadImage] Start upload. Raw bytes length=${imageBytes.length}, input fileName=$fileName');
+      // Detect image format from bytes (robust length checks)
+      String ext = 'jpg'; // default
+      String contentType = 'image/jpeg'; // default
+
+      bool matches(List<int> sig) {
+        if (imageBytes.length < sig.length) return false;
+        for (int i = 0; i < sig.length; i++) {
+          if (imageBytes[i] != sig[i]) return false;
+        }
+        return true;
       }
-      final finalFileName =
-          fileName.contains('.') ? fileName : '$fileName.$ext';
-      String contentType = 'image/jpeg';
-      if (ext == 'png')
-        contentType = 'image/png';
-      else if (ext == 'gif')
-        contentType = 'image/gif';
-      else if (ext == 'bmp')
-        contentType = 'image/bmp';
-      else if (ext == 'webp') contentType = 'image/webp';
+
+      if (matches([0x89, 0x50, 0x4E, 0x47])) { // PNG
+        ext = 'png'; contentType = 'image/png';
+      } else if (imageBytes.length >= 2 && imageBytes[0] == 0xFF && imageBytes[1] == 0xD8) { // JPG
+        ext = 'jpg'; contentType = 'image/jpeg';
+      } else if (matches([0x47, 0x49, 0x46, 0x38])) { // GIF87/89a
+        ext = 'gif'; contentType = 'image/gif';
+      } else if (imageBytes.length >= 12 &&
+          imageBytes[0] == 0x52 && imageBytes[1] == 0x49 && imageBytes[2] == 0x46 && imageBytes[3] == 0x46 &&
+          imageBytes[8] == 0x57 && imageBytes[9] == 0x45 && imageBytes[10] == 0x42 && imageBytes[11] == 0x50) { // WEBP
+        ext = 'webp'; contentType = 'image/webp';
+      }
+
+      // Normalize base name (strip extension if provided)
+      final baseFileName = fileName.contains('.') ? fileName.split('.').first : fileName;
+      final finalFileName = '$baseFileName.$ext';
+      debugPrint('[uploadImage] Detected ext=$ext contentType=$contentType final=$finalFileName');
 
       final metadata = SettableMetadata(contentType: contentType);
+      // Don't save pets in any child folder - directly in root as specified
       final storageRef = FirebaseStorage.instance.ref().child(finalFileName);
       final uploadTask = storageRef.putData(imageBytes, metadata);
       final snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('Error uploading pet image: $e');
       return "";
     }
   }
@@ -81,40 +115,88 @@ class _PetsState extends State<PetsAdmin> {
     if (result != null) {
       setState(() {
         _imageBytes = result.files.first.bytes;
-  // filename not used; only upload image bytes
+        // filename not used; only upload image bytes
       });
     }
   }
 
   // ===== CRUD =====
-  void addPet(Pet pet) async {
+  Future<void> addPet(Pet pet) async {
     setState(() => isLoading = true);
-    final newId = pet.id.isNotEmpty ? pet.id : const Uuid().v4();
-    final existing = await petsCollection.doc(newId).get();
-    if (existing.exists) {
-      _snack('ID đã tồn tại, vui lòng thử lại!');
-      setState(() => isLoading = false);
-      return;
+    
+    try {
+      debugPrint('=== Adding new pet ===');
+      final newId = pet.id.isNotEmpty ? pet.id : const Uuid().v4();
+      final existing = await petsCollection.doc(newId).get();
+      if (existing.exists) {
+        _snack('ID đã tồn tại, vui lòng thử lại!');
+        setState(() => isLoading = false);
+        return;
+      }
+      
+      // Handle price same as update method
+      dynamic priceValue;
+      if (pet.price != null) {
+        if (pet.price is String) {
+          priceValue = double.tryParse(pet.price as String) ?? 0.0;
+        } else if (pet.price is num) {
+          priceValue = pet.price;
+        } else {
+          priceValue = 0.0;
+        }
+      } else {
+        priceValue = 0.0;
+      }
+
+      if (_imageBytes == null) {
+        debugPrint('[addPet] No image bytes present -> abort');
+        setState(() { isLoading = false; });
+        return; // (UI now blocks earlier; this is safety net)
+      }
+
+      debugPrint('[addPet] Uploading image for new pet...');
+      final uploadedUrl = await uploadImage(_imageBytes!, newId);
+      if (uploadedUrl.isEmpty) {
+        debugPrint('[addPet] Upload failed, abort');
+        setState(() { isLoading = false; });
+        return;
+      }
+      debugPrint('[addPet] Image uploaded: $uploadedUrl');
+
+      await petsCollection.doc(newId).set({
+        'id': newId,
+        'name': pet.name.isNotEmpty ? pet.name : 'Unknown',
+        'category': pet.category.isNotEmpty ? pet.category : 'Dogs',
+        'imageUrl': uploadedUrl,
+        'age': pet.age.isNotEmpty ? pet.age : '1',
+        'breed': pet.breed.isNotEmpty ? pet.breed : 'Unknown',
+        'about': pet.about.isNotEmpty ? pet.about : 'No description',
+        'sex': pet.gender.isNotEmpty ? pet.gender : 'Unknown',
+        'price': priceValue,
+        'weight': pet.weight.isNotEmpty ? pet.weight : '0',
+        'color': pet.color ?? '',
+        'isAvailable': pet.isAvailable,
+      });
+      
+      callTrainAPI();
+
+      _snack('Thêm thú cưng thành công!');
+    } catch (e, stackTrace) {
+      debugPrint('Error adding pet: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _snack('Lỗi thêm thú cưng: $e');
+    } finally {
+      setState(() {
+        _imageBytes = null;
+        isLoading = false;
+      });
     }
-    await petsCollection.doc(newId).set({
-      'id': newId,
-      'name': pet.name,
-      'category': pet.category,
-      'imageUrl': pet.imageUrl,
-      'age': pet.age,
-      'breed': pet.breed,
-      'about': pet.about,
-      'sex': pet.gender,
-      'price': pet.price ?? pet.weight,
-    });
-    callTrainAPI();
-    setState(() => isLoading = false);
   }
 
   Future<void> callTrainAPI() async {
     try {
       // final uri = Uri.parse('http://localhost:5000/train');
-        final uri = Uri.parse('https://train-pet-image.onrender.com/train');
+      final uri = Uri.parse('https://train-pet-image.onrender.com/train');
       final response = await http.post(uri);
       if (response.statusCode == 200) {
         debugPrint('Train thành công!');
@@ -126,28 +208,119 @@ class _PetsState extends State<PetsAdmin> {
     }
   }
 
-  void updatePet(Pet pet) async {
+  Future<void> updatePet(Pet pet) async {
     setState(() => isLoading = true);
 
-    if (_imageBytes != null) {
-      try {
-        final oldImageRef = FirebaseStorage.instance.refFromURL(pet.imageUrl);
-        await oldImageRef.delete();
-      } catch (e) {
-        _snack('Xóa hình cũ bị lỗi $e');
+    try {
+      debugPrint('=== Starting updatePet ===');
+      debugPrint('Pet ID: ${pet.id}');
+      debugPrint('Pet name: ${pet.name}');
+      debugPrint('Pet breed: ${pet.breed}');
+      debugPrint('Pet price: ${pet.price} (type: ${pet.price.runtimeType})');
+      debugPrint('Pet weight: ${pet.weight}');
+      debugPrint('Pet isAvailable: ${pet.isAvailable}');
+      debugPrint('Pet color: ${pet.color}');
+      debugPrint('Pet gender: ${pet.gender}');
+      debugPrint('Pet about length: ${pet.about.length}');
+      
+  // finalImageUrl starts with current image (original from Firestore if editing)
+  // We intentionally do NOT upload before calling updatePet to avoid double upload/delete
+  String finalImageUrl = pet.imageUrl;
+      debugPrint('Initial finalImageUrl: $finalImageUrl');
+
+      if (_imageBytes != null) {
+        debugPrint('[updatePet] New image picked. Overwriting existing with same pet.id');
+        // Overwrite directly (Firebase Storage replace) – safer than delete then upload
+        finalImageUrl = await uploadImage(_imageBytes!, pet.id);
+        if (finalImageUrl.isEmpty) {
+          _snack('Upload hình mới thất bại!');
+          return;
+        }
+        debugPrint('[updatePet] New image uploaded (overwrite): $finalImageUrl');
       }
+
+      // Đảm bảo tất cả field đều có giá trị hợp lệ và không null - giống như addPet
+      debugPrint('Creating updateData map...');
+      debugPrint('pet.name: ${pet.name} (${pet.name.runtimeType})');
+      debugPrint('pet.category: ${pet.category} (${pet.category.runtimeType})');
+      debugPrint('finalImageUrl: $finalImageUrl (${finalImageUrl.runtimeType})');
+      debugPrint('pet.age: ${pet.age} (${pet.age.runtimeType})');
+      debugPrint('pet.breed: ${pet.breed} (${pet.breed.runtimeType})');
+      debugPrint('pet.about: ${pet.about} (${pet.about.runtimeType})');
+      debugPrint('pet.gender: ${pet.gender} (${pet.gender.runtimeType})');
+      debugPrint('pet.weight: ${pet.weight} (${pet.weight.runtimeType})');
+      debugPrint('pet.color: ${pet.color} (${pet.color.runtimeType})');
+      debugPrint('pet.isAvailable: ${pet.isAvailable} (${pet.isAvailable.runtimeType})');
+      
+      Map<String, dynamic> updateData;
+      try {
+        updateData = <String, dynamic>{
+          'name': pet.name.isNotEmpty ? pet.name : 'Unknown',
+          'category': pet.category.isNotEmpty ? pet.category : 'Dogs',
+          'imageUrl': finalImageUrl.isNotEmpty ? finalImageUrl : pet.imageUrl,
+          'age': pet.age.isNotEmpty ? pet.age : '1',
+          'breed': pet.breed.isNotEmpty ? pet.breed : 'Unknown',
+          'about': pet.about.isNotEmpty ? pet.about : 'No description',
+          'sex': pet.gender.isNotEmpty ? pet.gender : 'Unknown',
+          'weight': pet.weight.isNotEmpty ? pet.weight : '0',
+          'color': pet.color ?? '',
+          'isAvailable': pet.isAvailable,
+        };
+        debugPrint('updateData map created successfully');
+      } catch (e) {
+        debugPrint('Error creating updateData map: $e');
+        throw Exception('Failed to create update data: $e');
+      }
+      
+      // Handle price carefully - same logic as addPet
+      if (pet.price != null) {
+        if (pet.price is String) {
+          final priceValue = double.tryParse(pet.price as String);
+          updateData['price'] = priceValue ?? 0.0;
+        } else if (pet.price is num) {
+          updateData['price'] = pet.price;
+        } else {
+          updateData['price'] = 0.0;
+        }
+      } else {
+        updateData['price'] = 0.0;
+      }
+      
+      debugPrint('Final update data: $updateData');
+      
+      // Validate that pet.id exists and is not null/empty
+      if (pet.id.isEmpty) {
+        throw Exception('Pet ID is empty');
+      }
+      
+      // Check if document exists
+      final docExists = await petsCollection.doc(pet.id).get();
+      if (!docExists.exists) {
+        throw Exception('Pet document does not exist: ${pet.id}');
+      }
+      
+      // Validate all required fields are not null
+      for (final entry in updateData.entries) {
+        if (entry.value == null) {
+          throw Exception('Field ${entry.key} is null');
+        }
+      }
+      
+      debugPrint('About to update document: ${pet.id}');
+      await petsCollection.doc(pet.id).update(updateData);
+      debugPrint('Update completed successfully');
+
+      _snack('Cập nhật thú cưng thành công!');
+    } catch (e, stackTrace) {
+      debugPrint('Error updating pet: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _snack('Lỗi cập nhật thú cưng: $e');
+    } finally {
+      setState(() {
+        _imageBytes = null;
+        isLoading = false;
+      });
     }
-    await petsCollection.doc(pet.id).update({
-      'name': pet.name,
-      'category': pet.category,
-      'imageUrl': pet.imageUrl,
-      'age': pet.age,
-      'breed': pet.breed,
-      'about': pet.about,
-      'sex': pet.gender,
-      'price': pet.price ?? pet.weight,
-    });
-    setState(() => isLoading = false);
   }
 
   void deletePet(String id) async {
@@ -215,7 +388,8 @@ class _PetsState extends State<PetsAdmin> {
         suffixIcon: suffix,
         border: const OutlineInputBorder(),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+          borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.primary, width: 2),
         ),
       );
 
@@ -228,7 +402,8 @@ class _PetsState extends State<PetsAdmin> {
         title: Row(
           children: [
             Text(l10n.managePets,
-                style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)),
+                style: TextStyle(
+                    color: Theme.of(context).appBarTheme.foregroundColor)),
             const SizedBox(width: 12),
             Card(
               // decoration: BoxDecoration(
@@ -241,9 +416,11 @@ class _PetsState extends State<PetsAdmin> {
                   foregroundColor: Theme.of(context).colorScheme.primary,
                 ),
                 onPressed: _showPetDialog,
-                icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
+                icon: Icon(Icons.add,
+                    color: Theme.of(context).colorScheme.primary),
                 label: Text(l10n.addPet,
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary)),
               ),
             ),
           ],
@@ -263,8 +440,12 @@ class _PetsState extends State<PetsAdmin> {
                         child: ChoiceChip(
                           label: Text(c),
                           selected: selectedCategory == c,
-                          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(.15),
-                          backgroundColor: Theme.of(context).chipTheme.backgroundColor,
+                          selectedColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(.15),
+                          backgroundColor:
+                              Theme.of(context).chipTheme.backgroundColor,
                           labelStyle: TextStyle(
                             color: selectedCategory == c
                                 ? Theme.of(context).colorScheme.primary
@@ -315,7 +496,8 @@ class _PetsState extends State<PetsAdmin> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(
-                      child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary));
+                      child: CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.primary));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const EmptyState(
@@ -372,9 +554,12 @@ class _PetsState extends State<PetsAdmin> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
+                  CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary),
                   SizedBox(height: 8),
-                  Text('Đang xử lý...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                  Text('Đang xử lý...',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface)),
                 ],
               ),
             ),
@@ -396,7 +581,9 @@ class _PetsState extends State<PetsAdmin> {
               child: Text(l10n.cancel)),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.delete, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+              child: Text(l10n.delete,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.error))),
         ],
       ),
     );
@@ -404,20 +591,38 @@ class _PetsState extends State<PetsAdmin> {
   }
 
   void _showPetDialog({Pet? pet}) async {
+    // Reset image bytes khi mở dialog để hiển thị đúng hình hiện tại
+    setState(() { _imageBytes = null; _imageError = false; });
+
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: pet?.name);
     final imageController = TextEditingController(text: pet?.imageUrl);
     final ageController = TextEditingController(text: pet?.age);
     final aboutController = TextEditingController(text: pet?.about);
     final genderController = TextEditingController(text: pet?.gender);
-  final weightController = TextEditingController(text: pet?.price?.toString() ?? pet?.weight ?? '');
+    final priceController = TextEditingController(text: pet?.price?.toString() ?? '');
+    final weightController = TextEditingController(text: pet?.weight ?? '');
 
     String pickedCategory = pet?.category ?? 'Dogs';
+    bool isAvailable = pet?.isAvailable ?? false;
 
     if (pet != null) {
       await loadBreeds(pet.category);
-      selectedBreed = pet.breed;
+      // Inject pet.breed if not in list and not empty
+      if (pet.breed.isNotEmpty && !breedsList.contains(pet.breed)) {
+        breedsList = [...breedsList, pet.breed];
+      }
+      // Deduplicate while preserving order
+      final seen = <String>{};
+      breedsList = breedsList.where((b) => seen.add(b)).toList();
+      selectedBreed = pet.breed.isNotEmpty ? pet.breed : null;
+      selectedColor = (pet.color != null && colorKeys.contains(pet.color)) ? pet.color : null; // Khởi tạo màu sắc hiện tại (an toàn)
     } else {
       await loadBreeds(pickedCategory);
+      // Deduplicate list just in case
+      final seen = <String>{};
+      breedsList = breedsList.where((b) => seen.add(b)).toList();
+      selectedColor = null; // Reset màu sắc cho pet mới
     }
 
     if (!mounted) return;
@@ -425,175 +630,297 @@ class _PetsState extends State<PetsAdmin> {
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
+    return StatefulBuilder(
           builder: (context, setStateDialog) {
             final l10n = AppLocalizations.of(context)!;
+      // Safe values for dropdowns to avoid assertion: value must be null or exactly one match
+      final genderValue = genderController.text.isNotEmpty && ['Male','Female'].contains(genderController.text)
+        ? genderController.text
+        : null;
+      final breedValue = (selectedBreed != null && breedsList.contains(selectedBreed))
+        ? selectedBreed
+        : null;
+      final colorValue = (selectedColor != null && colorKeys.contains(selectedColor))
+        ? selectedColor
+        : null;
             return AlertDialog(
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               title: Text(pet == null ? l10n.addPet : l10n.edit),
-              content: SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                TextField(
-                                  controller: nameController,
-                                  decoration: _input('Name',
-                                      prefix: const Icon(Icons.badge_outlined)),
-                                ),
-                                const SizedBox(height: 10),
-                                DropdownButtonFormField<String>(
-                                  value: pickedCategory,
-                                  decoration: _input('Category',
-                                      prefix:
-                                          const Icon(Icons.category_outlined)),
-                                  onChanged: (v) async {
-                                    setStateDialog(() {
-                                      pickedCategory = v!;
-                                      selectedBreed = null;
-                                      breedsList = [];
-                                    });
-                                    await loadBreeds(pickedCategory);
-                                    setStateDialog(() {});
-                                  },
-                                  items: categories
-                                      .sublist(1)
-                                      .map((e) => DropdownMenuItem(
-                                          value: e, child: Text(e)))
-                                      .toList(),
-                                ),
-                                const SizedBox(height: 10),
-                                if (breedsList.isNotEmpty)
-                                  DropdownButtonFormField<String>(
-                                    value: selectedBreed,
-                                    decoration: _input('Breed',
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  TextFormField(
+                                    controller: nameController,
+                                    decoration: _input('Name',
                                         prefix:
-                                            const Icon(Icons.pets_outlined)),
-                                    onChanged: (v) =>
-                                        setStateDialog(() => selectedBreed = v),
-                                    items: breedsList
+                                            const Icon(Icons.badge_outlined)),
+                                    validator: (value) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
+                                        return 'Vui lòng nhập tên thú cưng';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  DropdownButtonFormField<String>(
+                                    value: pickedCategory,
+                                    decoration: _input('Category',
+                                        prefix: const Icon(
+                                            Icons.category_outlined)),
+                                    onChanged: (v) async {
+                                      setStateDialog(() {
+                                        pickedCategory = v!;
+                                        selectedBreed = null;
+                                        breedsList = [];
+                                      });
+                                      await loadBreeds(pickedCategory);
+                                      setStateDialog(() {});
+                                    },
+                                    items: categories
+                                        .sublist(1)
                                         .map((e) => DropdownMenuItem(
                                             value: e, child: Text(e)))
                                         .toList(),
                                   ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: weightController,
-                                  decoration: _input('Price',
-                                      prefix: const Icon(Icons.attach_money)),
-                                ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: ageController,
-                                  decoration: _input('Age',
-                                      prefix: const Icon(Icons.cake_outlined)),
-                                ),
-                                const SizedBox(height: 10),
-                                DropdownButtonFormField<String>(
-                                  value: genderController.text.isNotEmpty
-                                      ? genderController.text
-                                      : null,
-                                  decoration: _input('Gender',
-                                      prefix: const Icon(Icons.wc_outlined)),
-                                  onChanged: (v) => setStateDialog(
-                                      () => genderController.text = v ?? ''),
-                                  items: genderOptions
-                                      .map((e) => DropdownMenuItem(
-                                          value: e, child: Text(e)))
-                                      .toList(),
-                                ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: aboutController,
-                                  minLines: 4,
-                                  maxLines: 10,
-                                  keyboardType: TextInputType.multiline,
-                                  textInputAction: TextInputAction.newline,
-                                  decoration: _input('About',
-                                      prefix: const Icon(
-                                          Icons.description_outlined)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // Preview + Pick
-                          SizedBox(
-                            width: 220,
-                            child: Column(
-                              children: [
-                                AspectRatio(
-                                  aspectRatio: 1,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: secondaryColor,
-                                        border: Border.all(
-                                            color:
-                                                primaryColor.withOpacity(.25)),
-                                      ),
-                                      child: _imageBytes != null
-                                          ? FittedBox(
-                                              fit: BoxFit.contain,
-                                              // hiển thị nguyên hình
-                                              child: Image.memory(_imageBytes!),
-                                            )
-                                          : (pet != null
-                                              ? FittedBox(
-                                                  fit: BoxFit.contain,
-                                                  // hiển thị nguyên hình
-                                                  child: Image.network(
-                                                      pet.imageUrl),
-                                                )
-                                              : const Center(
-                                                  child: Icon(
-                                                      Icons.image_outlined,
-                                                      size: 48))),
+                                  const SizedBox(height: 10),
+                                  if (breedsList.isNotEmpty)
+                                    DropdownButtonFormField<String>(
+                                      value: breedValue,
+                                      decoration: _input('Breed',
+                                          prefix:
+                                              const Icon(Icons.pets_outlined)),
+                                      onChanged: (v) => setStateDialog(
+                                          () => selectedBreed = v),
+                                      items: breedsList.toSet().toList()
+                                          .map((e) => DropdownMenuItem(
+                                              value: e, child: Text(e)))
+                                          .toList(),
                                     ),
+                                  const SizedBox(height: 10),
+                                  TextFormField(
+                                    controller: priceController,
+                                    decoration: _input('Price',
+                                        prefix: const Icon(Icons.attach_money)),
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'Vui lòng nhập giá';
+                                      }
+                                      if (double.tryParse(value.trim()) == null) {
+                                        return 'Giá phải là số';
+                                      }
+                                      if (double.parse(value.trim()) <= 0) {
+                                        return 'Giá phải lớn hơn 0';
+                                      }
+                                      return null;
+                                    },
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton.icon(
-                                        icon: const Icon(
-                                            Icons.photo_library_outlined),
-                                        onPressed: () async {
-                                          await _pickImage();
-                                          setStateDialog(() {});
-                                        },
-                                        label: Text(l10n.pickImage),
-                                      ),
-                                    ),
-                                    if (pet != null && _imageBytes != null) ...[
+                                  const SizedBox(height: 10),
+                                  TextFormField(
+                                    controller: weightController,
+                                    decoration: _input('Weight (kg)',
+                                        prefix: const Icon(Icons.monitor_weight)),
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'Vui lòng nhập cân nặng';
+                                      }
+                                      if (double.tryParse(value.trim()) == null) {
+                                        return 'Cân nặng phải là số';
+                                      }
+                                      if (double.parse(value.trim()) <= 0) {
+                                        return 'Cân nặng phải lớn hơn 0';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  TextFormField(
+                                    controller: ageController,
+                                    decoration: _input('Age',
+                                        prefix:
+                                            const Icon(Icons.cake_outlined)),
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'Vui lòng nhập tuổi';
+                                      }
+                                      if (int.tryParse(value.trim()) == null) {
+                                        return 'Tuổi phải là số nguyên';
+                                      }
+                                      if (int.parse(value.trim()) <= 0) {
+                                        return 'Tuổi phải lớn hơn 0';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  DropdownButtonFormField<String>(
+                                    value: genderValue,
+                                    decoration: _input('Gender',
+                                        prefix: const Icon(Icons.wc_outlined)),
+                                    onChanged: (v) => setStateDialog(
+                                        () => genderController.text = v ?? ''),
+                                    items: genderOptions
+                                        .map((e) => DropdownMenuItem(
+                                            value: e, child: Text(e)))
+                                        .toList(),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  DropdownButtonFormField<String>(
+                                    value: colorValue,
+                                    decoration: _input(l10n.color,
+                                        prefix:
+                                            const Icon(Icons.palette_outlined)),
+                                    hint: Text(l10n.selectColor),
+                                    onChanged: (v) =>
+                                        setStateDialog(() => selectedColor = v),
+                                    items: colorKeys
+                                        .map((colorKey) => DropdownMenuItem(
+                                            value: colorKey,
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 16,
+                                                  height: 16,
+                                                  decoration: BoxDecoration(
+                                                    color: _getColorFromKey(
+                                                        colorKey),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            2),
+                                                    border: Border.all(
+                                                        color: Colors
+                                                            .grey.shade300),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(_getLocalizedColor(
+                                                    l10n, colorKey)),
+                                              ],
+                                            )))
+                                        .toList(),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.store_outlined, 
+                                           color: Theme.of(context).colorScheme.primary),
                                       const SizedBox(width: 8),
-                                      IconButton(
-                                        tooltip: 'Clear',
-                                        onPressed: () {
-                                          setStateDialog(
-                                              () => _imageBytes = null);
-                                        },
-                                        icon: const Icon(Icons.clear),
+                                      Text('Available for Sale',
+                                          style: TextStyle(fontSize: 16)),
+                                      const Spacer(),
+                                      Switch(
+                                        value: isAvailable,
+                                        onChanged: (value) => setStateDialog(() => isAvailable = value),
                                       ),
                                     ],
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  TextField(
+                                    controller: aboutController,
+                                    minLines: 4,
+                                    maxLines: 10,
+                                    keyboardType: TextInputType.multiline,
+                                    textInputAction: TextInputAction.newline,
+                                    decoration: _input('About',
+                                        prefix: const Icon(
+                                            Icons.description_outlined)),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 16),
+                            // Preview + Pick
+                            SizedBox(
+                              width: 220,
+                              child: Column(
+                                children: [
+                                  AspectRatio(
+                                    aspectRatio: 1,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: secondaryColor,
+                                          border: Border.all(
+                                              color: primaryColor
+                                                  .withOpacity(.25)),
+                                        ),
+                                        child: _imageBytes != null
+                                            ? FittedBox(
+                                                fit: BoxFit.contain,
+                                                // hiển thị nguyên hình
+                                                child:
+                                                    Image.memory(_imageBytes!),
+                                              )
+                                            : (pet != null
+                                                ? FittedBox(
+                                                    fit: BoxFit.contain,
+                                                    // hiển thị nguyên hình
+                                                    child: Image.network(
+                                                        pet.imageUrl),
+                                                  )
+                                                : const Center(
+                                                    child: Icon(
+                                                        Icons.image_outlined,
+                                                        size: 48))),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          icon: const Icon(Icons.photo_library_outlined),
+                                          onPressed: () async {
+                                            await _pickImage();
+                                            setStateDialog(() { _imageError = false; });
+                                          },
+                                          label: Text(l10n.pickImage),
+                                        ),
+                                      ),
+                                      if (pet != null && _imageBytes != null) ...[
+                                        const SizedBox(width: 8),
+                                        IconButton(
+                                          tooltip: 'Clear',
+                                          onPressed: () {
+                                            setStateDialog(() { _imageBytes = null; });
+                                          },
+                                          icon: const Icon(Icons.clear),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  if (pet == null && _imageError)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 6.0),
+                                        child: Text(
+                                          'Vui lòng chọn ảnh',
+                                          style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -606,70 +933,85 @@ class _PetsState extends State<PetsAdmin> {
                   child: Text(l10n.cancel),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary),
                   onPressed: () async {
-                    // Validate
-                    if (nameController.text.trim().isEmpty ||
-                        pickedCategory.isEmpty ||
-                        ageController.text.trim().isEmpty ||
-                        selectedBreed == null ||
-                        aboutController.text.trim().isEmpty ||
-                        genderController.text.trim().isNotEmpty &&
-                            !genderOptions.contains(genderController.text) ||
-                        weightController.text.trim().isEmpty ||
-                        (_imageBytes == null &&
-                            (pet == null || imageController.text.isEmpty))) {
-                      _snack('Vui lòng nhập đầy đủ thông tin và chọn ảnh!');
+                    debugPrint('=== Form Submit Started ===');
+                    
+                    // Validate using Form
+                    if (isLoading) return; // prevent double taps
+                    if (!formKey.currentState!.validate()) {
+                      debugPrint('Form validation failed');
                       return;
                     }
-                    if (double.tryParse(weightController.text.trim()) == null) {
-                      _snack('Giá phải là số!');
+                    debugPrint('Form validation passed');
+
+                    // Additional validations
+                    if (selectedBreed == null || selectedBreed!.isEmpty) {
+                      debugPrint('Breed validation failed: $selectedBreed');
+                      _snack('Vui lòng chọn giống!');
                       return;
                     }
-                    if (double.parse(weightController.text.trim()) <= 0) {
-                      _snack('Giá phải lớn hơn 0!');
+                    debugPrint('Breed validation passed: $selectedBreed');
+                    
+                    // Image validation (add requires image, update can keep old)
+                    debugPrint('Checking image selection. _imageBytes=${_imageBytes != null ? 'YES' : 'NO'} currentUrl=${pet?.imageUrl}');
+                    if (pet == null && _imageBytes == null) {
+                      debugPrint('Image validation failed (add)');
+                      setStateDialog(() { _imageError = true; });
                       return;
                     }
-                    if (int.tryParse(ageController.text.trim()) == null) {
-                      _snack('Tuổi phải là số nguyên!');
-                      return;
-                    }
+                    debugPrint('Image validation passed');
 
                     String imageUrl = imageController.text;
                     final petId = pet?.id ?? const Uuid().v4();
-                    if (_imageBytes != null) {
-                      imageUrl = await uploadImage(_imageBytes!, petId);
-                      if (imageUrl.isEmpty) {
-                        _snack('Lỗi upload ảnh!');
-                        return;
-                      }
-                    }
+                    
+                    // Không upload ảnh ở đây nữa để tránh double upload/delete.
+                    // Upload sẽ được thực hiện bên trong addPet/updatePet nếu _imageBytes != null.
+                    imageUrl = pet == null ? '' : pet.imageUrl;
+
+                    debugPrint('Creating Pet object...');
+                    debugPrint('Name: ${nameController.text}');
+                    debugPrint('Category: $pickedCategory');
+                    debugPrint('Breed: $selectedBreed');
+                    debugPrint('Price: ${priceController.text}');
+                    debugPrint('Weight: ${weightController.text}');
+                    debugPrint('Age: ${ageController.text}');
+                    debugPrint('Gender: ${genderController.text}');
+                    debugPrint('Color: $selectedColor');
+                    debugPrint('IsAvailable: $isAvailable');
 
                     final newPet = Pet(
                       id: petId,
-                      name: nameController.text,
+                      name: nameController.text.trim(),
                       category: pickedCategory,
                       imageUrl: imageUrl,
-                      age: ageController.text,
-                      breed: selectedBreed ?? '',
-                      about: aboutController.text,
-                      gender: genderController.text,
-                      weight: pet?.weight ?? '',
-                      price: weightController.text,
+                      age: ageController.text.trim(),
+                      breed: selectedBreed ?? 'Unknown',
+                      about: aboutController.text.trim(),
+                      gender: genderController.text.trim(),
+                      weight: weightController.text.trim(),
+                      price: priceController.text.trim(),
+                      color: selectedColor,
+                      isAvailable: isAvailable,
                     );
 
+                    debugPrint('Pet object created successfully');
+
                     if (pet == null) {
-                      addPet(newPet);
+                      debugPrint('Adding new pet...');
+                      await addPet(newPet); // ensure upload finishes before clearing bytes
                     } else {
-                      updatePet(newPet);
+                      debugPrint('Updating existing pet...');
+                      await updatePet(newPet); // optional await for consistency
                     }
 
                     if (!mounted) return;
-                    Navigator.pop(context);
-                    _imageBytes = null;
+                    Navigator.pop(context); // _imageBytes already cleared in add/update finally
                   },
                   child: Text(pet == null ? l10n.addPet : l10n.save,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary)),
                 ),
               ],
             );
@@ -724,7 +1066,9 @@ class _PetsState extends State<PetsAdmin> {
                                   height: 240,
                                   child: Center(
                                       child: CircularProgressIndicator(
-                                          color: Theme.of(context).colorScheme.primary)),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary)),
                                 );
                               },
                             ),
@@ -735,9 +1079,12 @@ class _PetsState extends State<PetsAdmin> {
                     const SizedBox(height: 16),
                     _infoRow(Icons.category, 'Category', pet.category),
                     _infoRow(Icons.pets, 'Breed', pet.breed),
-                    _infoRow(Icons.price_change, 'Price', CurrencyHelper.formatVND(pet.price ?? pet.weight)),
+                    _infoRow(Icons.price_change, 'Price',
+                        CurrencyHelper.formatVND(pet.price ?? pet.weight)),
                     _infoRow(Icons.cake, 'Age', '${pet.age} years'),
                     _infoRow(Icons.male, 'Gender', pet.gender),
+                    if (pet.color != null)
+                      _infoRowWithColor(Icons.palette, l10n.color, pet.color!),
                     _infoRow(
                         Icons.monitor_weight, 'Weight', '${pet.weight} Kg'),
                     const SizedBox(height: 10),
@@ -786,5 +1133,98 @@ class _PetsState extends State<PetsAdmin> {
         ],
       ),
     );
+  }
+
+  Widget _infoRowWithColor(IconData icon, String title, String colorKey) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Text('$title: ',
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: _getColorFromKey(colorKey),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _getLocalizedColor(l10n, colorKey),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods cho màu sắc
+  Color _getColorFromKey(String colorKey) {
+    switch (colorKey) {
+      case 'colorBrown':
+        return Colors.brown;
+      case 'colorBlack':
+        return Colors.black;
+      case 'colorWhite':
+        return Colors.white;
+      case 'colorGray':
+        return Colors.grey;
+      case 'colorGolden':
+        return Colors.amber;
+      case 'colorCream':
+        return const Color(0xFFF5DEB3);
+      case 'colorOrange':
+        return Colors.orange;
+      case 'colorBlue':
+        return Colors.blue;
+      case 'colorGreen':
+        return Colors.green;
+      case 'colorRed':
+        return Colors.red;
+      case 'colorMixed':
+        return Colors.grey.shade400;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getLocalizedColor(AppLocalizations l10n, String colorKey) {
+    switch (colorKey) {
+      case 'colorBrown':
+        return l10n.colorBrown;
+      case 'colorBlack':
+        return l10n.colorBlack;
+      case 'colorWhite':
+        return l10n.colorWhite;
+      case 'colorGray':
+        return l10n.colorGray;
+      case 'colorGolden':
+        return l10n.colorGolden;
+      case 'colorCream':
+        return l10n.colorCream;
+      case 'colorOrange':
+        return l10n.colorOrange;
+      case 'colorBlue':
+        return l10n.colorBlue;
+      case 'colorGreen':
+        return l10n.colorGreen;
+      case 'colorRed':
+        return l10n.colorRed;
+      case 'colorMixed':
+        return l10n.colorMixed;
+      default:
+        return colorKey;
+    }
   }
 }

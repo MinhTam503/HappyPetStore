@@ -184,6 +184,14 @@
   "@items": {
     "description": "Items label"
   },
+  "totalLabel": "Total",
+  "@totalLabel": {
+    "description": "Total label without parameters"
+  },
+  "dateLabel": "Date",
+  "@dateLabel": {
+    "description": "Date label without parameters"
+  },
   "pet": "Pet:",
   "@pet": {
     "description": "Pet label"
@@ -421,6 +429,58 @@
   "save": "Save",
   "@save": {
     "description": "Save button"
+  },
+  "color": "Color",
+  "@color": {
+    "description": "Color field label"
+  },
+  "selectColor": "Select Color",
+  "@selectColor": {
+    "description": "Select color dropdown hint"
+  },
+  "colorBrown": "Brown",
+  "@colorBrown": {
+    "description": "Brown color option"
+  },
+  "colorBlack": "Black",
+  "@colorBlack": {
+    "description": "Black color option"
+  },
+  "colorWhite": "White",
+  "@colorWhite": {
+    "description": "White color option"
+  },
+  "colorGray": "Gray",
+  "@colorGray": {
+    "description": "Gray color option"
+  },
+  "colorGolden": "Golden",
+  "@colorGolden": {
+    "description": "Golden color option"
+  },
+  "colorCream": "Cream",
+  "@colorCream": {
+    "description": "Cream color option"
+  },
+  "colorOrange": "Orange",
+  "@colorOrange": {
+    "description": "Orange color option"
+  },
+  "colorBlue": "Blue",
+  "@colorBlue": {
+    "description": "Blue color option"
+  },
+  "colorGreen": "Green",
+  "@colorGreen": {
+    "description": "Green color option"
+  },
+  "colorRed": "Red",
+  "@colorRed": {
+    "description": "Red color option"
+  },
+  "colorMixed": "Mixed",
+  "@colorMixed": {
+    "description": "Mixed color option"
   },
   "noItems": "No items",
   "@noItems": {
@@ -1242,4 +1302,39 @@
   "@descending": {
     "description": "Descending sort order"
   }
+  ,
+  "basicInfo": "Basic Information",
+  "@basicInfo": {"description": "Section title for basic information of a pet"},
+  "noName": "No name",
+  "@noName": {"description": "Fallback text when a pet has no name"},
+  "weight": "Weight",
+  "@weight": {"description": "Weight label"},
+  "gender": "Gender",
+  "@gender": {"description": "Gender label"},
+  "description": "Description",
+  "@description": {"description": "Description section title"},
+  "noDescription": "No description",
+  "@noDescription": {"description": "Fallback text when there is no description"},
+  "showLess": "Show less",
+  "@showLess": {"description": "Collapse long text button"},
+  "readMore": "Read more",
+  "@readMore": {"description": "Expand long text button"},
+  "similarProducts": "Similar Products",
+  "@similarProducts": {"description": "Similar products section title"},
+  "noSimilarProducts": "No similar products found",
+  "@noSimilarProducts": {"description": "No similar products fallback message"},
+  "addToCart": "Add to cart",
+  "@addToCart": {"description": "Add to cart button label"},
+  "loginRequiredAddToCart": "You need to login to add items to cart",
+  "@loginRequiredAddToCart": {"description": "Message shown when user must login for cart"},
+  "updateProfileInfoRequired": "Please update your profile information first",
+  "@updateProfileInfoRequired": {"description": "Prompt to update profile info"},
+  "genericErrorPrefix": "Error:",
+  "@genericErrorPrefix": {"description": "Generic error prefix"},
+  "cartErrorPrefix": "Cart error:",
+  "@cartErrorPrefix": {"description": "Cart error prefix"},
+  "unexpectedError": "An unexpected error occurred",
+  "@unexpectedError": {"description": "Unexpected error message"},
+  "pleaseLogin": "Please login",
+  "@pleaseLogin": {"description": "Short please login message"}
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -188,7 +189,7 @@ class _PetItemsAllState extends State<PetItemsAll> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
                         child: _PrimaryButton(
-                          label: 'Thêm vào giỏ hàng',
+                            label: AppLocalizations.of(context)?.addToCart ?? 'Thêm vào giỏ hàng',
                           icon: Icons.add_shopping_cart,
                           onTap: () async {
                             UserManager userManager = UserManager();

@@ -26,7 +26,7 @@ class CartBlocWeb extends Bloc<CartEventWeb, CartStateWeb> {
       }
       _items.add(Map<String, dynamic>.from(event.item));
       emit(CartLoaded(List<Map<String, dynamic>>.from(_items),
-          message: 'Đã thêm vào giỏ hàng'));
+          message: 'added_to_cart'));
     });
 
     // Các event khác không dùng, nhưng nếu lỡ bắn thì vẫn phản hồi lại danh sách hiện tại.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -177,7 +178,7 @@ class _PetItemsAllState extends State<AllPetItemWeb> {
                               child: SizedBox(
                                 height: 40,
                                 child: _PrimaryButton(
-                                  label: 'Thêm vào giỏ hàng',
+                                  label: AppLocalizations.of(context)?.addToCart ?? 'Thêm vào giỏ hàng',
                                   icon: Icons.shopping_cart_outlined,
                                   onTap: () {
                                     final productId =

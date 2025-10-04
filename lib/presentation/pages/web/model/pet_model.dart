@@ -13,20 +13,22 @@ class Pet {
   final String gender;
   final String weight;
   final dynamic price; // could be number or string in Firestore
+  final String? color; // Màu sắc thú cưng (nullable vì dữ liệu cũ chưa có)
+  final bool isAvailable;
 
   Pet({
     required this.id,
     required this.name,
     required this.category,
     required this.imageUrl,
-
     required this.age,
     required this.breed,
     required this.about,
-
     required this.gender,
     required this.weight,
     required this.price,
+    this.color, // Nullable field
+    this.isAvailable = false,
   });
 
   factory Pet.fromDocument(DocumentSnapshot doc) {
@@ -41,8 +43,10 @@ class Pet {
       breed: data['breed'] ?? 'breed',
       about: data['about'] ?? '',
       gender: data['sex'] ?? '',
-      weight: data['weight'] ?? '',
+      weight: data['weight']?.toString() ?? '',
       price: data['price'],
+      color: data['color'], // Nullable field từ Firestore
+      isAvailable: data['isAvailable'] ?? false,
     );
   }
 }

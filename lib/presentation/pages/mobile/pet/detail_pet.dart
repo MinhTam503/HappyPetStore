@@ -15,6 +15,7 @@ import '../../../bloc/favBloc/fav_state.dart';
 import '../../../widgets/pet_items_all.dart';
 // import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
@@ -153,7 +154,7 @@ class _DetailPetState extends State<DetailPet> {
       // Kiểm tra đăng nhập sử dụng UserManager (hỗ trợ tất cả phương thức đăng nhập)
       final userIdentifier = await userManager.getUserIdentifier();
       if (userIdentifier == null) {
-        _showMessage('Vui lòng đăng nhập để thêm vào giỏ hàng');
+  _showMessage(AppLocalizations.of(context)?.loginRequiredAddToCart ?? 'Vui lòng đăng nhập để thêm vào giỏ hàng');
         return;
       }
 
@@ -205,7 +206,8 @@ class _DetailPetState extends State<DetailPet> {
 
   @override
   Widget build(BuildContext context) {
-    final data = widget.pet;
+  final data = widget.pet;
+  final l10n = AppLocalizations.of(context);
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
@@ -315,7 +317,7 @@ class _DetailPetState extends State<DetailPet> {
                       children: [
                         Expanded(
                           child: Text(
-                            data['name'] ?? 'Không có tên',
+                            data['name'] ?? (l10n?.noName ?? 'Không có tên'),
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -341,27 +343,18 @@ class _DetailPetState extends State<DetailPet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Thông tin cơ bản',
+                            Text(
+                              l10n?.basicInfo ?? 'Thông tin cơ bản',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _buildInfoRow('Giống',
-                                data['breed']?.toString() ?? 'Không xác định'),
-                            _buildInfoRow('Tuổi',
-                                data['age']?.toString() ?? 'Không xác định'),
-                            _buildInfoRow(
-                                'Cân nặng',
-                                (data['weight'] != null
-                                    ? "${data['weight']} kg"
-                                    : 'Không xác định')),
-                            _buildInfoRow(
-                                'Giới tính',
-                                (data['sex'] ?? data['color'])?.toString() ??
-                                    'Không xác định'),
+              _buildInfoRow(l10n?.breed ?? 'Giống', data['breed']?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
+              _buildInfoRow(l10n?.age ?? 'Tuổi', data['age']?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
+              _buildInfoRow(l10n?.weight ?? 'Cân nặng', (data['weight'] != null ? "${data['weight']} kg" : (l10n?.unknown ?? 'Không xác định'))),
+              _buildInfoRow(l10n?.gender ?? 'Giới tính', (data['sex'] ?? data['color'])?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
                           ],
                         ),
                       ),
@@ -375,8 +368,8 @@ class _DetailPetState extends State<DetailPet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Mô tả',
+                            Text(
+                              l10n?.description ?? 'Mô tả',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -384,12 +377,11 @@ class _DetailPetState extends State<DetailPet> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              isExpand
-                                  ? (data['about'] ?? 'Không có mô tả')
-                                  : (data['about'] ?? 'Không có mô tả').length >
-                                          100
-                                      ? '${(data['about'] ?? 'Không có mô tả').substring(0, 100)}...'
-                                      : (data['about'] ?? 'Không có mô tả'),
+                isExpand
+                  ? (data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả'))
+                  : (data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả')).length > 100
+                    ? '${(data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả')).substring(0, 100)}...'
+                    : (data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả')),
                               style: const TextStyle(fontSize: 16),
                             ),
                             if ((data['about'] ?? '').length > 100)
@@ -399,7 +391,7 @@ class _DetailPetState extends State<DetailPet> {
                                     isExpand = !isExpand;
                                   });
                                 },
-                                child: Text(isExpand ? 'Thu gọn' : 'Xem thêm'),
+                                child: Text(isExpand ? (l10n?.showLess ?? 'Thu gọn') : (l10n?.readMore ?? 'Xem thêm')),
                               ),
                           ],
                         ),
@@ -427,8 +419,8 @@ class _DetailPetState extends State<DetailPet> {
                     const SizedBox(height: 24),
 
                     if (similarPets.isNotEmpty) ...[
-                      const Text(
-                        'Sản phẩm tương tự',
+                      Text(
+                        l10n?.similarProducts ?? 'Sản phẩm tương tự',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -463,8 +455,8 @@ class _DetailPetState extends State<DetailPet> {
                       ),
                       const SizedBox(height: 24),
                     ] else ...[
-                      const Text(
-                        'Không tìm thấy sản phẩm tương tự',
+                      Text(
+                        l10n?.noSimilarProducts ?? 'Không tìm thấy sản phẩm tương tự',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -533,12 +525,12 @@ class _DetailPetState extends State<DetailPet> {
                   ),
                   elevation: 4,
                 ),
-                child: const Column(
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.shopping_cart, color: Colors.white, size: 24),
                     Text(
-                      'Thêm vào giỏ hàng',
+                      (AppLocalizations.of(context)?.addToCart ?? 'Thêm vào giỏ hàng'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,

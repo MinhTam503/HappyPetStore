@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
@@ -34,13 +38,102 @@ class _AccountAdminState extends State<AccountAdmin> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  // Image picking state
+  Uint8List? _imageBytes;
+
+  // ===== Storage =====
+  Future<String> uploadImage(Uint8List imageBytes, String userId) async {
+    try {
+      // Detect image format from bytes
+      String ext = 'jpg';
+      if (imageBytes.length > 3) {
+        // Check PNG signature
+        if (imageBytes[0] == 0x89 && imageBytes[1] == 0x50 && imageBytes[2] == 0x4E && imageBytes[3] == 0x47) {
+          ext = 'png';
+        }
+        // Check JPEG signature
+        else if (imageBytes[0] == 0xFF && imageBytes[1] == 0xD8) {
+          ext = 'jpg';
+        }
+        // Check GIF signature
+        else if (imageBytes[0] == 0x47 && imageBytes[1] == 0x49 && imageBytes[2] == 0x46) {
+          ext = 'gif';
+        }
+        // Check WebP signature
+        else if (imageBytes.length > 11 && 
+                 imageBytes[8] == 0x57 && imageBytes[9] == 0x45 && 
+                 imageBytes[10] == 0x42 && imageBytes[11] == 0x50) {
+          ext = 'webp';
+        }
+      }
+
+      final fileName = '$userId.$ext';
+      String contentType = 'image/jpeg';
+      if (ext == 'png')
+        contentType = 'image/png';
+      else if (ext == 'gif')
+        contentType = 'image/gif';
+      else if (ext == 'webp') 
+        contentType = 'image/webp';
+
+      final metadata = SettableMetadata(contentType: contentType);
+      final storageRef =
+          FirebaseStorage.instance.ref().child('profile_images/$fileName');
+      final uploadTask = storageRef.putData(imageBytes, metadata);
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      return '';
+    }
+  }
+
+  // ===== Delete old image =====
+  Future<void> deleteOldImage(String imageUrl) async {
+    try {
+      if (imageUrl.isNotEmpty && imageUrl.contains('firebase') && imageUrl.contains('profile_images')) {
+        final oldImageRef = FirebaseStorage.instance.refFromURL(imageUrl);
+        await oldImageRef.delete();
+      }
+    } catch (e) {
+      debugPrint('Error deleting old image: $e');
+    }
+  }
+
+  // ===== Pick image =====
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result != null) {
+      setState(() {
+        _imageBytes = result.files.first.bytes;
+      });
+    }
+  }
+
   void addAccount(Map<String, dynamic> account) async {
     try {
       setState(() => isLoading = true);
-      await accountsCollection.add(account);
+      
+      // First add account to get the document ID
+      final docRef = await accountsCollection.add(account);
+      final userId = docRef.id;
+      
+      // Upload image if selected, using the generated userId
+      String finalImageUrl = account['imageUrl'] ?? '';
+      if (_imageBytes != null) {
+        finalImageUrl = await uploadImage(_imageBytes!, userId);
+        // Update the account with the new image URL
+        await accountsCollection.doc(userId).update({'imageUrl': finalImageUrl});
+      }
+      
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.accountAdded)));
+      
+      // Reset image after successful add
+      setState(() {
+        _imageBytes = null;
+      });
     } catch (e) {
       debugPrint('Error adding account: $e');
     } finally {
@@ -51,10 +144,28 @@ class _AccountAdminState extends State<AccountAdmin> {
   void updateAccount(String id, Map<String, dynamic> account) async {
     try {
       setState(() => isLoading = true);
+      
+      // Upload new image if selected
+      String finalImageUrl = account['imageUrl'] ?? '';
+      if (_imageBytes != null) {
+        // Delete old image first
+        final oldImageUrl = account['imageUrl'] ?? '';
+        await deleteOldImage(oldImageUrl);
+        
+        // Upload new image using userId as filename
+        finalImageUrl = await uploadImage(_imageBytes!, id);
+        account['imageUrl'] = finalImageUrl;
+      }
+      
       await accountsCollection.doc(id).update(account);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.accountUpdated)));
+      
+      // Reset image after successful update
+      setState(() {
+        _imageBytes = null;
+      });
     } catch (e) {
       debugPrint('Error updating account: $e');
     } finally {
@@ -362,6 +473,11 @@ class _AccountAdminState extends State<AccountAdmin> {
     final imageUrlController =
         TextEditingController(text: account?.get('imageUrl') ?? '');
 
+    // Reset image bytes when opening dialog for existing account
+    if (account != null) {
+      _imageBytes = null;
+    }
+
     showDialog(
       context: context,
       builder: (context) {
@@ -423,11 +539,21 @@ class _AccountAdminState extends State<AccountAdmin> {
                                   onChanged: (v) => setStateDialog(
                                       () => roleController.text = v ?? 'user'),
                                 ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: imageUrlController,
-                                  decoration: _input(AppLocalizations.of(context)!.imageUrl,
-                                      prefix: const Icon(Icons.link_outlined)),
+                                const SizedBox(height: 16),
+                                // Replace URL field with image picker button
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    await _pickImage();
+                                    setStateDialog(() {}); // Refresh preview
+                                  },
+                                  icon: const Icon(Icons.image),
+                                  label: Text(_imageBytes != null 
+                                      ? 'Image Selected' 
+                                      : 'Select Image'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                                  ),
                                 ),
                               ],
                             ),
@@ -444,14 +570,21 @@ class _AccountAdminState extends State<AccountAdmin> {
                                     height: 120,
                                     color: secondaryColor,
                                     alignment: Alignment.center,
-                                    child: imageUrlController.text.isNotEmpty
-                                        ? FittedBox(
-                                            fit: BoxFit.contain,
-                                            child: Image.network(
-                                                imageUrlController.text),
+                                    child: _imageBytes != null
+                                        ? Image.memory(
+                                            _imageBytes!,
+                                            width: 120,
+                                            height: 120,
+                                            fit: BoxFit.cover,
                                           )
-                                        : const Icon(Icons.person_outline,
-                                            size: 56),
+                                        : (imageUrlController.text.isNotEmpty
+                                            ? FittedBox(
+                                                fit: BoxFit.cover,
+                                                child: Image.network(
+                                                    imageUrlController.text),
+                                              )
+                                            : const Icon(Icons.person_outline,
+                                                size: 56)),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
