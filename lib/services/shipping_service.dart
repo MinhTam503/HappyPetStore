@@ -1,18 +1,15 @@
 import 'dart:math';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:pet_shop/services/goship_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pet_shop/helpers/order_notification_helper.dart';
 
-/// 🚚 Shipping Service - Tích hợp API giao hàng cho Happy Pets
-/// Hỗ trợ cả Mock API (để test) và GoSHIP API (production)
+/// 🚚 Shipping Service - Mock API giao hàng cho Happy Pets
+/// Chỉ sử dụng Mock API để test và demo
 class ShippingService {
-  // Configuration - chuyển đổi giữa Mock và GoSHIP
-  static bool get _useGoShip => dotenv.env['USE_GOSHIP'] == 'true';
   
   // Local mock data cho demo
   static final Map<String, Map<String, dynamic>> _mockShipments = {};
   
-  /// Tạo đơn giao hàng mới
+  /// Tạo đơn giao hàng mới - chỉ sử dụng Mock API
   /// 
   /// [orderId] - ID đơn hàng từ Firebase
   /// [shippingAddress] - Địa chỉ giao hàng
@@ -28,21 +25,8 @@ class ShippingService {
     List<Map<String, dynamic>>? items,
   }) async {
     print('🚚 Creating shipment for order: $orderId');
-    print('📊 Use GoSHIP: $_useGoShip');
     
-    // Sử dụng GoSHIP API nếu được bật
-    if (_useGoShip) {
-      return await _createGoShipShipment(
-        orderId: orderId,
-        shippingAddress: shippingAddress,
-        customerInfo: customerInfo,
-        totalWeight: totalWeight,
-        totalValue: totalValue,
-        items: items,
-      );
-    }
-    
-    // Fallback to Mock API
+    // Chỉ sử dụng Mock API
     return await _createMockShipment(
       orderId: orderId,
       shippingAddress: shippingAddress,
@@ -52,62 +36,7 @@ class ShippingService {
     );
   }
 
-  /// Tạo shipment với GoSHIP API
-  static Future<Map<String, dynamic>> _createGoShipShipment({
-    required String orderId,
-    required String shippingAddress,
-    required Map<String, dynamic> customerInfo,
-    double? totalWeight,
-    double? totalValue,
-    List<Map<String, dynamic>>? items,
-  }) async {
-    try {
-      print('🌐 Creating GoSHIP shipment...');
-      
-      final result = await GoShipService.createShipment(
-        orderId: orderId,
-        customerName: customerInfo['name'] ?? 'Khách hàng',
-        customerPhone: customerInfo['phone'] ?? '0123456789',
-        customerEmail: customerInfo['email'] ?? 'customer@example.com',
-        shippingAddress: shippingAddress,
-        items: items ?? [
-          {
-            'name': 'Sản phẩm thú cưng',
-            'quantity': 1,
-            'price': totalValue ?? 0,
-            'weight': totalWeight ?? 500,
-          }
-        ],
-        totalValue: totalValue ?? 0,
-        totalWeight: (totalWeight ?? 500).toInt(),
-      );
-      
-      if (result['success']) {
-        print('✅ GoSHIP shipment created successfully');
-        return result;
-      } else {
-        print('⚠️ GoSHIP failed, falling back to Mock API');
-        return await _createMockShipment(
-          orderId: orderId,
-          shippingAddress: shippingAddress,
-          customerInfo: customerInfo,
-          totalWeight: totalWeight,
-          totalValue: totalValue,
-        );
-      }
-    } catch (e) {
-      print('❌ GoSHIP error, falling back to Mock API: $e');
-      return await _createMockShipment(
-        orderId: orderId,
-        shippingAddress: shippingAddress,
-        customerInfo: customerInfo,
-        totalWeight: totalWeight,
-        totalValue: totalValue,
-      );
-    }
-  }
-
-  /// Tạo shipment với Mock API (fallback)
+  /// Tạo shipment với Mock API
   static Future<Map<String, dynamic>> _createMockShipment({
     required String orderId,
     required String shippingAddress,
@@ -137,9 +66,11 @@ class ShippingService {
         'shippingCompany': selectedCompany,
         'status': 'pickup_pending', // pickup_pending → in_transit → delivered
         'estimatedDelivery': estimatedDelivery.toIso8601String(),
+        'actualDeliveryTime': null, // Thời gian giao thực tế (null until delivered)
         'shippingFee': shippingFee,
         'shippingAddress': shippingAddress,
         'customerInfo': customerInfo,
+        'customerPhone': customerInfo['phone'] ?? '', // Số điện thoại customer để hiển thị
         'createdAt': DateTime.now().toIso8601String(),
         'trackingHistory': [
           {
@@ -175,29 +106,14 @@ class ShippingService {
     }
   }
   
-  /// Theo dõi trạng thái đơn hàng
+  /// Theo dõi trạng thái đơn hàng - chỉ sử dụng Mock API
   /// 
   /// [trackingNumber] - Mã vận đơn
   /// Returns: Thông tin chi tiết về trạng thái giao hàng
   static Future<Map<String, dynamic>> trackShipment(String trackingNumber) async {
     print('📱 Tracking shipment: $trackingNumber');
-    print('📊 Use GoSHIP: $_useGoShip');
     
-    // Sử dụng GoSHIP API nếu được bật
-    if (_useGoShip) {
-      try {
-        final result = await GoShipService.trackShipment(trackingNumber);
-        if (result['success']) {
-          return result;
-        } else {
-          print('⚠️ GoSHIP tracking failed, trying Mock API');
-        }
-      } catch (e) {
-        print('❌ GoSHIP tracking error: $e');
-      }
-    }
-    
-    // Fallback to Mock API
+    // Chỉ sử dụng Mock API và Firebase
     return await _trackMockShipment(trackingNumber);
   }
 
@@ -300,6 +216,8 @@ class ShippingService {
       
       // First try to update in Firebase
       bool updatedInFirebase = false;
+      String? orderId;
+      String? userEmail;
       
       try {
         // Check mobile orders
@@ -312,9 +230,12 @@ class ShippingService {
         if (mobileQuery.docs.isNotEmpty) {
           final doc = mobileQuery.docs.first;
           final data = doc.data();
+          orderId = data['orderId'] ?? data['id'];
+          userEmail = data['email'];
           
           if (data['shippingInfo'] != null) {
             final shippingInfo = Map<String, dynamic>.from(data['shippingInfo']);
+            final oldStatus = shippingInfo['status'];
             shippingInfo['status'] = newStatus;
             
             // Add to tracking history
@@ -327,13 +248,34 @@ class ShippingService {
             });
             shippingInfo['trackingHistory'] = trackingHistory;
             
+            // Cập nhật thời gian thực tế khi giao hàng
             if (newStatus == 'delivered') {
-              shippingInfo['deliveredAt'] = DateTime.now().toIso8601String();
+              shippingInfo['actualDeliveryTime'] = DateTime.now().toIso8601String();
             }
             
-            await doc.reference.update({'shippingInfo': shippingInfo});
+            // Tự động cập nhật trạng thái order dựa trên shipping status
+            Map<String, dynamic> orderUpdate = {'shippingInfo': shippingInfo};
+            
+            if (newStatus == 'delivered') {
+              orderUpdate['statusOrder'] = 'Completed';
+              orderUpdate['statusPayment'] = 'Payment Completed';
+            } else if (newStatus == 'failed' || newStatus == 'returned') {
+              orderUpdate['statusOrder'] = 'Cancelled';
+            }
+            
+            await doc.reference.update(orderUpdate);
             updatedInFirebase = true;
-            print('✅ Updated shipment status in Firebase mobile orders');
+            
+              // Gửi thông báo khi có thay đổi shipping status
+              if (userEmail != null && orderId != null) {
+                await _sendShippingStatusNotification(
+                  email: userEmail,
+                  orderId: orderId,
+                  oldStatus: oldStatus,
+                  newStatus: newStatus,
+                  description: description,
+                );
+              }            print('✅ Updated shipment status in Firebase mobile orders');
           }
         }
         
@@ -348,9 +290,12 @@ class ShippingService {
           if (webQuery.docs.isNotEmpty) {
             final doc = webQuery.docs.first;
             final data = doc.data();
+            orderId = data['orderId'] ?? data['id'];
+            userEmail = data['email'];
             
             if (data['shippingInfo'] != null) {
               final shippingInfo = Map<String, dynamic>.from(data['shippingInfo']);
+              final oldStatus = shippingInfo['status'];
               shippingInfo['status'] = newStatus;
               
               // Add to tracking history
@@ -363,12 +308,35 @@ class ShippingService {
               });
               shippingInfo['trackingHistory'] = trackingHistory;
               
+              // Cập nhật thời gian thực tế khi giao hàng
               if (newStatus == 'delivered') {
-                shippingInfo['deliveredAt'] = DateTime.now().toIso8601String();
+                shippingInfo['actualDeliveryTime'] = DateTime.now().toIso8601String();
               }
               
-              await doc.reference.update({'shippingInfo': shippingInfo});
+              // Tự động cập nhật trạng thái order dựa trên shipping status
+              Map<String, dynamic> orderUpdate = {'shippingInfo': shippingInfo};
+              
+              if (newStatus == 'delivered') {
+                orderUpdate['statusOrder'] = 'Completed';
+                orderUpdate['statusPayment'] = 'Payment Completed';
+              } else if (newStatus == 'failed' || newStatus == 'returned') {
+                orderUpdate['statusOrder'] = 'Cancelled';
+              }
+              
+              await doc.reference.update(orderUpdate);
               updatedInFirebase = true;
+              
+              // Gửi thông báo khi có thay đổi shipping status
+              if (userEmail != null && orderId != null) {
+                await _sendShippingStatusNotification(
+                  email: userEmail,
+                  orderId: orderId,
+                  oldStatus: oldStatus,
+                  newStatus: newStatus,
+                  description: description,
+                );
+              }
+              
               print('✅ Updated shipment status in Firebase web orders');
             }
           }
@@ -667,6 +635,85 @@ class ShippingService {
         return '#F44336'; // Red
       default:
         return '#757575'; // Grey
+    }
+  }
+  
+  /// Gửi thông báo khi shipping status thay đổi
+  static Future<void> _sendShippingStatusNotification({
+    required String email,
+    required String orderId,
+    required String oldStatus,
+    required String newStatus,
+    required String description,
+  }) async {
+    try {
+      // Lấy userId từ email
+      final userId = await OrderNotificationHelper.getUserIdFromEmail(email);
+      if (userId == null) {
+        print('⚠️ User not found for email: $email');
+        return;
+      }
+      
+      // Lấy thông tin customer
+      final customerInfo = await OrderNotificationHelper.getCustomerInfoFromEmail(email);
+      final customerName = customerInfo?['displayName'] ?? customerInfo?['name'] ?? 'Customer';
+      
+      // Gửi thông báo dựa trên trạng thái mới
+      switch (newStatus) {
+        case 'in_transit':
+          await OrderNotificationHelper.sendOrderShippedNotification(
+            userId: userId,
+            orderId: orderId,
+            customerName: customerName,
+            trackingNumber: '',
+            shippingCompany: description,
+          );
+          break;
+          
+        case 'out_for_delivery':
+          await OrderNotificationHelper.sendShippingStatusNotification(
+            userId: userId,
+            orderId: orderId,
+            customerName: customerName,
+            status: 'Đang giao hàng',
+            message: description,
+          );
+          break;
+          
+        case 'delivered':
+          await OrderNotificationHelper.sendOrderDeliveredNotification(
+            userId: userId,
+            orderId: orderId,
+            customerName: customerName,
+            deliveredAt: DateTime.now(),
+          );
+          break;
+          
+        case 'failed':
+        case 'returned':
+          await OrderNotificationHelper.sendShippingStatusNotification(
+            userId: userId,
+            orderId: orderId,
+            customerName: customerName,
+            status: 'Giao hàng thất bại',
+            message: description,
+          );
+          break;
+          
+        default:
+          // Gửi thông báo chung cho các trạng thái khác
+          await OrderNotificationHelper.sendShippingStatusNotification(
+            userId: userId,
+            orderId: orderId,
+            customerName: customerName,
+            status: getStatusText(newStatus),
+            message: description,
+          );
+      }
+      
+      print('✅ Shipping status notification sent for $newStatus');
+    } catch (e) {
+      print('❌ Error sending shipping status notification: $e');
     }
   }
 }

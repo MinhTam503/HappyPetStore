@@ -208,84 +208,91 @@ class _ShippingTrackingWidgetState extends State<ShippingTrackingWidget> {
           ),
         ),
         const SizedBox(height: 12),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: history.length,
-          separatorBuilder: (context, index) => Container(
-            width: 2,
-            height: 16,
-            margin: const EdgeInsets.only(left: 11),
-            color: Colors.grey.shade300,
+        // Wrap trong Container với height cố định để có thể cuộn
+        Container(
+          height: 250, // Giới hạn chiều cao
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(8),
           ),
-          itemBuilder: (context, index) {
-            final item = history[history.length - 1 - index]; // Reverse order (newest first)
-            final isLatest = index == 0;
-            
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isLatest ? Colors.green : Colors.grey.shade300,
-                    border: Border.all(
-                      color: isLatest ? Colors.green.shade700 : Colors.grey.shade400,
-                      width: 2,
-                    ),
-                  ),
-                  child: isLatest 
-                    ? const Icon(Icons.check, size: 12, color: Colors.white)
-                    : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['description'],
-                        style: TextStyle(
-                          fontWeight: isLatest ? FontWeight.bold : FontWeight.normal,
-                          color: isLatest ? Colors.black : Colors.grey.shade700,
-                        ),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(8),
+            itemCount: history.length,
+            separatorBuilder: (context, index) => Container(
+              width: 2,
+              height: 16,
+              margin: const EdgeInsets.only(left: 11),
+              color: Colors.grey.shade300,
+            ),
+            itemBuilder: (context, index) {
+              final item = history[history.length - 1 - index]; // Reverse order (newest first)
+              final isLatest = index == 0;
+              
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isLatest ? Colors.green : Colors.grey.shade300,
+                      border: Border.all(
+                        color: isLatest ? Colors.green.shade700 : Colors.grey.shade400,
+                        width: 2,
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.access_time, size: 12, color: Colors.grey.shade500),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatDateTime(item['timestamp']),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade500,
-                            ),
+                    ),
+                    child: isLatest 
+                      ? const Icon(Icons.check, size: 12, color: Colors.white)
+                      : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['description'],
+                          style: TextStyle(
+                            fontWeight: isLatest ? FontWeight.bold : FontWeight.normal,
+                            color: isLatest ? Colors.black : Colors.grey.shade700,
                           ),
-                          if (item['location'] != null) ...[
-                            const SizedBox(width: 16),
-                            Icon(Icons.location_on, size: 12, color: Colors.grey.shade500),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time, size: 12, color: Colors.grey.shade500),
                             const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                item['location'],
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade500,
-                                ),
+                            Text(
+                              _formatDateTime(item['timestamp']),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
                               ),
                             ),
+                            if (item['location'] != null) ...[
+                              const SizedBox(width: 16),
+                              Icon(Icons.location_on, size: 12, color: Colors.grey.shade500),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  item['location'],
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ],
     );

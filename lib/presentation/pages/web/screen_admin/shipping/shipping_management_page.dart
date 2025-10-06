@@ -312,12 +312,8 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                   const Spacer(),
-                  Icon(Icons.schedule, size: 16, color: Colors.grey.shade600),
-                  const SizedBox(width: 4),
-                  Text(
-                    _formatDate(shipment['estimatedDelivery']),
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
+                  // Hiển thị thời gian thông minh
+                  _buildTimeDisplay(shipment),
                 ],
               ),
               const SizedBox(height: 8),
@@ -335,6 +331,36 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
                   ),
                 ],
               ),
+              // Hiển thị số điện thoại customer nếu có
+              if (shipment['customerPhone'] != null && 
+                  shipment['customerPhone'].toString().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.phone, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      'SĐT: ${shipment['customerPhone']}',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ]
+              // Fallback: Lấy từ customerInfo hoặc deliveryInfo nếu không có customerPhone
+              else if ((shipment['customerInfo'] != null && shipment['customerInfo']['phone'] != null) ||
+                       (shipment['deliveryInfo'] != null && shipment['deliveryInfo']['phone'] != null)) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.phone, size: 16, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      'SĐT: ${_getCustomerPhone(shipment)}',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -346,43 +372,98 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        child: Container(
-          width: 600,
-          height: 700,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.local_shipping),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Chi tiết giao hàng',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: Container(
+            width: 600,
+            height: 750,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.local_shipping),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Chi tiết giao hàng',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ShippingTrackingWidget(
-                  trackingNumber: shipment['trackingNumber'],
-                  isAdminView: true,
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ShippingTrackingWidget(
+                    trackingNumber: shipment['trackingNumber'],
+                    isAdminView: true,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  /// Hiển thị thời gian giao hàng thông minh
+  Widget _buildTimeDisplay(Map<String, dynamic> shipment) {
+    final status = shipment['status'] as String;
+    
+    // Nếu đã giao hoặc hủy, hiện thời gian thực tế
+    if (status == 'delivered') {
+      // Thử lấy thời gian giao thực tế từ nhiều field
+      final actualTime = shipment['actualDeliveryTime'] ?? 
+                        shipment['deliveredAt'] ?? 
+                        shipment['timestamp'];
+      if (actualTime != null) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, size: 16, color: Colors.green),
+            const SizedBox(width: 4),
+            Text(
+              'Đã giao: ${_formatDate(actualTime)}',
+              style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w600),
+            ),
+          ],
+        );
+      }
+    }
+    
+    if (status == 'failed' || status == 'returned') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cancel, size: 16, color: Colors.red),
+          const SizedBox(width: 4),
+          Text(
+            'Thất bại',
+            style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600),
+          ),
+        ],
+      );
+    }
+    
+    // Các trạng thái khác hiện thời gian dự kiến
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.schedule, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 4),
+        Text(
+          _formatDate(shipment['estimatedDelivery']),
+          style: TextStyle(color: Colors.grey.shade600),
+        ),
+      ],
     );
   }
 
@@ -393,5 +474,22 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
     } catch (e) {
       return isoDate;
     }
+  }
+
+  /// Lấy số điện thoại customer từ nhiều nguồn
+  String _getCustomerPhone(Map<String, dynamic> shipment) {
+    // Thử lấy từ customerInfo
+    if (shipment['customerInfo'] != null && shipment['customerInfo']['phone'] != null) {
+      return shipment['customerInfo']['phone'].toString();
+    }
+    // Thử lấy từ deliveryInfo
+    if (shipment['deliveryInfo'] != null && shipment['deliveryInfo']['phone'] != null) {
+      return shipment['deliveryInfo']['phone'].toString();
+    }
+    // Thử lấy từ phone field cũ
+    if (shipment['phone'] != null && shipment['phone'].toString().isNotEmpty) {
+      return shipment['phone'].toString();
+    }
+    return '';
   }
 }

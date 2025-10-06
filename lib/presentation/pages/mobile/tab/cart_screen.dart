@@ -501,6 +501,8 @@ class _CartScreenState extends State<CartScreen> {
 
     // Extract address from selectedDeliveryInfo
     final shippingAddress = selectedDeliveryInfo?['address'] ?? "Địa chỉ không xác định";
+    final shippingName = selectedDeliveryInfo?['name'] ?? userInfoForOrder?['displayName'] ?? "";
+    final shippingPhone = selectedDeliveryInfo?['phone'] ?? userInfoForOrder?['phone'] ?? "";
     
     final orderData = {
       "orderId": orderRef.id,
@@ -517,7 +519,17 @@ class _CartScreenState extends State<CartScreen> {
       "statusOrder": "Pending",
       "timestamp": FieldValue.serverTimestamp(),
       "paymentMethod": paymentMethod,
+      // Complete shipping information
+      "shippingAddress": shippingAddress,
       "shippingInfo": selectedDeliveryInfo ?? {},
+      "deliveryInfo": selectedDeliveryInfo != null ? {
+        "name": shippingName,
+        "phone": shippingPhone,
+        "address": shippingAddress,
+        "isDefault": selectedDeliveryInfo!['isDefault'] ?? false,
+        "latitude": selectedDeliveryInfo!['latitude'],
+        "longitude": selectedDeliveryInfo!['longitude'],
+      } : {},
       "items": items,
     };
 
@@ -527,7 +539,9 @@ class _CartScreenState extends State<CartScreen> {
     print("  - phone: ${orderData['phone']}");
     print("  - displayName: ${orderData['displayName']}");
     print("  - address: ${orderData['address']}");
+    print("  - shippingAddress: ${orderData['shippingAddress']}");
     print("  - shippingInfo: ${orderData['shippingInfo']}");
+    print("  - deliveryInfo: ${orderData['deliveryInfo']}");
     print("🌱 Collected breeds for Apriori: $breeds");
 
     await orderRef.set(orderData);

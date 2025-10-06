@@ -304,6 +304,35 @@ class OrderNotificationHelper {
     }
   }
 
+  // ===================== SHIPPING STATUS NOTIFICATIONS =====================
+
+  /// Gửi thông báo khi trạng thái vận chuyển thay đổi
+  static Future<void> sendShippingStatusNotification({
+    required String userId,
+    required String orderId,
+    String? customerName,
+    required String status,
+    required String message,
+  }) async {
+    try {
+      // Sử dụng method có sẵn để gửi thông báo custom
+      await _adminNotificationService.sendPersonalNotification(
+        userId: userId,
+        title: 'Cập nhật trạng thái vận chuyển',
+        content: 'Đơn hàng $orderId: $status - $message',
+        additionalData: {
+          'orderId': orderId,
+          'status': status,
+          'customerName': customerName,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+      print('✅ Shipping status notification sent successfully');
+    } catch (e) {
+      print('❌ Error sending shipping status notification: $e');
+    }
+  }
+
   // ===================== ANALYTICS =====================
 
   /// Lấy thống kê thông báo

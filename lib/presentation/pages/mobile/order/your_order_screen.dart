@@ -54,6 +54,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         return FontAwesomeIcons.clock;
       case 'Processing':
         return FontAwesomeIcons.spinner;
+      case 'Shipped':
+        return FontAwesomeIcons.truck;
       case 'Completed':
         return FontAwesomeIcons.checkCircle;
       case 'Cancelled':
@@ -69,12 +71,59 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         return Colors.orange;
       case 'Processing':
         return Colors.blue;
+      case 'Shipped':
+        return Colors.purple;
       case 'Completed':
         return Colors.green;
       case 'Cancelled':
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  IconData getShippingStatusIcon(String shippingStatus) {
+    switch (shippingStatus) {
+      case 'pickup_pending':
+        return FontAwesomeIcons.clock;
+      case 'in_transit':
+        return FontAwesomeIcons.truck;
+      case 'out_for_delivery':
+        return FontAwesomeIcons.locationDot;
+      case 'delivered':
+        return FontAwesomeIcons.checkCircle;
+      default:
+        return FontAwesomeIcons.question;
+    }
+  }
+
+  Color getShippingStatusColor(String shippingStatus) {
+    switch (shippingStatus) {
+      case 'pickup_pending':
+        return Colors.orange;
+      case 'in_transit':
+        return Colors.blue;
+      case 'out_for_delivery':
+        return Colors.purple;
+      case 'delivered':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String getShippingStatusText(String shippingStatus) {
+    switch (shippingStatus) {
+      case 'pickup_pending':
+        return 'Chờ lấy hàng';
+      case 'in_transit':
+        return 'Đang vận chuyển';
+      case 'out_for_delivery':
+        return 'Đang giao hàng';
+      case 'delivered':
+        return 'Đã giao hàng';
+      default:
+        return 'Không xác định';
     }
   }
 
@@ -88,6 +137,92 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
       final hh = dt.hour.toString().padLeft(2, '0');
       final mm = dt.minute.toString().padLeft(2, '0');
       return '$d/$m/$y • $hh:$mm';
+    }
+    return '-';
+  }
+
+  /// Hiển thị thời gian giao hàng thông minh
+  Widget _buildDeliveryTimeDisplay(Map<String, dynamic> shippingInfo) {
+    final status = shippingInfo['status'] ?? '';
+    
+    // Nếu đã giao hoặc hủy, hiện thời gian thực tế
+    if (status == 'delivered') {
+      // Thử lấy thời gian giao thực tế từ nhiều field
+      final actualTime = shippingInfo['actualDeliveryTime'] ?? 
+                        shippingInfo['deliveredAt'] ?? 
+                        shippingInfo['timestamp'];
+      if (actualTime != null) {
+        return Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              "Đã giao lúc: ${_formatDeliveryTime(actualTime)}",
+              style: TextStyle(
+                color: Colors.green.shade700,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        );
+      }
+    }
+    
+    if (status == 'failed' || status == 'returned') {
+      return Row(
+        children: [
+          Icon(Icons.cancel, color: Colors.red, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            "Giao hàng thất bại",
+            style: TextStyle(
+              color: Colors.red.shade700,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      );
+    }
+    
+    // Các trạng thái khác hiện thời gian dự kiến
+    if (status == 'in_transit' || status == 'out_for_delivery' || status == 'pickup_pending') {
+      final estimatedTime = shippingInfo['estimatedDelivery'];
+      if (estimatedTime != null) {
+        return Row(
+          children: [
+            Icon(Icons.schedule, color: Colors.orange, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              "Dự kiến giao: ${_formatDeliveryTime(estimatedTime)}",
+              style: TextStyle(
+                color: Colors.orange.shade700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        );
+      }
+    }
+    
+    return const SizedBox.shrink();
+  }
+
+  /// Format thời gian giao hàng
+  String _formatDeliveryTime(dynamic timeString) {
+    try {
+      if (timeString is String) {
+        final dateTime = DateTime.parse(timeString);
+        final day = dateTime.day.toString().padLeft(2, '0');
+        final month = dateTime.month.toString().padLeft(2, '0');
+        final year = dateTime.year.toString();
+        final hour = dateTime.hour.toString().padLeft(2, '0');
+        final minute = dateTime.minute.toString().padLeft(2, '0');
+        return '$day/$month/$year • $hour:$minute';
+      }
+    } catch (e) {
+      print('Error formatting delivery time: $e');
     }
     return '-';
   }
@@ -175,6 +310,15 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                 final totalRaw = order['totalAmount'] ?? 0;
                 final statusPay = order['statusPayment'] ?? '';
                 final id = order['orderId'] ?? order.id;
+                
+                // Safely get tracking number and shipping info
+                final orderData = order.data() as Map<String, dynamic>?;
+                final trackingNumber = orderData?.containsKey('trackingNumber') == true 
+                    ? orderData!['trackingNumber'] 
+                    : null;
+                final shippingInfo = orderData?.containsKey('shippingInfo') == true 
+                    ? orderData!['shippingInfo'] 
+                    : null;
 
                 return Card(
                   elevation: 2,
@@ -247,8 +391,33 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                           .withOpacity(.12),
                                       fg: getStatusColor(status),
                                     ),
+                                    // Hiển thị trạng thái vận chuyển nếu có tracking number
+                                    if (trackingNumber != null && trackingNumber.toString().isNotEmpty && shippingInfo != null)
+                                      _ChipBadge(
+                                        label: getShippingStatusText(shippingInfo['status'] ?? 'pickup_pending'),
+                                        icon: getShippingStatusIcon(shippingInfo['status'] ?? 'pickup_pending'),
+                                        bg: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending').withOpacity(.12),
+                                        fg: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending'),
+                                      ),
                                   ],
                                 ),
+                                // Hiển thị tracking number nếu có
+                                if (trackingNumber != null && trackingNumber.toString().isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.local_shipping, size: 16, color: Colors.grey[600]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "Tracking: $trackingNumber",
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                                 const SizedBox(height: 10),
                                 // Nút hủy (nếu Pending)
                                 if (status == 'Pending')
@@ -318,6 +487,15 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         final totalRaw = order['totalAmount'] ?? 0;
         final statusPay = order['statusPayment'] ?? '';
         final email = order['email'] ?? '';
+        
+        // Safely get tracking number and shipping info
+        final orderData = order.data() as Map<String, dynamic>?;
+        final trackingNumber = orderData?.containsKey('trackingNumber') == true 
+            ? orderData!['trackingNumber'] 
+            : null;
+        final shippingInfo = orderData?.containsKey('shippingInfo') == true 
+            ? orderData!['shippingInfo'] 
+            : null;
 
         // Debug logging for order details
         print(
@@ -327,21 +505,73 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
 
         // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
         String address = '';
+        String customerPhone = '';
         try {
           if (order.data() is Map<String, dynamic>) {
             final orderData = order.data() as Map<String, dynamic>;
-            if (orderData.containsKey('shippingAddress')) {
-              address = orderData['shippingAddress'] ?? '';
-            } else if (orderData.containsKey('shippingInfo')) {
-              // Format từ deliveryInfo cũ
-              final deliveryInfo = orderData['shippingInfo'];
+            
+            // Lấy số điện thoại từ nhiều nguồn theo thứ tự ưu tiên
+            // 1. Từ shipping info customerPhone
+            if (shippingInfo is Map<String, dynamic> && shippingInfo['customerPhone'] != null) {
+              customerPhone = shippingInfo['customerPhone'].toString();
+            }
+            // 2. Từ deliveryInfo phone
+            else if (orderData.containsKey('deliveryInfo') && orderData['deliveryInfo'] is Map<String, dynamic>) {
+              final deliveryInfo = orderData['deliveryInfo'] as Map<String, dynamic>;
+              if (deliveryInfo['phone'] != null && deliveryInfo['phone'].toString().isNotEmpty) {
+                customerPhone = deliveryInfo['phone'].toString();
+              }
+            }
+            // 3. Từ phone field cũ
+            else if (orderData.containsKey('phone') && orderData['phone'].toString().isNotEmpty) {
+              customerPhone = orderData['phone'].toString();
+            }
+            
+            // Ưu tiên shippingAddress field mới
+            if (orderData.containsKey('shippingAddress') && 
+                orderData['shippingAddress'] != null && 
+                orderData['shippingAddress'].toString().isNotEmpty) {
+              address = orderData['shippingAddress'].toString();
+              // Thêm số điện thoại nếu có
+              if (customerPhone.isNotEmpty) {
+                address = '$customerPhone\n$address';
+              }
+            }
+            // Fallback to deliveryInfo format
+            else if (orderData.containsKey('deliveryInfo')) {
+              final deliveryInfo = orderData['deliveryInfo'];
               if (deliveryInfo is Map<String, dynamic>) {
                 final name = deliveryInfo['name'] ?? '';
-                final phone = deliveryInfo['phone'] ?? '';
+                final phone = deliveryInfo['phone'] ?? customerPhone;
                 final addr = deliveryInfo['address'] ?? '';
                 address = '$name • $phone\n$addr';
               } else if (deliveryInfo is String) {
                 address = deliveryInfo;
+                if (customerPhone.isNotEmpty) {
+                  address = '$customerPhone\n$address';
+                }
+              }
+            }
+            // Fallback to shippingInfo format  
+            else if (orderData.containsKey('shippingInfo')) {
+              final shippingInfo = orderData['shippingInfo'];
+              if (shippingInfo is Map<String, dynamic> && shippingInfo['address'] != null) {
+                final name = shippingInfo['name'] ?? '';
+                final phone = shippingInfo['phone'] ?? customerPhone;
+                final addr = shippingInfo['address'] ?? '';
+                address = '$name • $phone\n$addr';
+              } else if (shippingInfo is String) {
+                address = shippingInfo;
+                if (customerPhone.isNotEmpty) {
+                  address = '$customerPhone\n$address';
+                }
+              }
+            }
+            // Final fallback to old address field
+            else if (orderData.containsKey('address')) {
+              address = orderData['address']?.toString() ?? '';
+              if (customerPhone.isNotEmpty) {
+                address = '$customerPhone\n$address';
               }
             }
           }
@@ -439,6 +669,108 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     ),
                   const SizedBox(height: 12),
                   const Divider(height: 1),
+                  
+                  // Hiển thị trạng thái vận chuyển nếu có tracking number
+                  if (trackingNumber != null && trackingNumber.toString().isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      "Thông tin vận chuyển",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.local_shipping, 
+                                   color: Colors.blue.shade600, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Mã vận đơn: $trackingNumber",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (shippingInfo != null && shippingInfo is Map<String, dynamic>) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Icon(
+                                  getShippingStatusIcon(shippingInfo['status'] ?? 'pickup_pending'),
+                                  color: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending'),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Trạng thái: ${getShippingStatusText(shippingInfo['status'] ?? 'pickup_pending')}",
+                                  style: TextStyle(
+                                    color: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending'),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (shippingInfo['shippingCompany'] != null) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.business, color: Colors.grey.shade600, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Đơn vị vận chuyển: ${shippingInfo['shippingCompany']}",
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            
+                            // Hiển thị thời gian thông minh
+                            const SizedBox(height: 8),
+                            _buildDeliveryTimeDisplay(shippingInfo),
+                            
+                            // Hiển thị số điện thoại customer nếu có
+                            if (shippingInfo['customerPhone'] != null && 
+                                shippingInfo['customerPhone'].toString().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.phone, color: Colors.grey.shade600, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "SĐT người nhận: ${shippingInfo['customerPhone']}",
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                  ],
+                  
                   const SizedBox(height: 10),
                   Text(
                     "Items",
@@ -542,7 +874,8 @@ class _FilterBar extends StatelessWidget {
     final filterItems = [
       'All',
       'Pending',
-      'Processing',
+      'Processing', 
+      'Shipped',
       'Completed',
       'Cancelled'
     ];

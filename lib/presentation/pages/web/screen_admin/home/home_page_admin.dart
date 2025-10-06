@@ -17,6 +17,19 @@ import '../category/category_admin.dart';
 import '../auth/login_admin_page.dart';
 import '../order/orders_admin.dart';
 
+// Helper class for navigation items
+class NavigationItem {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+
+  const NavigationItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
+}
+
 class HomePageAdmin extends StatefulWidget {
   const HomePageAdmin({super.key});
 
@@ -89,6 +102,114 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     }
   }
 
+  // Helper methods for navigation
+  List<NavigationItem> _getNavigationItems() {
+    final l10n = AppLocalizations.of(context)!;
+    return [
+      NavigationItem(
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard,
+        label: l10n.dashboard,
+      ),
+      NavigationItem(
+        icon: Icons.pets_outlined,
+        selectedIcon: Icons.pets,
+        label: l10n.pets,
+      ),
+      NavigationItem(
+        icon: Icons.category_outlined,
+        selectedIcon: Icons.category,
+        label: l10n.category,
+      ),
+      NavigationItem(
+        icon: Icons.group_outlined,
+        selectedIcon: Icons.group,
+        label: l10n.account,
+      ),
+      NavigationItem(
+        icon: Icons.receipt_long_outlined,
+        selectedIcon: Icons.receipt_long,
+        label: l10n.orders,
+      ),
+      NavigationItem(
+        icon: Icons.notifications_active_outlined,
+        selectedIcon: Icons.notifications_active,
+        label: l10n.notification,
+      ),
+      NavigationItem(
+        icon: Icons.inbox_outlined,
+        selectedIcon: Icons.inbox,
+        label: l10n.inbox,
+      ),
+      NavigationItem(
+        icon: Icons.store_outlined,
+        selectedIcon: Icons.store,
+        label: l10n.shopInfo,
+      ),
+      NavigationItem(
+        icon: Icons.analytics_outlined,
+        selectedIcon: Icons.analytics,
+        label: l10n.petAnalytics,
+      ),
+      NavigationItem(
+        icon: Icons.bar_chart_outlined,
+        selectedIcon: Icons.bar_chart,
+        label: l10n.revenue,
+      ),
+      NavigationItem(
+        icon: Icons.local_shipping_outlined,
+        selectedIcon: Icons.local_shipping,
+        label: 'Giao hàng',
+      ),
+    ];
+  }
+
+  Widget _buildNavigationItem(int index, NavigationItem item) {
+    final isSelected = _selectedIndex == index;
+    final theme = Theme.of(context);
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Material(
+        color: isSelected 
+          ? theme.colorScheme.primary.withOpacity(0.1)
+          : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _selectedIndex = index),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  isSelected ? item.selectedIcon : item.icon,
+                  color: isSelected 
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    style: TextStyle(
+                      color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -120,47 +241,35 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       ),
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) =>
-                setState(() => _selectedIndex = index),
-            labelType: NavigationRailLabelType.all,
-            destinations: [
-              NavigationRailDestination(
-                  icon: const Icon(Icons.dashboard_outlined),
-                  label: Text(l10n.dashboard)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.pets_outlined),
-                  label: Text(l10n.pets)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.category_outlined),
-                  label: Text(l10n.category)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.group_outlined),
-                  label: Text(l10n.account)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  label: Text(l10n.orders)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.notifications_active),
-                  label: Text(l10n.notification)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.inbox_outlined),
-                  label: Text(l10n.inbox)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.store_outlined),
-                  label: Text(l10n.shopInfo)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.analytics_outlined),
-                  label: Text(l10n.petAnalytics)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.bar_chart_outlined),
-                  label: Text(l10n.revenue)),
-              NavigationRailDestination(
-                  icon: const Icon(Icons.local_shipping_outlined),
-                  label: Text('Giao hàng')),
-            ],
+          // Scrollable NavigationRail để xử lý overflow
+          Container(
+            width: 200,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                right: BorderSide(
+                  color: Theme.of(context).dividerColor,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Leading space
+                  const SizedBox(height: 8),
+                  
+                  // Navigation items
+                  for (int i = 0; i < _getNavigationItems().length; i++)
+                    _buildNavigationItem(i, _getNavigationItems()[i]),
+                    
+                  // Trailing space
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
           ),
+          // Main content area
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
