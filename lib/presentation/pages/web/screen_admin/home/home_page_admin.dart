@@ -8,6 +8,7 @@ import 'package:pet_shop/presentation/pages/web/screen_admin/notification/notifi
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet/pets_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_analytics_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/shipping_management_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
 import 'package:pet_shop/presentation/widgets/settings_menu.dart';
 
@@ -39,6 +40,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     const ShopInfo(),
     const PetAnalyticsPage(),
     const RevenuePage(),
+   const ShippingManagementPage(),
   ];
 
   void _setIndex(int i) {
@@ -154,6 +156,9 @@ class _HomePageAdminState extends State<HomePageAdmin> {
               NavigationRailDestination(
                   icon: const Icon(Icons.bar_chart_outlined),
                   label: Text(l10n.revenue)),
+              NavigationRailDestination(
+                  icon: const Icon(Icons.local_shipping_outlined),
+                  label: Text('Giao hàng')),
             ],
           ),
           Expanded(

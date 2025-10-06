@@ -499,6 +499,9 @@ class _CartScreenState extends State<CartScreen> {
     final userInfoForOrder = await userManager.getUserInfoForOrder();
     final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
 
+    // Extract address from selectedDeliveryInfo
+    final shippingAddress = selectedDeliveryInfo?['address'] ?? "Địa chỉ không xác định";
+    
     final orderData = {
       "orderId": orderRef.id,
       "userIdentifier": userIdentifier,
@@ -506,6 +509,7 @@ class _CartScreenState extends State<CartScreen> {
       "email": userInfoForOrder?['email'] ?? currentUserEmail ?? userIdentifier,
       "phone": userInfoForOrder?['phone'] ?? (userInfo?["phone"] ?? ""),
       "displayName": userInfoForOrder?['displayName'] ?? "",
+      "address": shippingAddress, // Add shipping address directly
       "totalAmount": totalAmount,
       "statusPayment": isPaid
           ? (paymentMethod == 'paypal' ? "Payment Completed" : "COD")
@@ -522,6 +526,8 @@ class _CartScreenState extends State<CartScreen> {
     print("  - email: ${orderData['email']}");
     print("  - phone: ${orderData['phone']}");
     print("  - displayName: ${orderData['displayName']}");
+    print("  - address: ${orderData['address']}");
+    print("  - shippingInfo: ${orderData['shippingInfo']}");
     print("🌱 Collected breeds for Apriori: $breeds");
 
     await orderRef.set(orderData);
@@ -1057,6 +1063,10 @@ class _CartScreenState extends State<CartScreen> {
 
                               try {
                                 // Kiểm tra thông tin giao hàng
+                                print("🔍 DEBUG: Checking delivery info...");
+                                print("🔍 selectedDeliveryInfo: $selectedDeliveryInfo");
+                                print("🔍 deliveryInfos.length: ${deliveryInfos.length}");
+                                
                                 if (selectedDeliveryInfo == null ||
                                     deliveryInfos.isEmpty) {
                                   DialogHelper.hideLoadingDialog(context);

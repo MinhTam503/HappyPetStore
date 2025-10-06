@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
+import 'package:pet_shop/services/shipping_service.dart';
+import 'package:pet_shop/presentation/components/shipping_tracking_widget.dart';
 import '../../components/empty_state.dart';
 import '../send_email.dart';
 import 'components/order_card.dart';
@@ -382,6 +384,92 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                             };
                             await updateOrder(orderId, collection, payload);
 
+                            // Debug order data
+                            print('🔍 Order Debug Info:');
+                            print('🔍 Order ID: $orderId');
+                            print('🔍 New Status: $newStatus');
+                            print('🔍 Address: "$address"');
+                            print('🔍 Address isEmpty: ${address.isEmpty}');
+                            print('🔍 Total: $total');
+                            print('🔍 Email: $email');
+                            print('🔍 Current tracking number: ${order['trackingNumber']}');
+
+                            // Tạo shipment khi chuyển sang Processing (chỉ nếu chưa có tracking number)
+                            if (newStatus == 'Processing' && (order['trackingNumber'] == null || order['trackingNumber'].toString().isEmpty)) {
+                              print('🚚 Status is Processing and no tracking number, creating shipment...');
+                              
+                              if (address.isEmpty) {
+                                print('⚠️ Address is empty! Using fallback address');
+                                address = 'Địa chỉ không xác định, TP.HCM'; // Fallback address
+                              }
+                              
+                              try {
+                                print('🚚 Creating shipment for order: $orderId');
+                                
+                                final result = await ShippingService.createShipment(
+                                  orderId: orderId,
+                                  shippingAddress: address,
+                                  customerInfo: {
+                                    'email': email,
+                                    'name': 'Khách hàng', // Fallback name
+                                  },
+                                  totalValue: double.tryParse(total.replaceAll('\$', '')) ?? 0,
+                                  items: [
+                                    {
+                                      'name': 'Pet Store Order',
+                                      'quantity': 1,
+                                      'price': double.tryParse(total.replaceAll('\$', '')) ?? 0,
+                                      'weight': 1000, // 1kg default
+                                    }
+                                  ],
+                                );
+                                
+                                print('🚚 Shipment creation result: ${result['success']}');
+                                
+                                if (result['success']) {
+                                  final trackingNumber = result['data']['trackingNumber'];
+                                  print('🚚 Tracking number: $trackingNumber');
+                                  
+                                  // Lưu tracking number vào order
+                                  await updateOrder(orderId, collection, {
+                                    'trackingNumber': trackingNumber,
+                                    'shippingInfo': result['data'],
+                                  });
+                                  
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Đã tạo đơn giao hàng: $trackingNumber'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  print('🚚 Shipment creation failed: ${result['message']}');
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Lỗi tạo đơn giao hàng: ${result['message']}'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              } catch (e) {
+                                print('Error creating shipment: $e');
+                              }
+                            } else if (newStatus == 'Processing' && order['trackingNumber'] != null && order['trackingNumber'].toString().isNotEmpty) {
+                              print('🚚 Order already has tracking number: ${order['trackingNumber']} - skipping shipment creation');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Đơn hàng đã có mã vận chuyển: ${order['trackingNumber']}'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              }
+                            }
+
                             // Gửi notification và email
                             if (orderId.isNotEmpty && email.isNotEmpty) {
                               final userInfo = await authService.value
@@ -742,6 +830,22 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                         },
                       ),
                     ),
+
+                    // Thêm tracking widget nếu có trackingNumber
+                    if (order['trackingNumber'] != null) ...[
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Thông tin giao hàng',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                      const SizedBox(height: 8),
+                      ShippingTrackingWidget(
+                        trackingNumber: order['trackingNumber'].toString(),
+                        isAdminView: true,
+                      ),
+                    ],
 
                     const SizedBox(height: 16),
                     Align(
