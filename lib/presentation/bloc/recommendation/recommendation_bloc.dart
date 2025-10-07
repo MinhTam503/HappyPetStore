@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/domain/usecases/recommendation_usecase.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_event.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_state.dart';
@@ -14,6 +15,7 @@ class RecommendationBloc extends Bloc<RecommendationEvent, RecommendationState> 
     on<LoadRecommendationsByType>(_onLoadRecommendationsByType);
     on<LoadHybridRecommendations>(_onLoadHybridRecommendations);
     on<LoadPersonalizedRecommendations>(_onLoadPersonalizedRecommendations);
+    on<LoadSearchRecommendations>(_onLoadSearchRecommendations);
     on<TrackUserInteraction>(_onTrackUserInteraction);
     on<LoadUserProfile>(_onLoadUserProfile);
     on<LoadSimilarUsers>(_onLoadSimilarUsers);
@@ -143,6 +145,88 @@ class RecommendationBloc extends Bloc<RecommendationEvent, RecommendationState> 
     } catch (e) {
       // Only emit error if tracking is critical for the UI
       print('Error tracking interaction: $e');
+    }
+  }
+
+  Future<void> _onLoadSearchRecommendations(
+    LoadSearchRecommendations event,
+    Emitter<RecommendationState> emit,
+  ) async {
+    emit(RecommendationLoading());
+    
+    try {
+      // Combine different recommendation types for search suggestions
+      final contentBased = await _recommendationUseCase.getRecommendationsByType(
+        userId: event.userId,
+        type: RecommendationType.contentBased,
+        limit: 3,
+      );
+      
+      final trending = await _recommendationUseCase.getRecommendationsByType(
+        userId: event.userId,
+        type: RecommendationType.trending,
+        limit: 3,
+      );
+      
+      final collaborative = await _recommendationUseCase.getRecommendationsByType(
+        userId: event.userId,
+        type: RecommendationType.collaborative,
+        limit: 2,
+      );
+      
+      final association = await _recommendationUseCase.getRecommendationsByType(
+        userId: event.userId,
+        type: RecommendationType.association,
+        limit: 2,
+      );
+
+      // Combine and deduplicate recommendations
+      final allRecommendations = <RecommendationItem>[];
+      final seenPetIds = <String>{};
+
+      // Add recommendations with priority
+      for (final item in contentBased) {
+        if (!seenPetIds.contains(item.petId)) {
+          allRecommendations.add(item);
+          seenPetIds.add(item.petId);
+        }
+      }
+
+      for (final item in trending) {
+        if (!seenPetIds.contains(item.petId) && allRecommendations.length < event.limit) {
+          allRecommendations.add(item);
+          seenPetIds.add(item.petId);
+        }
+      }
+
+      for (final item in collaborative) {
+        if (!seenPetIds.contains(item.petId) && allRecommendations.length < event.limit) {
+          allRecommendations.add(item);
+          seenPetIds.add(item.petId);
+        }
+      }
+
+      for (final item in association) {
+        if (!seenPetIds.contains(item.petId) && allRecommendations.length < event.limit) {
+          allRecommendations.add(item);
+          seenPetIds.add(item.petId);
+        }
+      }
+
+      final recommendationsByType = <RecommendationType, List<RecommendationItem>>{
+        RecommendationType.contentBased: contentBased,
+        RecommendationType.trending: trending,
+        RecommendationType.collaborative: collaborative,
+        RecommendationType.association: association,
+      };
+
+      emit(RecommendationLoaded(
+        recommendations: allRecommendations,
+        recommendationsByType: recommendationsByType,
+        message: 'Search recommendations loaded successfully',
+      ));
+    } catch (e) {
+      emit(RecommendationError('Lỗi khi tải gợi ý tìm kiếm: ${e.toString()}'));
     }
   }
 

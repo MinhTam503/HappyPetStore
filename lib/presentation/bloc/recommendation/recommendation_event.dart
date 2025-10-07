@@ -38,6 +38,21 @@ class LoadRecommendationsByType extends RecommendationEvent {
   List<Object?> get props => [userId, type, limit];
 }
 
+class LoadSearchRecommendations extends RecommendationEvent {
+  final String userId;
+  final String? searchQuery;
+  final int limit;
+
+  const LoadSearchRecommendations({
+    required this.userId,
+    this.searchQuery,
+    this.limit = 10,
+  });
+
+  @override
+  List<Object?> get props => [userId, searchQuery, limit];
+}
+
 class TrackUserInteraction extends RecommendationEvent {
   final String userId;
   final String petId;

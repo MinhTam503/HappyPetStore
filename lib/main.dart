@@ -7,6 +7,7 @@ import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
 import 'package:pet_shop/core/di/recommendation_di.dart';
 import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
+import 'package:pet_shop/core/services/search_recommendations_manager.dart';
 import 'package:pet_shop/core/services/settings_service.dart';
 import 'package:pet_shop/data/repositories/notification_repository.dart';
 import 'package:pet_shop/data/repositories/viewed_pets/recent_pets_repository_impl.dart';
@@ -79,6 +80,10 @@ void main() async {
   try {
     await setupRecommendationDI();
     await RecommendationTrackingService().initialize();
+    
+    // Initialize search recommendations manager with auto-refresh
+    await SearchRecommendationsManager().initialize();
+    
     if (kDebugMode) {
       debugPrint('🎯 Recommendation system initialized successfully');
     }

@@ -10,6 +10,11 @@ import 'package:pet_shop/data/repositories/search_history_repository.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
 import 'package:pet_shop/presentation/bloc/search/search_event.dart';
 import 'package:pet_shop/presentation/bloc/search/search_state.dart';
+import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
+import 'package:pet_shop/domain/usecases/recommendation_usecase.dart';
+import 'package:pet_shop/data/repositories/recommendation_repository_impl.dart';
+import 'package:pet_shop/presentation/widgets/search_recommendations_section.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -21,10 +26,12 @@ class SearchPage extends StatefulWidget {
 class _NewSearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  final UserManager _userManager = UserManager();
   late final SearchBloc _searchBloc;
   File? selectedImage;
   String? searchImagePath;
   bool isLoading = false;
+  String? userId;
 
   @override
   void initState() {
@@ -34,6 +41,7 @@ class _NewSearchPageState extends State<SearchPage> {
       firestore: FirebaseFirestore.instance,
     );
     _searchBloc.add(LoadSearchHistory());
+    _initializeUser();
 
     // Add search on text change
     _searchController.addListener(() {
@@ -43,6 +51,19 @@ class _NewSearchPageState extends State<SearchPage> {
 
     // Test Firebase data
     _testFirebaseCategories();
+  }
+
+  Future<void> _initializeUser() async {
+    try {
+      await _userManager.initialize();
+      if (_userManager.isLoggedIn && mounted) {
+        setState(() {
+          userId = _userManager.currentUserId;
+        });
+      }
+    } catch (e) {
+      print('Error loading user: $e');
+    }
   }
 
   void _testFirebaseCategories() async {
@@ -133,8 +154,20 @@ class _NewSearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _searchBloc,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _searchBloc),
+        BlocProvider(
+          create: (context) => RecommendationBloc(
+            recommendationUseCase: RecommendationUseCase(
+              RecommendationRepositoryImpl(
+                firestore: FirebaseFirestore.instance,
+                userManager: _userManager,
+              ),
+            ),
+          ),
+        ),
+      ],
       child: BlocConsumer<SearchBloc, SearchState>(
         listener: (context, state) {
           if (state is SearchLoading) {
@@ -675,6 +708,14 @@ class _NewSearchPageState extends State<SearchPage> {
                                     }).toList(),
                                   ],
                                 ),
+                              ),
+                            ),
+
+                          // Search Recommendations Section
+                          if (userId != null && selectedImage == null && _searchController.text.isEmpty)
+                            SliverToBoxAdapter(
+                              child: SearchRecommendationsSection(
+                                userId: userId!,
                               ),
                             ),
 
