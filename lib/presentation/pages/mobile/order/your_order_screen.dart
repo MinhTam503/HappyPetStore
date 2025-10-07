@@ -5,6 +5,7 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
+import 'package:pet_shop/presentation/components/shipping_tracking_widget.dart';
 
 class YourOrderScreen extends StatefulWidget {
   const YourOrderScreen({super.key});
@@ -308,6 +309,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                 final order = orders[index];
                 final status = order['statusOrder'] ?? '';
                 final totalRaw = order['totalAmount'] ?? 0;
+                final subtotal = order['subtotal'] ?? totalRaw;
+                final shippingFee = order['shippingFee'] ?? 0;
                 final statusPay = order['statusPayment'] ?? '';
                 final id = order['orderId'] ?? order.id;
                 
@@ -372,11 +375,26 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   runSpacing: 6,
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
+                                    // Show breakdown if subtotal exists (new orders), otherwise just total (old orders)
+                                    if (subtotal != totalRaw && shippingFee > 0) ...[
+                                      _ChipBadge(
+                                        label: "Hàng: ${CurrencyHelper.formatVND(subtotal)}",
+                                        icon: Icons.shopping_cart_outlined,
+                                        bg: Colors.blue.shade50,
+                                        fg: Colors.blue.shade700,
+                                      ),
+                                      _ChipBadge(
+                                        label: "Ship: ${CurrencyHelper.formatVND(shippingFee)}",
+                                        icon: Icons.local_shipping_outlined,
+                                        bg: Colors.orange.shade50,
+                                        fg: Colors.orange.shade700,
+                                      ),
+                                    ],
                                     _ChipBadge(
-                                      label: CurrencyHelper.formatVND(totalRaw),
+                                      label: (subtotal != totalRaw && shippingFee > 0) ? "Tổng: ${CurrencyHelper.formatVND(totalRaw)}" : "${CurrencyHelper.formatVND(totalRaw)}",
                                       icon: Icons.payments_outlined,
-                                      bg: Colors.grey.shade100,
-                                      fg: Colors.black87,
+                                      bg: Colors.green.shade50,
+                                      fg: Colors.green.shade700,
                                     ),
                                     _ChipBadge(
                                       label: "Pay: $statusPay",
@@ -485,6 +503,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
       builder: (context) {
         final status = order['statusOrder'] ?? '';
         final totalRaw = order['totalAmount'] ?? 0;
+        final subtotal = order['subtotal'] ?? totalRaw;
+        final shippingFee = order['shippingFee'] ?? 0;
         final statusPay = order['statusPayment'] ?? '';
         final email = order['email'] ?? '';
         
@@ -585,11 +605,13 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
           initialChildSize: 0.72,
           minChildSize: 0.5,
           maxChildSize: 0.92,
-          builder: (context, controller) {
-            return Padding(
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Center(
                     child: Container(
@@ -643,11 +665,26 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         bg: Colors.grey.shade100,
                         fg: Colors.black87,
                       ),
+                      // Show breakdown if subtotal exists and different from total (new orders), otherwise just total
+                      if (subtotal != totalRaw && shippingFee > 0) ...[
+                        _ChipBadge(
+                          label: "Hàng: ${CurrencyHelper.formatVND(subtotal)}",
+                          icon: Icons.shopping_cart_outlined,
+                          bg: Colors.blue.shade50,
+                          fg: Colors.blue.shade700,
+                        ),
+                        _ChipBadge(
+                          label: "Ship: ${CurrencyHelper.formatVND(shippingFee)}",
+                          icon: Icons.local_shipping_outlined,
+                          bg: Colors.orange.shade50,
+                          fg: Colors.orange.shade700,
+                        ),
+                      ],
                       _ChipBadge(
-                        label: "Total: ${CurrencyHelper.formatVND(totalRaw)}",
+                        label: (subtotal != totalRaw && shippingFee > 0) ? "Tổng: ${CurrencyHelper.formatVND(totalRaw)}" : "${CurrencyHelper.formatVND(totalRaw)}",
                         icon: Icons.payments_outlined,
-                        bg: Colors.grey.shade100,
-                        fg: Colors.black87,
+                        bg: Colors.green.shade50,
+                        fg: Colors.green.shade700,
                       ),
                     ],
                   ),
@@ -767,6 +804,21 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         ],
                       ),
                     ),
+                    
+                    // Add ShippingTrackingWidget for real-time tracking
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: ShippingTrackingWidget(
+                        trackingNumber: trackingNumber,
+                        isAdminView: false, // Customer view
+                      ),
+                    ),
+                    
                     const SizedBox(height: 16),
                     const Divider(height: 1),
                   ],
@@ -779,20 +831,17 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         ),
                   ),
                   const SizedBox(height: 8),
-                  Expanded(
-                    child: ListView.separated(
-                      controller: controller,
-                      itemCount: petsData.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final petData = petsData[index];
-                        final name = petData['name'] ?? '';
-                        final price =
-                            petData['price'] ?? petData['weight'] ?? '';
-                        final qty = petData['quantity'] ?? 1;
-                        final image = (petData['imageUrl'] ?? '') as String;
+                  // Pet items list (replaced ListView with Column for better scrolling)
+                  Column(
+                    children: petsData.map((petData) {
+                      final name = petData['name'] ?? '';
+                      final price = petData['price'] ?? petData['weight'] ?? '';
+                      final qty = petData['quantity'] ?? 1;
+                      final image = (petData['imageUrl'] ?? '') as String;
 
-                        return Card(
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        child: Card(
                           elevation: 1,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -830,9 +879,9 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                             subtitle: Text(
                                 "${CurrencyHelper.formatVND(price)}  •  x$qty"),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 8),
                   Align(

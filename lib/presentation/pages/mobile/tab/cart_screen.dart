@@ -18,6 +18,7 @@ import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dar
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
+import 'package:pet_shop/services/shipping_service.dart';
 import '../../../../data/models/cart_model.dart';
 import '../../../bloc/apriori/apriori_bloc.dart';
 import '../../../bloc/apriori/apriori_event.dart';
@@ -47,6 +48,10 @@ class _CartScreenState extends State<CartScreen> {
   List<Map<String, dynamic>> deliveryInfos = [];
   Map<String, dynamic>? selectedDeliveryInfo;
   Map<String, dynamic>? userInfo;
+  
+  // Shipping fee calculation
+  double shippingFee = 0.0;
+  bool isCalculatingShipping = false;
 
   @override
   void initState() {
@@ -136,6 +141,54 @@ class _CartScreenState extends State<CartScreen> {
     print(
         "👤 Fetched user info: email=${userInfo?['email']}, phone=${userInfo?['phone']}");
     setState(() {});
+  }
+
+  Future<void> calculateShippingFee(List<CartModel> cartItems) async {
+    if (selectedDeliveryInfo == null || cartItems.isEmpty) {
+      setState(() {
+        shippingFee = 0.0;
+      });
+      return;
+    }
+
+    setState(() {
+      isCalculatingShipping = true;
+    });
+
+    try {
+      final totalValue = _calculateTotal(cartItems);
+      final totalWeight = cartItems.length * 1.5; // Estimate 1.5kg per pet
+      
+      final result = await ShippingService.calculateShippingFee(
+        shippingAddress: selectedDeliveryInfo!['address'] ?? '',
+        totalValue: totalValue,
+        totalWeight: totalWeight,
+        customerInfo: {
+          'name': selectedDeliveryInfo!['name'] ?? '',
+          'phone': selectedDeliveryInfo!['phone'] ?? '',
+        },
+      );
+      
+      if (result['success']) {
+        setState(() {
+          shippingFee = result['data']['shippingFee'].toDouble();
+        });
+      } else {
+        // Fallback to default shipping fee
+        setState(() {
+          shippingFee = 30000.0; // Default 30k VND
+        });
+      }
+    } catch (e) {
+      print('❌ Error calculating shipping fee: $e');
+      setState(() {
+        shippingFee = 30000.0; // Default 30k VND
+      });
+    } finally {
+      setState(() {
+        isCalculatingShipping = false;
+      });
+    }
   }
 
   void onOrderSuccessWithBreeds(List<String> breeds) async {
@@ -400,6 +453,27 @@ class _CartScreenState extends State<CartScreen> {
             setState(() {
               selectedDeliveryInfo = address;
             });
+            
+            // Calculate shipping fee when address changes
+            if (userIdentifier != null) {
+              final currentState = context.read<CartBloc>().state;
+              if (currentState is CartLoaded) {
+                final cartItems = currentState.items;
+                final carts = cartItems.map((item) {
+                  return CartModel(
+                    grocery: {
+                      ...item,
+                      'price': item["price"]?.toString() ?? '0',
+                      'productId': item["productId"]?.toString() ?? '',
+                      'name': item["name"]?.toString() ?? '',
+                      'imageUrl': item["imageUrl"]?.toString() ?? '',
+                    },
+                    quantity: item["quantity"] ?? 1,
+                  );
+                }).toList();
+                calculateShippingFee(carts);
+              }
+            }
           },
         ),
       ),
@@ -408,6 +482,27 @@ class _CartScreenState extends State<CartScreen> {
     // Refresh addresses after returning from address list
     if (result != null) {
       fetchAddresses();
+      
+      // Calculate shipping fee after address update
+      if (userIdentifier != null) {
+        final currentState = context.read<CartBloc>().state;
+        if (currentState is CartLoaded) {
+          final cartItems = currentState.items;
+          final carts = cartItems.map((item) {
+            return CartModel(
+              grocery: {
+                ...item,
+                'price': item["price"]?.toString() ?? '0',
+                'productId': item["productId"]?.toString() ?? '',
+                'name': item["name"]?.toString() ?? '',
+                'imageUrl': item["imageUrl"]?.toString() ?? '',
+              },
+              quantity: item["quantity"] ?? 1,
+            );
+          }).toList();
+          calculateShippingFee(carts);
+        }
+      }
     }
   }
 
@@ -425,7 +520,9 @@ class _CartScreenState extends State<CartScreen> {
       total += itemTotal;
     }
     
-    print("🧮 Total calculated: ${CurrencyHelper.formatVND(total)}");
+    print("🧮 Subtotal: ${CurrencyHelper.formatVND(total)}");
+    print("🚚 Shipping fee: ${CurrencyHelper.formatVND(shippingFee)}");
+    print("🧮 Total with shipping: ${CurrencyHelper.formatVND(total + shippingFee)}");
     return total;
   }
 
@@ -436,7 +533,10 @@ class _CartScreenState extends State<CartScreen> {
     await userManager.initialize();
 
     final totalAmount = _calculateTotal(cartItems);
-    print("💰 Total amount to save to Firestore: ${CurrencyHelper.formatVND(totalAmount)}");
+    final grandTotal = totalAmount + shippingFee;
+    print("💰 Subtotal: ${CurrencyHelper.formatVND(totalAmount)}");
+    print("🚚 Shipping fee: ${CurrencyHelper.formatVND(shippingFee)}");
+    print("💰 Grand total to save to Firestore: ${CurrencyHelper.formatVND(grandTotal)}");
     
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
@@ -512,7 +612,9 @@ class _CartScreenState extends State<CartScreen> {
       "phone": userInfoForOrder?['phone'] ?? (userInfo?["phone"] ?? ""),
       "displayName": userInfoForOrder?['displayName'] ?? "",
       "address": shippingAddress, // Add shipping address directly
-      "totalAmount": totalAmount,
+      "totalAmount": grandTotal, // Include shipping fee in total
+      "subtotal": totalAmount, // Keep subtotal separate
+      "shippingFee": shippingFee, // Store shipping fee separately
       "statusPayment": isPaid
           ? (paymentMethod == 'paypal' ? "Payment Completed" : "COD")
           : "COD",
@@ -546,6 +648,56 @@ class _CartScreenState extends State<CartScreen> {
 
     await orderRef.set(orderData);
 
+    // Create shipping after saving order
+    try {
+      final totalWeight = cartItems.length * 1.5; // Estimate 1.5kg per pet
+      final customerInfo = {
+        'name': shippingName,
+        'phone': shippingPhone.isNotEmpty ? shippingPhone : '0987654321', // Ensure phone exists
+        'email': orderData['email'],
+      };
+
+      print('📦 Creating shipment with info:');
+      print('  - Name: ${customerInfo['name']}');
+      print('  - Phone: ${customerInfo['phone']}');
+      print('  - Email: ${customerInfo['email']}');
+      print('  - Address: $shippingAddress');
+      print('  - Total weight: ${totalWeight}kg');
+      print('  - Items count: ${items.length}');
+
+      final shippingResult = await ShippingService.createShipment(
+        orderId: orderRef.id,
+        shippingAddress: shippingAddress,
+        customerInfo: customerInfo,
+        totalWeight: totalWeight,
+        totalValue: totalAmount,
+        items: items.map((item) => {
+          'name': item['name']?.toString() ?? 'Pet Store Item',
+          'quantity': item['quantity'] ?? 1,
+          'price': item['price'] ?? 0,
+          'weight': (item['weight'] ?? 1500).toInt(), // in grams, default 1.5kg
+        }).toList(),
+      );
+
+      if (shippingResult['success']) {
+        final shipmentData = shippingResult['data'];
+        final trackingNumber = shipmentData['trackingNumber'];
+
+        // Update order with shipping info
+        await orderRef.update({
+          'trackingNumber': trackingNumber,
+          'shippingInfo': shipmentData,
+        });
+
+        print('✅ Shipping created successfully: $trackingNumber');
+      } else {
+        print('⚠️ Shipping creation failed: ${shippingResult['message']}');
+      }
+    } catch (e) {
+      print('❌ Error creating shipping: $e');
+      // Continue even if shipping fails - order is already saved
+    }
+
     // Gửi thông báo đơn hàng đã được đặt
     final orderUserId = orderData['userId']?.toString();
     final orderUserName = orderData['displayName']?.toString();
@@ -555,7 +707,7 @@ class _CartScreenState extends State<CartScreen> {
         userId: orderUserId,
         orderId: orderRef.id,
         customerName: orderUserName,
-        totalAmount: totalAmount,
+        totalAmount: grandTotal, // Use grand total including shipping
       );
     }
 
@@ -677,6 +829,9 @@ class _CartScreenState extends State<CartScreen> {
   void paymentInit(double amount, String currency, String userIdentifier,
       List<CartModel> carts) async {
     try {
+      // Include shipping fee in payment amount
+      final grandTotal = amount + shippingFee;
+      
       // Check if Stripe is ready for use
       final canUse = await StripeHelper.canUseStripe();
       if (!canUse) {
@@ -731,11 +886,11 @@ class _CartScreenState extends State<CartScreen> {
       }
 
       // Convert VND to USD (approximate rate: 1 USD = 24,000 VND)
-      double amountInUSD = amount;
-      print("💱 Payment conversion: Original amount = ${CurrencyHelper.formatVND(amount)}");
+      double amountInUSD = grandTotal;
+      print("💱 Payment conversion: Original amount = ${CurrencyHelper.formatVND(grandTotal)}");
       
       if (currency.toLowerCase() == 'vnd') {
-        amountInUSD = amount / 24000; // Convert VND to USD
+        amountInUSD = grandTotal / 24000; // Convert VND to USD
         currency = 'usd';
         print("💱 Converted to USD: \$${amountInUSD.toStringAsFixed(2)}");
       } else {
@@ -894,6 +1049,13 @@ class _CartScreenState extends State<CartScreen> {
                 );
               }).toList();
 
+              // Calculate shipping fee when cart loads/changes
+              if (selectedDeliveryInfo != null && shippingFee == 0.0 && !isCalculatingShipping) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  calculateShippingFee(carts);
+                });
+              }
+
               final double totalPrice = _calculateTotal(carts);
               return Column(
                 children: [
@@ -1048,6 +1210,109 @@ class _CartScreenState extends State<CartScreen> {
                             ],
                           ),
                         ),
+                        
+                        // Shipping fee calculation
+                        if (selectedDeliveryInfo != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Tạm tính',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      CurrencyHelper.formatVND(totalPrice),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.local_shipping,
+                                          size: 16,
+                                          color: Colors.blue,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Phí vận chuyển',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.blue.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (isCalculatingShipping)
+                                      const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        shippingFee > 0 
+                                          ? CurrencyHelper.formatVND(shippingFee)
+                                          : 'Miễn phí',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: shippingFee > 0 ? Colors.blue.shade700 : Colors.green,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Tổng cộng',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      CurrencyHelper.formatVND(totalPrice + shippingFee),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        
+                        const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -1057,7 +1322,7 @@ class _CartScreenState extends State<CartScreen> {
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black)),
                             Text(
-                              CurrencyHelper.formatVND(totalPrice),
+                              CurrencyHelper.formatVND(totalPrice + shippingFee),
                               style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,

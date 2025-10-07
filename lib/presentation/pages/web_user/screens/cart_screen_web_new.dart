@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/stripe_payment_screen.dart';
+import 'package:pet_shop/services/shipping_service.dart';
 
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_state_web.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_event_web.dart';
@@ -20,6 +21,10 @@ class CartScreenWeb extends StatefulWidget {
 }
 
 class _CartScreenWebState extends State<CartScreenWeb> {
+  // Shipping fee calculation
+  double shippingFee = 0.0;
+  bool isCalculatingShipping = false;
+  
   double _priceOf(Map<String, dynamic> item) {
   final raw = item['price'] ?? 0;
     return double.tryParse(raw.toString()) ?? 0.0;
@@ -27,6 +32,58 @@ class _CartScreenWebState extends State<CartScreenWeb> {
 
   double _total(List<Map<String, dynamic>> items) {
     return items.fold(0.0, (sum, it) => sum + _priceOf(it));
+  }
+  
+  double _grandTotal(List<Map<String, dynamic>> items) {
+    return _total(items) + shippingFee;
+  }
+  
+  Future<void> calculateShippingFee(List<Map<String, dynamic>> items, String address) async {
+    if (items.isEmpty || address.isEmpty) {
+      setState(() {
+        shippingFee = 0.0;
+      });
+      return;
+    }
+
+    setState(() {
+      isCalculatingShipping = true;
+    });
+
+    try {
+      final totalValue = _total(items);
+      final totalWeight = items.length * 1.5; // Estimate 1.5kg per pet
+      
+      final result = await ShippingService.calculateShippingFee(
+        shippingAddress: address,
+        totalValue: totalValue,
+        totalWeight: totalWeight,
+        customerInfo: {
+          'name': 'Web Customer',
+          'phone': '0123456789',
+        },
+      );
+      
+      if (result['success']) {
+        setState(() {
+          shippingFee = result['data']['shippingFee'].toDouble();
+        });
+      } else {
+        // Fallback to default shipping fee
+        setState(() {
+          shippingFee = 30000.0; // Default 30k VND
+        });
+      }
+    } catch (e) {
+      print('❌ Error calculating shipping fee: $e');
+      setState(() {
+        shippingFee = 30000.0; // Default 30k VND
+      });
+    } finally {
+      setState(() {
+        isCalculatingShipping = false;
+      });
+    }
   }
 
     // ---------------------- SAVE ORDER ----------------------
@@ -82,7 +139,9 @@ class _CartScreenWebState extends State<CartScreenWeb> {
         "fullName": customerName, // Changed from customerName to fullName to match format
         "phone": customerPhone,
         "address": customerAddress, // Changed from customerAddress to address
-        "totalAmount": totalAmount,
+        "totalAmount": totalAmount + shippingFee, // Include shipping fee
+        "subtotal": totalAmount, // Keep subtotal separate  
+        "shippingFee": shippingFee, // Store shipping fee separately
         "statusPayment": "Pending Payment", // Always pending - payment success will update
         "statusOrder": "Pending", // Always pending - payment success will update
         "timestamp": FieldValue.serverTimestamp(),
@@ -96,8 +155,45 @@ class _CartScreenWebState extends State<CartScreenWeb> {
 
       await orderRef.set(orderData);
       
+      // Create shipping after saving order
+      try {
+        final totalWeight = items.length * 1.5; // Estimate 1.5kg per pet
+        final customerInfo = {
+          'name': customerName,
+          'phone': customerPhone,
+          'email': customerEmail,
+        };
+
+        final shippingResult = await ShippingService.createShipment(
+          orderId: orderRef.id,
+          shippingAddress: customerAddress,
+          customerInfo: customerInfo,
+          totalWeight: totalWeight,
+          totalValue: totalAmount,
+          items: processedItems,
+        );
+
+        if (shippingResult['success']) {
+          final shipmentData = shippingResult['data'];
+          final trackingNumber = shipmentData['trackingNumber'];
+
+          // Update order with shipping info
+          await orderRef.update({
+            'trackingNumber': trackingNumber,
+            'shippingInfo': shipmentData,
+          });
+
+          print('✅ Shipping created successfully: $trackingNumber');
+        } else {
+          print('⚠️ Shipping creation failed: ${shippingResult['message']}');
+        }
+      } catch (e) {
+        print('❌ Error creating shipping: $e');
+        // Continue even if shipping fails - order is already saved
+      }
+      
       if (kDebugMode) {
-        print(' Order saved to ordersWeb collection: ${orderRef.id}');
+        print('🛒 Order saved to ordersWeb collection: ${orderRef.id}');
         print(' Backend Order ID: web_demo_${DateTime.now().millisecondsSinceEpoch}');
       }
     } catch (e) {
@@ -167,7 +263,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
   // ---------------------- CHECKOUT FLOW ----------------------
   Future<void> _startCheckout(List<Map<String, dynamic>> items) async {
     if (kDebugMode) {
-      print(' Starting checkout process...');
+      print('🛒 Starting checkout process...');
     }
     
     final total = _total(items);
@@ -176,7 +272,15 @@ class _CartScreenWebState extends State<CartScreenWeb> {
     final info = await showDialog<_CheckoutInfo>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _CheckoutDialog(total: total),
+      builder: (_) => _CheckoutDialog(
+        total: total,
+        shippingFee: shippingFee,
+        onAddressChanged: (address) {
+          if (address.isNotEmpty) {
+            calculateShippingFee(items, address);
+          }
+        },
+      ),
     );
 
     if (info == null) {
@@ -195,6 +299,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
     // Generate temp order ID and customer email before payment
     final tempOrderId = "temp_${DateTime.now().millisecondsSinceEpoch}";
     final customerEmail = info.email.isNotEmpty ? info.email : 'guest@petshop.com';
+    final grandTotal = total + shippingFee;
     
     // Save order to Firestore BEFORE payment
     await _saveOrderToFirestore(
@@ -203,13 +308,13 @@ class _CartScreenWebState extends State<CartScreenWeb> {
       customerPhone: info.phone,
       customerAddress: info.address,
       items: items,
-      totalAmount: total,
+      totalAmount: grandTotal, // Use grand total including shipping
       sessionId: tempOrderId, // Use temp ID that payment success can search for
     );
 
     // Thanh toán qua Stripe Payment Screen
     final ok = await _payWithStripePaymentScreen(
-      totalAmount: total,
+      totalAmount: grandTotal, // Use grand total for payment
       customerName: info.fullName,
       customerPhone: info.phone,
       customerAddress: info.address,
@@ -306,6 +411,8 @@ class _CartScreenWebState extends State<CartScreenWeb> {
 
                 final summary = _SummaryPanel(
                   total: total,
+                  shippingFee: shippingFee,
+                  isCalculatingShipping: isCalculatingShipping,
                   onClear: () => context.read<CartBlocWeb>().add(ClearCart('web')),
                   onCheckout: () => _startCheckout(items),
                 );
@@ -479,11 +586,15 @@ class _CartRowTile extends StatelessWidget {
 class _SummaryPanel extends StatelessWidget {
   const _SummaryPanel({
     required this.total,
+    required this.shippingFee,
+    required this.isCalculatingShipping,
     required this.onClear,
     required this.onCheckout,
   });
 
   final double total;
+  final double shippingFee;
+  final bool isCalculatingShipping;
   final VoidCallback onClear;
   final VoidCallback onCheckout;
 
@@ -500,6 +611,54 @@ class _SummaryPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Shipping fee display
+            if (shippingFee > 0) ...[
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      "Tạm tính",
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  ),
+                  Text(
+                    CurrencyHelper.formatVND(total),
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.local_shipping, size: 16, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Phí vận chuyển",
+                          style: TextStyle(fontSize: 14, color: Colors.blue.shade700),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isCalculatingShipping)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Text(
+                      CurrencyHelper.formatVND(shippingFee),
+                      style: TextStyle(fontSize: 14, color: Colors.blue.shade700),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Divider(),
+            ],
+            
             Row(
               children: [
                 const Expanded(
@@ -509,7 +668,7 @@ class _SummaryPanel extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  CurrencyHelper.formatVND(total),
+                  CurrencyHelper.formatVND(total + shippingFee),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w800, color: primaryColor),
                 ),
@@ -569,8 +728,14 @@ class _CheckoutInfo {
 }
 
 class _CheckoutDialog extends StatefulWidget {
-  const _CheckoutDialog({required this.total});
+  const _CheckoutDialog({
+    required this.total,
+    this.shippingFee = 0.0,
+    this.onAddressChanged,
+  });
   final double total;
+  final double shippingFee;
+  final Function(String)? onAddressChanged;
 
   @override
   State<_CheckoutDialog> createState() => _CheckoutDialogState();
@@ -679,11 +844,20 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      if (widget.shippingFee > 0)
+                        Text(
+                          'Phí ship: ${CurrencyHelper.formatVND(widget.shippingFee)}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
                       Text(
-                        'Tổng thanh toán: ${CurrencyHelper.formatVND(widget.total)}',
+                        'Tổng: ${CurrencyHelper.formatVND(widget.total + widget.shippingFee)}',
                         style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -874,6 +1048,12 @@ class _CheckoutDialogState extends State<_CheckoutDialog> {
                               ),
                               validator: _req,
                               maxLines: 3,
+                              onChanged: (value) {
+                                // Calculate shipping fee when address changes
+                                if (widget.onAddressChanged != null && value.trim().isNotEmpty) {
+                                  widget.onAddressChanged!(value.trim());
+                                }
+                              },
                             ),
                           ],
                         ),

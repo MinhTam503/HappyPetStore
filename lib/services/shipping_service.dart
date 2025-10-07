@@ -84,27 +84,37 @@ class ShippingService {
   }) async {
     try {
       print('🚚 Creating GHN shipment for order: $orderId');
+      print('📍 Shipping address: $shippingAddress');
       
       // Parse customer info
       final customerName = customerInfo['name'] ?? 'Khách hàng';
       final customerPhone = customerInfo['phone'] ?? '0123456789';
       
+      // Validate customer phone (ensure Vietnamese format)
+      String validatedPhone = customerPhone;
+      if (!validatedPhone.startsWith('0') || validatedPhone.length < 10) {
+        validatedPhone = '0987654321'; // Fallback to valid phone
+        print('⚠️ Invalid phone $customerPhone, using fallback: $validatedPhone');
+      }
+      
       // Default dimensions for pet shipments (có thể customize)
-      final weight = ((totalWeight ?? 2000) * 1000).toInt(); // Convert kg to grams
+      final weight = ((totalWeight ?? 2.0) * 1000).toInt(); // Convert kg to grams
       const length = 30; // cm
       const width = 30; // cm  
       const height = 20; // cm
       
-      // For test, use default HCMC location
-      // In production, you would parse the actual address
-      const toDistrictId = 1463; // Test district in HCMC
-      const toWardCode = '21211'; // Test ward
+      // Parse district và ward từ address hoặc dùng default
+      Map<String, dynamic> locationInfo = _parseVietnameseAddress(shippingAddress);
+      final toDistrictId = locationInfo['districtId'] ?? 1463; // Default HCMC
+      final toWardCode = locationInfo['wardCode'] ?? '21211'; // Default ward
+      
+      print('🏢 Parsed location: District ID = $toDistrictId, Ward Code = $toWardCode');
       
       // Prepare items for GHN
       final ghnItems = items?.map((item) => {
-        'name': item['name'] ?? 'Thú cưng',
+        'name': item['name']?.toString() ?? 'Thú cưng',
         'quantity': item['quantity'] ?? 1,
-        'weight': weight,
+        'weight': (item['weight'] ?? (weight / items.length)).toInt(),
       }).toList() ?? [
         {
           'name': 'Thú cưng và phụ kiện',
@@ -113,22 +123,25 @@ class ShippingService {
         }
       ];
       
+      print('📦 Items for GHN: $ghnItems');
+      print('📞 Customer: $customerName, Phone: $validatedPhone');
+      
       // Create GHN order
       final result = await GHNService.createOrder(
         paymentTypeId: '1', // Shop pays shipping
-        note: 'Đơn hàng thú cưng từ Happy Pets',
+        note: 'Đơn hàng thú cưng từ Happy Pets - $orderId',
         requiredNote: 'CHOXEMHANGKHONGTHU', // Allow inspection but no return
         clientOrderCode: orderId,
         toDistrictId: toDistrictId,
-        toWardCode: toWardCode,
+        toWardCode: toWardCode.toString(),
         toName: customerName,
-        toPhone: customerPhone,
+        toPhone: validatedPhone,
         toAddress: shippingAddress,
         weight: weight,
         length: length,
         width: width,
         height: height,
-        insuranceValue: totalValue?.toInt(),
+        insuranceValue: _limitInsuranceValue(totalValue)?.toInt(),
         items: ghnItems,
       );
       
@@ -188,6 +201,101 @@ class ShippingService {
         totalWeight: totalWeight,
         totalValue: totalValue,
       );
+    }
+  }
+
+  /// Calculate shipping fee cho order
+  /// Returns: Map với success, data {shippingFee}, message
+  static Future<Map<String, dynamic>> calculateShippingFee({
+    required String shippingAddress,
+    required double totalValue,
+    required double totalWeight,
+    required Map<String, dynamic> customerInfo,
+  }) async {
+    try {
+      switch (_currentProvider.toLowerCase()) {
+        case 'ghn':
+          return await _calculateGHNShippingFee(
+            shippingAddress: shippingAddress,
+            totalValue: totalValue,
+            totalWeight: totalWeight,
+            customerInfo: customerInfo,
+          );
+        case 'mock':
+        default:
+          final fee = _calculateShippingFee(shippingAddress, totalValue);
+          return {
+            'success': true,
+            'data': {'shippingFee': fee},
+            'message': 'Phí giao hàng đã được tính'
+          };
+      }
+    } catch (e) {
+      print('❌ Error calculating shipping fee: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+        'data': {'shippingFee': 30000.0}, // Default fallback
+        'message': 'Lỗi tính phí giao hàng, sử dụng phí mặc định'
+      };
+    }
+  }
+  
+  /// Calculate GHN shipping fee
+  static Future<Map<String, dynamic>> _calculateGHNShippingFee({
+    required String shippingAddress,
+    required double totalValue,
+    required double totalWeight,
+    required Map<String, dynamic> customerInfo,
+  }) async {
+    try {
+      // For test, use default HCMC location
+      // In production, you would parse the actual address to get proper district/ward IDs
+      const toDistrictId = 1463; // Test district in HCMC
+      const toWardCode = '21211'; // Test ward
+      
+      final weight = (totalWeight * 1000).toInt(); // Convert kg to grams
+      const length = 30; // cm
+      const width = 30; // cm  
+      const height = 20; // cm
+      
+      final result = await GHNService.calculateShippingFee(
+        toDistrictId: toDistrictId,
+        toWardCode: toWardCode,
+        weight: weight,
+        length: length,
+        width: width,
+        height: height,
+        insuranceValue: totalValue.toInt(),
+      );
+      
+      if (result['success']) {
+        final ghnData = result['data'];
+        final fee = ghnData['total_fee']?.toDouble() ?? 30000.0;
+        
+        return {
+          'success': true,
+          'data': {'shippingFee': fee},
+          'message': 'Phí giao hàng GHN đã được tính'
+        };
+      } else {
+        // Fallback to mock calculation
+        final fee = _calculateShippingFee(shippingAddress, totalValue);
+        return {
+          'success': true,
+          'data': {'shippingFee': fee},
+          'message': 'Sử dụng tính phí dự phòng'
+        };
+      }
+    } catch (e) {
+      print('❌ GHN fee calculation error: $e');
+      // Fallback to mock calculation
+      final fee = _calculateShippingFee(shippingAddress, totalValue);
+      return {
+        'success': true,
+        'data': {'shippingFee': fee},
+        'message': 'Lỗi GHN, sử dụng tính phí dự phòng'
+      };
     }
   }
 
@@ -954,5 +1062,44 @@ class ShippingService {
     } catch (e) {
       print('❌ Error sending shipping status notification: $e');
     }
+  }
+
+  /// Parse Vietnamese address to get district and ward codes for GHN
+  /// For now, use default HCMC location. In production, you would implement
+  /// proper address parsing using GHN's province/district/ward APIs
+  static Map<String, dynamic> _parseVietnameseAddress(String address) {
+    // Default HCMC location for testing
+    // TODO: Implement proper address parsing using GHN APIs
+    
+    // Check for common HCMC districts
+    if (address.toLowerCase().contains('quận 1') || address.toLowerCase().contains('quan 1')) {
+      return {
+        'districtId': 1463, // Quận 1, HCMC
+        'wardCode': '21211', // Phường 1
+      };
+    } else if (address.toLowerCase().contains('quận 12') || address.toLowerCase().contains('quan 12')) {
+      return {
+        'districtId': 1455, // Quận 12, HCMC  
+        'wardCode': '21809', // Phường Hiệp Thành
+      };
+    } else if (address.toLowerCase().contains('thủ dầu một') || address.toLowerCase().contains('thu dau mot')) {
+      return {
+        'districtId': 1542, // Thành phố Thủ Dầu Một, Bình Dương
+        'wardCode': '21607', // Phường Phú Hoà
+      };
+    }
+    
+    // Default fallback to Quận 1, HCMC for testing
+    return {
+      'districtId': 1463,
+      'wardCode': '21211',
+    };
+  }
+
+  /// Limit insurance value to GHN maximum (5M VND)
+  static double? _limitInsuranceValue(double? value) {
+    if (value == null) return null;
+    const maxInsuranceValue = 5000000.0; // 5M VND limit
+    return value > maxInsuranceValue ? maxInsuranceValue : value;
   }
 }
