@@ -9,6 +9,7 @@ import 'package:pet_shop/presentation/pages/web/screen_admin/pet/pets_admin.dart
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_analytics_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/shipping_management_page.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/ghn_test_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
 import 'package:pet_shop/presentation/widgets/settings_menu.dart';
 
@@ -54,6 +55,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     const PetAnalyticsPage(),
     const RevenuePage(),
    const ShippingManagementPage(),
+   const GHNTestPage(), // GHN Test page
   ];
 
   void _setIndex(int i) {
@@ -160,6 +162,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         icon: Icons.local_shipping_outlined,
         selectedIcon: Icons.local_shipping,
         label: 'Giao hàng',
+      ),
+      NavigationItem(
+        icon: Icons.bug_report_outlined,
+        selectedIcon: Icons.bug_report,
+        label: 'GHN Test',
       ),
     ];
   }

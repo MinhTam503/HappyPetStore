@@ -1,15 +1,39 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
+import 'package:pet_shop/services/ghn_service.dart';
 
-/// 🚚 Shipping Service - Mock API giao hàng cho Happy Pets
-/// Chỉ sử dụng Mock API để test và demo
+/// 🚚 Shipping Service - Multi-provider shipping cho Happy Pets
+/// Hỗ trợ: Mock API (test), GHN API (production)
 class ShippingService {
   
   // Local mock data cho demo
   static final Map<String, Map<String, dynamic>> _mockShipments = {};
   
-  /// Tạo đơn giao hàng mới - chỉ sử dụng Mock API
+  /// Lấy provider từ environment với web fallback
+  static String get _currentProvider {
+    String provider = '';
+    
+    if (kIsWeb) {
+      // For web deployment, default to GHN for demo
+      provider = 'ghn';
+      if (kDebugMode) {
+        debugPrint('🌐 Web mode: Using GHN provider');
+      }
+    } else {
+      // For mobile/desktop, read from .env
+      provider = dotenv.env['SHIPPING_PROVIDER'] ?? 'mock';
+      if (kDebugMode) {
+        debugPrint('📱 Mobile mode: Provider from .env = $provider');
+      }
+    }
+    
+    return provider;
+  }
+  
+  /// Tạo đơn giao hàng mới - Hỗ trợ nhiều provider
   /// 
   /// [orderId] - ID đơn hàng từ Firebase
   /// [shippingAddress] - Địa chỉ giao hàng
@@ -25,15 +49,146 @@ class ShippingService {
     List<Map<String, dynamic>>? items,
   }) async {
     print('🚚 Creating shipment for order: $orderId');
+    print('📦 Using shipping provider: $_currentProvider');
     
-    // Chỉ sử dụng Mock API
-    return await _createMockShipment(
-      orderId: orderId,
-      shippingAddress: shippingAddress,
-      customerInfo: customerInfo,
-      totalWeight: totalWeight,
-      totalValue: totalValue,
-    );
+    switch (_currentProvider.toLowerCase()) {
+      case 'ghn':
+        return await _createGHNShipment(
+          orderId: orderId,
+          shippingAddress: shippingAddress,
+          customerInfo: customerInfo,
+          totalWeight: totalWeight,
+          totalValue: totalValue,
+          items: items,
+        );
+      case 'mock':
+      default:
+        return await _createMockShipment(
+          orderId: orderId,
+          shippingAddress: shippingAddress,
+          customerInfo: customerInfo,
+          totalWeight: totalWeight,
+          totalValue: totalValue,
+        );
+    }
+  }
+  
+  /// Tạo shipment với GHN API
+  static Future<Map<String, dynamic>> _createGHNShipment({
+    required String orderId,
+    required String shippingAddress,
+    required Map<String, dynamic> customerInfo,
+    double? totalWeight,
+    double? totalValue,
+    List<Map<String, dynamic>>? items,
+  }) async {
+    try {
+      print('🚚 Creating GHN shipment for order: $orderId');
+      
+      // Parse customer info
+      final customerName = customerInfo['name'] ?? 'Khách hàng';
+      final customerPhone = customerInfo['phone'] ?? '0123456789';
+      
+      // Default dimensions for pet shipments (có thể customize)
+      final weight = ((totalWeight ?? 2000) * 1000).toInt(); // Convert kg to grams
+      const length = 30; // cm
+      const width = 30; // cm  
+      const height = 20; // cm
+      
+      // For test, use default HCMC location
+      // In production, you would parse the actual address
+      const toDistrictId = 1463; // Test district in HCMC
+      const toWardCode = '21211'; // Test ward
+      
+      // Prepare items for GHN
+      final ghnItems = items?.map((item) => {
+        'name': item['name'] ?? 'Thú cưng',
+        'quantity': item['quantity'] ?? 1,
+        'weight': weight,
+      }).toList() ?? [
+        {
+          'name': 'Thú cưng và phụ kiện',
+          'quantity': 1,
+          'weight': weight,
+        }
+      ];
+      
+      // Create GHN order
+      final result = await GHNService.createOrder(
+        paymentTypeId: '1', // Shop pays shipping
+        note: 'Đơn hàng thú cưng từ Happy Pets',
+        requiredNote: 'CHOXEMHANGKHONGTHU', // Allow inspection but no return
+        clientOrderCode: orderId,
+        toDistrictId: toDistrictId,
+        toWardCode: toWardCode,
+        toName: customerName,
+        toPhone: customerPhone,
+        toAddress: shippingAddress,
+        weight: weight,
+        length: length,
+        width: width,
+        height: height,
+        insuranceValue: totalValue?.toInt(),
+        items: ghnItems,
+      );
+      
+      if (result['success']) {
+        final ghnData = result['data'];
+        
+        // Format shipment data để compatible với existing system
+        final shipmentData = {
+          'trackingNumber': ghnData['trackingNumber'],
+          'orderId': orderId,
+          'shippingCompany': 'Giao Hàng Nhanh',
+          'status': 'pickup_pending', // Map từ GHN status
+          'estimatedDelivery': ghnData['estimatedDelivery'],
+          'actualDeliveryTime': null,
+          'shippingFee': ghnData['shippingFee'],
+          'shippingAddress': shippingAddress,
+          'customerInfo': customerInfo,
+          'customerPhone': customerPhone,
+          'createdAt': DateTime.now().toIso8601String(),
+          'provider': 'ghn',
+          'ghnOrderCode': ghnData['orderCode'],
+          'trackingHistory': [
+            {
+              'status': 'pickup_pending',
+              'description': 'Đơn hàng đã được tạo trên GHN, chờ lấy hàng',
+              'timestamp': DateTime.now().toIso8601String(),
+              'location': 'Happy Pets Store - TP.HCM'
+            }
+          ]
+        };
+        
+        print('✅ GHN shipment created: ${ghnData['trackingNumber']}');
+        
+        return {
+          'success': true,
+          'data': shipmentData,
+          'message': 'Đơn giao hàng GHN đã được tạo thành công'
+        };
+      } else {
+        // Fallback to mock if GHN fails
+        print('⚠️ GHN failed, falling back to mock: ${result['error']}');
+        return await _createMockShipment(
+          orderId: orderId,
+          shippingAddress: shippingAddress,
+          customerInfo: customerInfo,
+          totalWeight: totalWeight,
+          totalValue: totalValue,
+        );
+      }
+    } catch (e) {
+      print('❌ GHN shipment creation error: $e');
+      // Fallback to mock on error
+      return await _createMockShipment(
+        orderId: orderId,
+        shippingAddress: shippingAddress,
+        customerInfo: customerInfo,
+        totalWeight: totalWeight,
+        totalValue: totalValue,
+      );
+    }
   }
 
   /// Tạo shipment với Mock API
@@ -106,15 +261,99 @@ class ShippingService {
     }
   }
   
-  /// Theo dõi trạng thái đơn hàng - chỉ sử dụng Mock API
+  /// Theo dõi trạng thái đơn hàng - Hỗ trợ nhiều provider
   /// 
   /// [trackingNumber] - Mã vận đơn
   /// Returns: Thông tin chi tiết về trạng thái giao hàng
   static Future<Map<String, dynamic>> trackShipment(String trackingNumber) async {
     print('📱 Tracking shipment: $trackingNumber');
     
-    // Chỉ sử dụng Mock API và Firebase
-    return await _trackMockShipment(trackingNumber);
+    // Determine provider từ tracking number hoặc Firebase data
+    String provider = await _determineProviderFromTrackingNumber(trackingNumber);
+    print('📦 Detected provider: $provider');
+    
+    switch (provider.toLowerCase()) {
+      case 'ghn':
+        return await _trackGHNShipment(trackingNumber);
+      case 'mock':
+      default:
+        return await _trackMockShipment(trackingNumber);
+    }
+  }
+  
+  /// Determine provider từ tracking number hoặc Firebase
+  static Future<String> _determineProviderFromTrackingNumber(String trackingNumber) async {
+    try {
+      // Check Firebase for provider info
+      final collections = ['orders', 'ordersWeb'];
+      
+      for (String collectionName in collections) {
+        final query = await FirebaseFirestore.instance
+            .collection(collectionName)
+            .where('trackingNumber', isEqualTo: trackingNumber)
+            .limit(1)
+            .get();
+            
+        if (query.docs.isNotEmpty) {
+          final data = query.docs.first.data();
+          final shippingInfo = data['shippingInfo'];
+          if (shippingInfo != null && shippingInfo['provider'] != null) {
+            return shippingInfo['provider'];
+          }
+        }
+      }
+      
+      // Fallback: determine từ tracking number format
+      if (trackingNumber.startsWith('GHN') || trackingNumber.length == 10) {
+        return 'ghn';
+      } else if (trackingNumber.startsWith('MOCK') || trackingNumber.startsWith('HPS')) {
+        return 'mock';
+      }
+      
+      return _currentProvider; // Use environment default
+    } catch (e) {
+      print('⚠️ Error determining provider: $e');
+      return 'mock'; // Safe fallback
+    }
+  }
+  
+  /// Track shipment với GHN API
+  static Future<Map<String, dynamic>> _trackGHNShipment(String trackingNumber) async {
+    try {
+      print('📱 Tracking GHN shipment: $trackingNumber');
+      
+      // Call GHN tracking API
+      final result = await GHNService.trackOrder(orderCode: trackingNumber);
+      
+      if (result['success']) {
+        final ghnData = result['data'];
+        
+        // Format data để compatible với existing system
+        return {
+          'success': true,
+          'data': {
+            'trackingNumber': ghnData['trackingNumber'],
+            'status': ghnData['status'],
+            'shippingCompany': 'Giao Hàng Nhanh',
+            'estimatedDelivery': DateTime.now().add(Duration(days: 1)).toIso8601String(),
+            'currentLocation': ghnData['currentAddress'] ?? 'Đang cập nhật...',
+            'trackingHistory': ghnData['trackingHistory'] ?? [],
+            'updatedAt': ghnData['updatedAt'],
+            'provider': 'ghn',
+            'ghnData': ghnData['ghnData'], // Store original GHN response
+          },
+          'message': 'Theo dõi GHN thành công'
+        };
+      } else {
+        // If GHN tracking fails, try fallback to Firebase data
+        print('⚠️ GHN tracking failed: ${result['error']}');
+        return await _trackMockShipment(trackingNumber);
+      }
+    } catch (e) {
+      print('❌ GHN tracking error: $e');
+      // Fallback to mock/Firebase tracking
+      return await _trackMockShipment(trackingNumber);
+    }
   }
 
   /// Track shipment với Mock API và Firebase fallback
