@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/chatBot/chatbot_page.dart';
-import 'package:pet_shop/core/services/settings_service.dart';
 
 class ChatBubbleWidget extends StatefulWidget {
   const ChatBubbleWidget({super.key});
@@ -20,7 +19,7 @@ class _ChatBubbleWidgetState extends State<ChatBubbleWidget>
   @override
   void initState() {
     super.initState();
-    
+
     // Pulse animation for the glow effect
     _pulseController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -61,12 +60,13 @@ class _ChatBubbleWidgetState extends State<ChatBubbleWidget>
   void _onTap() async {
     await _bounceController.forward();
     await _bounceController.reverse();
-    
+
     if (mounted) {
       Navigator.push(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const ChatBotPage(userId: 'user_123'),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const ChatBotPage(userId: 'user_123'),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
@@ -107,7 +107,8 @@ class _ChatBubbleWidgetState extends State<ChatBubbleWidget>
                   boxShadow: [
                     // Glowing effect
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.3 + (_pulseAnimation.value * 0.2)),
+                      color: primaryColor
+                          .withOpacity(0.3 + (_pulseAnimation.value * 0.2)),
                       spreadRadius: 2 + (_pulseAnimation.value * 4),
                       blurRadius: 8 + (_pulseAnimation.value * 8),
                       offset: const Offset(0, 2),

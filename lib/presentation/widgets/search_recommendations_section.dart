@@ -8,6 +8,7 @@ import 'package:pet_shop/presentation/bloc/recommendation/recommendation_event.d
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_state.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
 import 'package:pet_shop/presentation/bloc/search/search_event.dart';
+import 'dart:math' as math;
 
 class SearchRecommendationsSection extends StatefulWidget {
   final String userId;
@@ -32,6 +33,26 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
   }
 
   Future<void> _loadRecommendations() async {
+    // 🎯 FORCE REFRESH: Skip cache để test user preferences mới
+    print('🔄 FORCE REFRESH: Skipping cache to load fresh recommendations...');
+    
+    // 🔧 CLEAR cached data để force UI sử dụng fresh data
+    setState(() {
+      _cachedRecommendations = null; // Clear cache variable
+      _isLoadingFromCache = false;
+    });
+    
+    // Load trực tiếp từ server với PERSONALIZED algorithm (same as home page)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        print('🎯 Loading PERSONALIZED recommendations (same as home page)...');
+        context.read<RecommendationBloc>().add(
+          LoadPersonalizedRecommendations(userId: widget.userId, limit: 15),
+        );
+      }
+    });
+    
+    /* OLD CACHE LOGIC - Disabled for testing
     // Bước 1: Kiểm tra cache trước
     final cachedRecommendations = await SearchRecommendationsCache.getRecommendations(widget.userId);
     
@@ -53,6 +74,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
         );
       }
     });
+    */
   }
 
   @override
@@ -98,6 +120,13 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
       listener: (context, state) {
         // Lưu vào cache khi load thành công từ server
         if (state is RecommendationLoaded) {
+          print('🎯 FRESH RECOMMENDATIONS LOADED: ${state.recommendations.length} items');
+          print('🎯 Top 3 fresh recommendations:');
+          for (int i = 0; i < math.min(3, state.recommendations.length); i++) {
+            final rec = state.recommendations[i];
+            print('  ${i + 1}. ${rec.name} (${rec.breed}) - Score: ${rec.score}');
+          }
+          
           SearchRecommendationsCache.saveRecommendations(
             userId: widget.userId,
             recommendations: state.recommendations,
@@ -208,15 +237,15 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
       groupedRecommendations[item.type]!.add(item);
     }
     
-    // Nhóm theo type và hiển thị
-    final typeLabels = {
-      RecommendationType.contentBased: 'Phù hợp với sở thích',
-      RecommendationType.trending: 'Đang thịnh hành',
-      RecommendationType.collaborative: 'Người khác cũng thích',
-      RecommendationType.association: 'Thường mua cùng nhau',
-      RecommendationType.personalized: 'Dành riêng cho bạn',
-      RecommendationType.hybrid: 'Đề xuất thông minh',
-    };
+    // // Nhóm theo type và hiển thị
+    // final typeLabels = {
+    //   RecommendationType.contentBased: 'Phù hợp với sở thích',
+    //   RecommendationType.trending: 'Đang thịnh hành',
+    //   RecommendationType.collaborative: 'Người khác cũng thích',
+    //   RecommendationType.association: 'Thường mua cùng nhau',
+    //   RecommendationType.personalized: 'Dành riêng cho bạn',
+    //   RecommendationType.hybrid: 'Đề xuất thông minh',
+    // };
 
     final typeColors = {
       RecommendationType.contentBased: Colors.blue,

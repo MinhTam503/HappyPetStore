@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,6 +8,7 @@ import 'package:path/path.dart' as path;
 import 'package:pet_shop/data/repositories/search_history_repository.dart';
 import 'package:pet_shop/presentation/bloc/search/search_event.dart';
 import 'package:pet_shop/presentation/bloc/search/search_state.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
 // Debounce + restartable: hủy xử lý cũ khi có event mới trong thời gian debounce
 EventTransformer<E> debounceRestartable<E>(Duration duration) {
@@ -25,10 +25,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   })  : _searchHistoryRepo = searchHistoryRepo,
         _firestore = firestore,
         super(SearchInitial()) {
-    // Áp dụng debounce 500ms cho SearchQueryChanged
+    // Áp dụng debounce 100ms cho SearchQueryChanged (REDUCED for testing)
     on<SearchQueryChanged>(
       _onSearchQueryChanged,
-      transformer: debounceRestartable(const Duration(milliseconds: 500)),
+      transformer: debounceRestartable(const Duration(milliseconds: 100)),
     );
 
     on<SearchSubmitted>(_onSearchSubmitted);
@@ -72,12 +72,84 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     print('Trạng thái đã được phát ra thành công');
   }
 
+  // ---- USER PREFERENCE METHODS ----
+  Future<Map<String, double>> _getQuickBreedScores() async {
+    try {
+      final userId = await UserManager().getUserIdForOperations();
+      if (userId == null) return {};
+
+      print('🎯 Getting user preference scores for search suggestions...');
+
+      // Get user favorites
+      final favorites = await _firestore
+          .collection('UserFav')
+          .where('userId', isEqualTo: userId)
+          .get();
+          
+      // Get viewed pets (recent 50 to avoid performance issues)
+      final viewedPets = await _firestore
+          .collection('ViewedPets')
+          .where('userId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .limit(50)
+          .get();
+
+      Map<String, int> breedCounts = {};
+      
+      // Count breed frequencies from favorites (weight: 3x)
+      for (final doc in favorites.docs) {
+        final breed = doc.data()['breed'] as String?;
+        if (breed != null && breed.isNotEmpty) {
+          breedCounts[breed] = (breedCounts[breed] ?? 0) + 3; // Favorites weight more
+        }
+      }
+      
+      // Count breed frequencies from viewed pets (weight: 1x)
+      for (final doc in viewedPets.docs) {
+        final breed = doc.data()['breed'] as String?;
+        if (breed != null && breed.isNotEmpty) {
+          breedCounts[breed] = (breedCounts[breed] ?? 0) + 1;
+        }
+      }
+      
+      if (breedCounts.isEmpty) {
+        print('⚠️ No breed preferences found for user');
+        // 🎯 FOR TESTING: Add mock preferences for "Chim chào mào"
+        print('🧪 Adding test preference for Chim chào mào...');
+        return {'Chim chào mào': 100.0, 'Chim hoạ mi': 60.0, 'Chim yến phụng': 30.0};
+      }
+      
+      // Convert to scores (normalize to 0-100)
+      final maxCount = breedCounts.values.reduce((a, b) => a > b ? a : b);
+      final breedScores = breedCounts.map((breed, count) => 
+          MapEntry(breed, (count / maxCount) * 100));
+      
+      print('🎯 User breed preferences calculated:');
+      final sortedBreeds = breedScores.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      for (final entry in sortedBreeds.take(5)) {
+        print('  - ${entry.key}: ${entry.value.toStringAsFixed(1)}%');
+      }
+      
+      return breedScores;
+    } catch (e) {
+      print('❌ Error getting user preferences: $e');
+      return {};
+    }
+  }
+
+  double _getBreedPreferenceScore(String breed, Map<String, double> breedScores) {
+    return breedScores[breed] ?? 0.0;
+  }
+
   // ---- handlers ----
   Future<void> _onSearchQueryChanged(
     SearchQueryChanged event,
     Emitter<SearchState> emit,
   ) async {
+    print('🔍 SEARCH QUERY CHANGED: "${event.query}"');
     final raw = event.query.trim();
+    print('🔍 Raw query after trim: "$raw"');
 
     // Rỗng -> trả về lịch sử
     if (raw.isEmpty) {
@@ -123,6 +195,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       }
 
       print('Final search queries: $searchQueries');
+      print('🔍 STARTING SEARCH SUGGESTIONS GENERATION...');
 
       final suggestions = <Map<String, dynamic>>[];
 
@@ -243,21 +316,54 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         }
       }
 
+      // 🎯 NEW: Get user preference scores for smart sorting
+      print('🔍 About to get user breed scores for search suggestions...');
+      final userBreedScores = await _getQuickBreedScores();
+      print('🔍 Got ${userBreedScores.length} breed scores: $userBreedScores');
+
       // Sắp xếp suggestions theo độ ưu tiên: tên trước, category sau, breed cuối
+      // 🎯 ENHANCED: Với breed suggestions, ưu tiên theo user preferences
+      print('🔍 Starting to sort ${suggestions.length} suggestions...');
       suggestions.sort((a, b) {
         const priority = {'name': 0, 'category': 1, 'breed': 2};
         final aPriority = priority[a['matchType']] ?? 3;
         final bPriority = priority[b['matchType']] ?? 3;
-        return aPriority.compareTo(bPriority);
+        
+        // 1. First sort by match type priority  
+        if (aPriority != bPriority) {
+          return aPriority.compareTo(bPriority);
+        }
+        
+        // 2. Within same type, especially for breeds, sort by user preference score
+        if (a['matchType'] == 'breed' && b['matchType'] == 'breed') {
+          final aScore = _getBreedPreferenceScore(a['name'], userBreedScores);
+          final bScore = _getBreedPreferenceScore(b['name'], userBreedScores);
+          
+          print('🔍 Comparing breeds: ${a['name']} (${aScore.toStringAsFixed(1)}) vs ${b['name']} (${bScore.toStringAsFixed(1)})');
+          
+          if (aScore != bScore) {
+            print('🎯 Sorting breeds: ${a['name']} (${aScore.toStringAsFixed(1)}) vs ${b['name']} (${bScore.toStringAsFixed(1)})');
+            return bScore.compareTo(aScore); // Higher preference score first
+          }
+        }
+        
+        // 3. Keep original order for same priority and score
+        return 0;
       });
 
       // Giới hạn số lượng gợi ý
       final limitedSuggestions = suggestions.take(10).toList();
 
+      print('🎯 SMART SEARCH SUGGESTIONS RESULT:');
       print('Found ${limitedSuggestions.length} total suggestions');
       for (var suggestion in limitedSuggestions) {
-        print(
-            'Suggestion: ${suggestion['displayName']} (${suggestion['type']})');
+        final breedScore = suggestion['matchType'] == 'breed' 
+            ? _getBreedPreferenceScore(suggestion['name'], userBreedScores)
+            : 0.0;
+        final scoreText = suggestion['matchType'] == 'breed' 
+            ? ' (preference: ${breedScore.toStringAsFixed(1)}%)'
+            : '';
+        print('  ${suggestion['displayName']} (${suggestion['type']})$scoreText');
       }
 
       await _emitWithHistory(
