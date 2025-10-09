@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admin.dart';
@@ -110,9 +108,7 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 900;
-
           final form = Stack(
-
             children: [
               Center(
                 child: ConstrainedBox(
@@ -154,6 +150,8 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.email_outlined),
                                 border: OutlineInputBorder(),
+                                filled: true,
+                                fillColor: Colors.white,
                               ),
                               validator: (v) {
                                 final text = v?.trim() ?? '';
@@ -177,6 +175,8 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                                 labelText: 'Mật khẩu',
                                 prefixIcon: const Icon(Icons.lock_outline),
                                 border: const OutlineInputBorder(),
+                                filled: true,
+                                fillColor: Colors.white,
                                 suffixIcon: IconButton(
                                   tooltip: _obscure
                                       ? 'Hiện mật khẩu'
