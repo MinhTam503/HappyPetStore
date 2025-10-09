@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart'; // Chứa primaryColor, secondaryColor
+import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/dashboard/dashboard_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/notification/notification_management_panel.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet/pets_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_analytics_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
-import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/shipping_management_page.dart';
-import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/ghn_test_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
 import 'package:pet_shop/presentation/widgets/settings_menu.dart';
-
 import '../account/account_admin.dart';
 import '../category/category_admin.dart';
 import '../auth/login_admin_page.dart';
@@ -43,20 +41,31 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   String? _role;
   bool _loading = true;
 
-  late final List<Widget> _pages = [
-    DashboardPage(onNavigateToTab: _setIndex),
-    const PetsAdmin(),
-    const CategoryAdmin(),
-    const AccountAdmin(),
-    const OrdersAdmin(),
-    const NotificationManagementPanel(),
-    const InboxPageAdmin(),
-    const ShopInfo(),
-    const PetAnalyticsPage(),
-    const RevenuePage(),
-   const ShippingManagementPage(),
-   const GHNTestPage(), // GHN Test page
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePages();
+    _fetchRole();
+  }
+
+  void _initializePages() {
+    _pages = [
+      DashboardPage(onNavigateToTab: _setIndex),
+      const PetsAdmin(),
+      const CategoryAdmin(),
+      const AccountAdmin(),
+      const OrdersAdmin(),
+      const NotificationManagementPanel(),
+      const InboxPageAdmin(),
+      const ShopInfo(),
+      const PetAnalyticsPage(),
+      const RevenuePage(),
+      //  const ShippingManagementPage(),
+      //  const GHNTestPage(), // GHN Test page
+    ];
+  }
 
   void _setIndex(int i) {
     if (i < 0 || i >= _pages.length) return;
@@ -64,17 +73,30 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _fetchRole();
+  void dispose() {
+    // Clean up any resources
+    super.dispose();
   }
 
   Future<void> _fetchRole() async {
-    final info = await authService.value.getUserInfo();
-    setState(() {
-      _role = info?['role'] ?? 'user';
-      _loading = false;
-    });
+    try {
+      final info = await authService.value.getUserInfo();
+      if (mounted) {
+        setState(() {
+          _role = info?['role'] ?? 'user';
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      // Handle error gracefully
+      print('Error fetching role: $e');
+      if (mounted) {
+        setState(() {
+          _role = 'user'; // Default to non-admin
+          _loading = false;
+        });
+      }
+    }
   }
 
   void _logout() async {
@@ -158,55 +180,66 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         selectedIcon: Icons.bar_chart,
         label: l10n.revenue,
       ),
-      NavigationItem(
-        icon: Icons.local_shipping_outlined,
-        selectedIcon: Icons.local_shipping,
-        label: 'Giao hàng',
-      ),
-      NavigationItem(
-        icon: Icons.bug_report_outlined,
-        selectedIcon: Icons.bug_report,
-        label: 'GHN Test',
-      ),
+      // NavigationItem(
+      //   icon: Icons.local_shipping_outlined,
+      //   selectedIcon: Icons.local_shipping,
+      //   label: 'Giao hàng',
+      // ),
+      // NavigationItem(
+      //   icon: Icons.bug_report_outlined,
+      //   selectedIcon: Icons.bug_report,
+      //   label: 'GHN Test',
+      // ),
     ];
   }
 
   Widget _buildNavigationItem(int index, NavigationItem item) {
+    if (!mounted) return const SizedBox.shrink();
+    
     final isSelected = _selectedIndex == index;
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
-        color: isSelected 
-          ? theme.colorScheme.primary.withOpacity(0.1)
-          : Colors.transparent,
+        color: isSelected
+            ? theme.colorScheme.primary.withOpacity(0.1)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => setState(() => _selectedIndex = index),
+          onTap: () {
+            if (mounted) {
+              _setIndex(index);
+            }
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   isSelected ? item.selectedIcon : item.icon,
-                  color: isSelected 
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
-                Expanded(
+                Flexible(
                   child: Text(
                     item.label,
                     style: TextStyle(
                       color: isSelected
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                       fontSize: 14,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
                 ),
               ],
@@ -219,72 +252,188 @@ class _HomePageAdminState extends State<HomePageAdmin> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    // Error boundary - prevent complete crashes
+    try {
+      final l10n = AppLocalizations.of(context)!;
 
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: primaryColor)),
-      );
-    }
-    if (_role != 'admin') {
-      return const LoginAdminPage();
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        title: Text(l10n.adminPanel,
-            style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
-        actions: [
-          const SettingsMenu(),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: Icon(Icons.logout,
-                color: Theme.of(context).colorScheme.onPrimary),
-            onPressed: _logout,
-            tooltip: l10n.logout,
-          ),
-        ],
-      ),
-      body: Row(
-        children: [
-          // Scrollable NavigationRail để xử lý overflow
-          Container(
-            width: 200,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                right: BorderSide(
-                  color: Theme.of(context).dividerColor,
-                  width: 1,
+      if (_loading) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator(color: primaryColor)),
+        );
+      }
+      
+      if (_role != 'admin') {
+        return const LoginAdminPage();
+      }
+      
+      final items = _getNavigationItems();
+      const itemHeight = 65.0; // Increased height to accommodate longer text
+      
+      // Calculate responsive sidebar width based on screen size
+      final screenWidth = MediaQuery.of(context).size.width;
+      final sidebarWidth = screenWidth < 1200 ? 200.0 : 220.0;
+      final showSidebar = screenWidth >= 400;
+      
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).primaryColor,
+          leading: !showSidebar ? IconButton(
+            icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.onPrimary),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ) : null,
+          automaticallyImplyLeading: !showSidebar,
+          title: Text(l10n.adminPanel,
+              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+          actions: [
+            const SettingsMenu(),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(Icons.logout,
+                  color: Theme.of(context).colorScheme.onPrimary),
+              onPressed: _logout,
+              tooltip: l10n.logout,
+            ),
+          ],
+        ),
+        drawer: !showSidebar ? Drawer(
+          child: Column(
+            children: [
+              // Drawer header
+              Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                ),
+                child: Center(
+                  child: Text(
+                    l10n.adminPanel,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Leading space
-                  const SizedBox(height: 8),
-                  
-                  // Navigation items
-                  for (int i = 0; i < _getNavigationItems().length; i++)
-                    _buildNavigationItem(i, _getNavigationItems()[i]),
-                    
-                  // Trailing space
-                  const SizedBox(height: 8),
-                ],
+              // Navigation items
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: items.length,
+                  itemBuilder: (context, i) => ListTile(
+                    leading: Icon(
+                      _selectedIndex == i ? items[i].selectedIcon : items[i].icon,
+                      color: _selectedIndex == i
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    title: Text(
+                      items[i].label,
+                      style: TextStyle(
+                        color: _selectedIndex == i
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: _selectedIndex == i ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                    selected: _selectedIndex == i,
+                    onTap: () {
+                      _setIndex(i);
+                      Navigator.of(context).pop(); // Close drawer
+                    },
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          // Main content area
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _pages[_selectedIndex],
-            ),
+        ) : null,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            // Calculate safe sidebar width with proper bounds checking
+            final isVerySmall = constraints.maxWidth < 600;
+            final maxSidebarWidth = constraints.maxWidth * (isVerySmall ? 0.4 : 0.3);
+            final minSidebarWidth = isVerySmall ? 150.0 : 180.0;
+            final safeSidebarWidth = maxSidebarWidth < minSidebarWidth 
+                ? minSidebarWidth 
+                : sidebarWidth.clamp(minSidebarWidth, maxSidebarWidth);
+            
+            return Row(
+              children: [
+                // Sidebar Navigation - Responsive
+                if (showSidebar) // Use the showSidebar variable instead of checking width again
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: maxSidebarWidth,
+                      minWidth: minSidebarWidth,
+                    ),
+                    child: Container(
+                      width: safeSidebarWidth,
+                      height: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border(
+                          right: BorderSide(
+                            color: Theme.of(context).dividerColor,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        itemExtent: itemHeight,
+                        itemCount: items.length,
+                        itemBuilder: (context, i) => _buildNavigationItem(i, items[i]),
+                      ),
+                    ),
+                  ),
+                // Main content area - Takes remaining space
+                Expanded(
+                  child: SafeArea(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Container(
+                        key: ValueKey(_selectedIndex),
+                        child: _selectedIndex < _pages.length 
+                            ? _pages[_selectedIndex] 
+                            : _pages[0],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      // Fallback UI in case of any layout errors
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(LocalizationHelper.getLocalizedText(context, 'admin_panel')),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                LocalizationHelper.getLocalizedText(context, 'something_went_wrong'),
+                style: const TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 0;
+                  });
+                },
+                child: Text(LocalizationHelper.getLocalizedText(context, 'retry')),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
+    }
   }
 }

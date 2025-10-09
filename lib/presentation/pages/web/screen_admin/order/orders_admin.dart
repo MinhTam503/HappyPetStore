@@ -144,23 +144,24 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        title:
-            Text(AppLocalizations.of(context)!.manageOrders, 
-                style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)),
+        title: Text(
+          AppLocalizations.of(context)!.manageOrders, 
+          style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)
+        ),
         actions: [
-          // Filter status
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: SizedBox(
-              height: 40,
+          // Flexible container for filters
+          Flexible(
+            child: Container(
+              // constraints: const BoxConstraints(maxWidth: 1200),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Platform filter
+                    // Platform filter - smaller chips
                     for (int i = 0; i < platforms.length; i++)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
                         child: ChoiceChip(
                           label: Text(platforms[i]),
                           selected: selectedPlatformIndex == i,
@@ -170,15 +171,17 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                             color: selectedPlatformIndex == i
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).textTheme.bodyMedium?.color,
+                            fontSize: 12,
                           ),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           onSelected: (_) => setState(() => selectedPlatformIndex = i),
                         ),
                       ),
-                    const SizedBox(width: 16),
-                    // Status filter
+                    const SizedBox(width: 4),
+                    // Status filter - smaller chips
                     for (int i = 0; i < statuses.length; i++)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
                         child: ChoiceChip(
                           label: Text(statuses[i]),
                           selected: selectedStatusIndex == i,
@@ -188,24 +191,31 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                             color: selectedStatusIndex == i
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).textTheme.bodyMedium?.color,
+                            fontSize: 12,
                           ),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           onSelected: (_) => setState(() => selectedStatusIndex = i),
                         ),
                       ),
                     const SizedBox(width: 8),
-                    // Sort
-                    DropdownButton<String>(
-                      value: orderSort,
-                      items: [
-                        DropdownMenuItem(
-                            value: 'desc', child: Text(AppLocalizations.of(context)!.newest)),
-                        DropdownMenuItem(value: 'asc', child: Text(AppLocalizations.of(context)!.oldest)),
-                      ],
-                      onChanged: (v) => setState(() => orderSort = v ?? 'desc'),
-                      underline: Container(),
-                      style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 16),
+                    // Sort dropdown - compact
+                    SizedBox(
+                      height: 32,
+                      child: DropdownButton<String>(
+                        value: orderSort,
+                        items: [
+                          DropdownMenuItem(
+                              value: 'desc', child: Text(AppLocalizations.of(context)!.newest)),
+                          DropdownMenuItem(value: 'asc', child: Text(AppLocalizations.of(context)!.oldest)),
+                        ],
+                        onChanged: (v) => setState(() => orderSort = v ?? 'desc'),
+                        underline: Container(),
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyLarge?.color, 
+                          fontSize: 14
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 8),
                   ],
                 ),
               ),
@@ -232,7 +242,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
       body: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16), // Tăng padding từ 12 lên 16
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: _getOrdersStream(),
               builder: (context, snapshot) {
@@ -318,13 +328,13 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                 return LayoutBuilder(
                   builder: (context, c) {
                     final crossAxisCount =
-                        (c.maxWidth ~/ 420).clamp(1, 3); // ~420px mỗi card
+                        (c.maxWidth ~/ 420).clamp(1, 3); // Quay lại 420px như cũ
                     return GridView.builder(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        mainAxisExtent: 160, // Chiều cao item
+                        mainAxisExtent: 160, // Tăng từ 160 lên 200 để phù hợp với text lớn hơn
                       ),
                       itemCount: orders.length,
                       itemBuilder: (context, i) {

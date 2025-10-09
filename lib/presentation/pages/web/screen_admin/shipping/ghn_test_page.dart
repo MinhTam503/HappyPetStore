@@ -235,7 +235,7 @@ class _GHNTestPageState extends State<GHNTestPage> {
         _addLog('📝 Description: ${data['description']}');
         _addLog('⏰ Simulated At: ${data['updatedAt']}');
         _addLog('');
-        _addLog('� IMPORTANT: For REAL status update:');
+        _addLog('⚠️ IMPORTANT: For REAL status update:');
         _addLog('1. Go to: https://5sao.ghn.dev/order');
         _addLog('2. Find order: $_lastCreatedTrackingNumber');
         _addLog('3. Click order → Update status manually');

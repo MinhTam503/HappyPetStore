@@ -98,7 +98,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
             await RecommendationLogger.log('🔍 SEARCHING for breed: "$breed" (score: $breedScore)');
             
             // NO LIMITS: Get ALL available pets for this breed
-            await RecommendationLogger.log('� NO LIMITS: Fetching ALL pets for breed "$breed"');
+            await RecommendationLogger.log('🔓 NO LIMITS: Fetching ALL pets for breed "$breed"');
             
             // Primary query: exact match - GET ALL pets (no limit)
             var breedSnapshot = await firestore
@@ -211,7 +211,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 .limit(3) // Even fewer category-level recommendations
                 .get();
             
-            print('� CATEGORY-LEVEL: "$category" (score: $score) -> ${snapshot.docs.length} pets found');
+            print('🏷️ CATEGORY-LEVEL: "$category" (score: $score) -> ${snapshot.docs.length} pets found');
             
             for (final doc in snapshot.docs) {
               if (items.length >= request.limit) break;
@@ -681,7 +681,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       final now = DateTime.now();
       
       // 1. ORDERS (Highest weight + recency bonus)
-      print('� Orders: ${ordersSnapshot.docs.length}');
+      print('📦 Orders: ${ordersSnapshot.docs.length}');
       for (final doc in ordersSnapshot.docs) {
         final data = doc.data();
         final items = data['items'] as List<dynamic>? ?? [];
@@ -748,7 +748,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       }
       
       // 3. FAVORITES (High weight with createdAt support)
-      print('� Favorites: ${favoritesItems.length}');
+      print('❤️ Favorites: ${favoritesItems.length}');
       for (final item in favoritesItems) {
         final data = item as Map<String, dynamic>;
         
@@ -802,7 +802,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       }
       
       // 4. SEARCH HISTORY (Lower weight)
-      print('� Search history: ${searchHistorySnapshot.docs.length}');
+      print('🔍 Search history: ${searchHistorySnapshot.docs.length}');
       for (final doc in searchHistorySnapshot.docs) {
         final data = doc.data();
         final query = data['query']?.toString().toLowerCase() ?? '';

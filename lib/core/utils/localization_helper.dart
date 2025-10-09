@@ -275,6 +275,14 @@ class LocalizationHelper {
         return fallback ?? 'Lịch sử xem thú cưng đã tắt. Tới trang cài đặt để mở';
       case 'goToSettings':
         return fallback ?? 'Tới cài đặt';
+        
+      // Admin interface
+      case 'admin_panel':
+        return fallback ?? 'Bảng điều khiển quản trị';
+      case 'something_went_wrong':
+        return fallback ?? 'Đã xảy ra lỗi';
+      case 'retry':
+        return fallback ?? 'Thử lại';
 
       default:
         return fallback ?? key;
