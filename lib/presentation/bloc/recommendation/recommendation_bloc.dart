@@ -137,14 +137,14 @@ class RecommendationBloc extends Bloc<RecommendationEvent, RecommendationState> 
       // Don't emit a new state for tracking unless needed for UI feedback
       // The tracking happens in the background
       if (state is RecommendationLoaded) {
-        // Optionally show a success message
+        // Tùy chọn hiển thị thông báo thành công
         emit((state as RecommendationLoaded).copyWith(
           message: 'Đã cập nhật sở thích của bạn',
         ));
       }
     } catch (e) {
-      // Only emit error if tracking is critical for the UI
-      print('Error tracking interaction: $e');
+      // Chỉ phát ra lỗi nếu việc theo dõi là quan trọng cho UI
+      print('Lỗi theo dõi tương tác: $e');
     }
   }
 
@@ -223,7 +223,7 @@ class RecommendationBloc extends Bloc<RecommendationEvent, RecommendationState> 
       emit(RecommendationLoaded(
         recommendations: allRecommendations,
         recommendationsByType: recommendationsByType,
-        message: 'Search recommendations loaded successfully',
+        message: 'Gợi ý tìm kiếm đã được tải thành công',
       ));
     } catch (e) {
       emit(RecommendationError('Lỗi khi tải gợi ý tìm kiếm: ${e.toString()}'));
@@ -267,7 +267,7 @@ class RecommendationBloc extends Bloc<RecommendationEvent, RecommendationState> 
     RefreshRecommendations event,
     Emitter<RecommendationState> emit,
   ) async {
-    // Force refresh by loading personalized recommendations
+    // Làm mới bằng cách tải khuyến nghị cá nhân hóa
     add(LoadPersonalizedRecommendations(userId: event.userId));
   }
 }

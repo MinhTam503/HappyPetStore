@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
@@ -9,7 +8,6 @@ import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart'
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/notification/nofi_screen.dart';
-import 'package:pet_shop/presentation/pages/mobile/auth/login_page.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});

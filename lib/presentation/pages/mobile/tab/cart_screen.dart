@@ -12,6 +12,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/orderSuccess.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
@@ -429,7 +430,7 @@ class _CartScreenState extends State<CartScreen> {
                       NotificationHelper.showWarning(
                         context,
                         'Thông tin chưa đầy đủ',
-                        'Vui lòng nhập đầy đủ thông tin giao hàng',
+                        LocalizationHelper.getLocalizedText(context, 'pleaseEnterShippingInfo'),
                       );
                     }
                   },
@@ -1017,8 +1018,8 @@ class _CartScreenState extends State<CartScreen> {
         backgroundColor: secondaryColor,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          "My Cart",
+        title: Text(
+          LocalizationHelper.getLocalizedText(context, 'myCart'),
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -1352,7 +1353,7 @@ class _CartScreenState extends State<CartScreen> {
                                   NotificationHelper.showWarning(
                                     context,
                                     'Thiếu thông tin giao hàng',
-                                    'Vui lòng thêm thông tin giao hàng trước khi đặt hàng',
+                                    LocalizationHelper.getLocalizedText(context, 'pleaseAddShippingInfo'),
                                   );
                                   return;
                                 }
@@ -1381,7 +1382,7 @@ class _CartScreenState extends State<CartScreen> {
                                       NotificationHelper.showWarning(
                                         context,
                                         'Thiếu số điện thoại',
-                                        'Vui lòng cập nhật số điện thoại trong hồ sơ cá nhân trước khi đặt hàng!',
+                                        LocalizationHelper.getLocalizedText(context, 'pleaseUpdatePhoneNumber'),
                                       );
                                       return;
                                     }

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/search/search_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
@@ -31,7 +32,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> categories = [];
-  String userName = "Người dùng";
+  String userName = "Người dùng"; // Default fallback
   String? userId;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   UserManager userManager = UserManager();
@@ -120,7 +121,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() {
         userName = userInfo['displayName']?.isNotEmpty == true
             ? userInfo['displayName']
-            : "Bạn";
+            : LocalizationHelper.getLocalizedText(context, 'you');
         userId = FirebaseAuth.instance.currentUser?.uid;
       });
     }
@@ -269,7 +270,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            l10n?.searchPetsPlaceholder ?? "Tìm kiếm thú cưng",
+                            LocalizationHelper.getLocalizedText(context, 'searchPetsPlaceholder'),
                             style: const TextStyle(
                               color: Colors.black45,
                               fontSize: 14,
@@ -336,14 +337,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 fontSize: 23,
               ),
               children: [
-                TextSpan(text: "${l10n?.hello ?? 'Xin chào'}, "),
+                TextSpan(text: "${LocalizationHelper.getLocalizedText(context, 'hello')}, "),
                 TextSpan(
                   text: "$userName\n",
                   style: const TextStyle(color: primaryColor),
                 ),
                 TextSpan(
                   text: l10n?.welcomeToHappyPets ??
-                      "Chào bạn đến với Happy Pets Shop!",
+                      LocalizationHelper.getLocalizedText(context, 'welcomeToHappyPets'),
                   style: const TextStyle(
                     fontSize: 17,
                     color: Colors.black38,
@@ -358,7 +359,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           const SizedBox(height: 10),
           Text(
             l10n?.findPerfectCompanion ??
-                "Hãy tìm người bạn đồng hành hoàn hảo cho gia đình bạn",
+                LocalizationHelper.getLocalizedText(context, 'findPerfectCompanion'),
             style: const TextStyle(
               fontSize: 28,
               color: Colors.black,
@@ -408,7 +409,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(
                 width: 300,
                 child: Text(
-                  l10n?.searchPetsPlaceholder ?? "Tìm kiếm thú cưng",
+                  l10n?.searchPetsPlaceholder ?? LocalizationHelper.getLocalizedText(context, 'searchPetsPlaceholder'),
                   style: const TextStyle(
                     color: Colors.black45,
                     fontSize: 14,

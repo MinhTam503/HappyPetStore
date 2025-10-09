@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pet_shop/presentation/pages/mobile/auth/login_page_new.dart';
-import 'package:pet_shop/presentation/pages/mobile/auth/register_page_new.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/login_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/register_page.dart';
 
 class LoginOrRegister extends StatefulWidget {
   const LoginOrRegister({super.key});

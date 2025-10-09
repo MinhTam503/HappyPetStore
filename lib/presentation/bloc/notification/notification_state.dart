@@ -57,7 +57,7 @@ class NotificationCreated extends NotificationState {
 
   const NotificationCreated({
     required this.notificationId,
-    this.message = 'Notification created successfully',
+    this.message = 'Thông báo đã được tạo thành công',
   });
 
   @override
@@ -70,7 +70,7 @@ class BroadcastNotificationCreated extends NotificationState {
 
   const BroadcastNotificationCreated({
     required this.notificationIds,
-    this.message = 'Broadcast notification sent successfully',
+    this.message = 'Thông báo quảng bá đã được gửi thành công',
   });
 
   @override

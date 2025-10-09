@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/data/models/notification_model.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_event.dart';
@@ -164,9 +165,9 @@ class _NofiScreenState extends State<NofiScreen> {
         backgroundColor: secondaryColor,
         centerTitle: true,
         elevation: 0,
-        title: const Text(
-          "Thông báo",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        title: Text(
+          LocalizationHelper.getLocalizedText(context, 'notificationTitle'),
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         actions: [
           // Mark all as read button

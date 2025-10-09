@@ -1,0 +1,85 @@
+@startuml Recommendation Algorithm Flow
+
+!theme plain
+title Luồng thuật toán khuyến nghị Pet Shop
+
+start
+
+:User request recommendations;
+
+:Analyze user preferences from:
+- Orders (priority: 5.0)
+- Favorites (priority: 3.0) 
+- Search history (priority: 1.5)
+- Viewed pets (priority: 1.0);
+
+if (User has preferences?) then (yes)
+    :Calculate dynamic thresholds:
+    - Top breed score × 60%
+    - Select max 5 qualified breeds;
+    
+    :PHASE 1: Breed-specific targeting;
+    
+    :For each qualified breed:
+    - Query pets by exact breed
+    - Score: 0.85-0.95 (very high)
+    - Reason: "Phù hợp với sở thích về [breed]";
+    
+    if (Found ≥ 2 good breed matches?) then (no)
+        :PHASE 2: Category-level fallback;
+        
+        :For preferred categories:
+        - Query pets by category
+        - Score: 0.45-0.65 (medium)
+        - Reason: "Khám phá thêm trong danh mục [category]";
+    endif
+    
+else (no)
+    :Use general recommendations;
+endif
+
+if (Need more recommendations?) then (yes)
+    :PHASE 3: General discovery;
+    
+    :Query diverse categories:
+    - Dogs, Cats, Birds, Fish
+    - Score: 0.6 (good)
+    - Reason: "Khám phá thú cưng mới";
+endif
+
+:Remove duplicates and limit results;
+
+partition "Parallel Algorithm Execution" {
+    :Content-Based Filtering\n(Weight: 40%);
+    :Collaborative Filtering\n(Weight: 30%);
+    :Trending Analysis\n(Weight: 20%);
+    :Association Rules\n(Weight: 10%);
+}
+
+:Hybrid Combination:
+- Weighted score calculation
+- Duplicate removal
+- Score normalization;
+
+:Final ranking by combined score;
+
+:Cache results for 1 hour;
+
+:Return recommendations to user;
+
+stop
+
+note right
+    **Scoring System:**
+    • Purchase: 5.0
+    • Favorite: 3.0  
+    • Search: 1.5
+    • View: 1.0
+    
+    **Recency Multipliers:**
+    • 0-30 days: 2.0×
+    • 30-90 days: 1.5×
+    • >90 days: 1.0×
+end note
+
+@enduml

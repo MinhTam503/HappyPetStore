@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -52,7 +53,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         centerTitle: true,
         elevation: 0,
         title: Text(
-          "Change Password",
+          LocalizationHelper.getLocalizedText(context, 'changePassword'),
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
             letterSpacing: .2,
@@ -148,7 +149,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                   hint: "Nhập mật khẩu cũ",
                                   icon: Icons.lock_outline,
                                   isObscure: _hideOld,
-                                  onToggle: () => setState(() => _hideOld = !_hideOld),
+                                  onToggle: () =>
+                                      setState(() => _hideOld = !_hideOld),
                                 ),
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) {
@@ -159,8 +161,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                   }
                                   return null;
                                 },
-                                onFieldSubmitted: (_) =>
-                                    FocusScope.of(context).requestFocus(_newNode),
+                                onFieldSubmitted: (_) => FocusScope.of(context)
+                                    .requestFocus(_newNode),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -178,7 +180,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                   hint: "Nhập mật khẩu mới",
                                   icon: Icons.lock_reset,
                                   isObscure: _hideNew,
-                                  onToggle: () => setState(() => _hideNew = !_hideNew),
+                                  onToggle: () =>
+                                      setState(() => _hideNew = !_hideNew),
                                 ),
                                 onChanged: (_) => setState(() {}),
                                 validator: (v) {
@@ -188,7 +191,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                   if (v.trim().length < 6) {
                                     return "Mật khẩu phải từ 6 kí tự";
                                   }
-                                  if (v.trim() == oldPasswordController.text.trim()) {
+                                  if (v.trim() ==
+                                      oldPasswordController.text.trim()) {
                                     return "Không thể trùng mật khẩu cũ";
                                   }
                                   return null;
@@ -200,7 +204,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                             const SizedBox(height: 10),
 
                             // Thanh đánh giá độ mạnh (UI only)
-                            _PasswordStrengthBar(password: newPasswordController.text),
+                            _PasswordStrengthBar(
+                                password: newPasswordController.text),
 
                             const SizedBox(height: 16),
 
@@ -217,13 +222,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                   hint: "Nhập lại mật khẩu mới",
                                   icon: Icons.lock,
                                   isObscure: _hideConfirm,
-                                  onToggle: () => setState(() => _hideConfirm = !_hideConfirm),
+                                  onToggle: () => setState(
+                                      () => _hideConfirm = !_hideConfirm),
                                 ),
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) {
                                     return "Vui lòng xác nhận mật khẩu";
                                   }
-                                  if (v.trim() != newPasswordController.text.trim()) {
+                                  if (v.trim() !=
+                                      newPasswordController.text.trim()) {
                                     return "Mật khẩu mới không khớp";
                                   }
                                   return null;
@@ -237,33 +244,36 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: _isLoading ? null : _onChangePasswordPressed,
+                                onPressed: _isLoading
+                                    ? null
+                                    : _onChangePasswordPressed,
                                 style: ElevatedButton.styleFrom(
                                   padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                                      const EdgeInsets.symmetric(vertical: 14),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  backgroundColor: primaryColor, // dùng màu hệ thống app
+                                  backgroundColor:
+                                      primaryColor, // dùng màu hệ thống app
                                   foregroundColor: Colors.black,
-                                  disabledBackgroundColor:
-                                  Colors.grey.shade300,
+                                  disabledBackgroundColor: Colors.grey.shade300,
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.4,
-                                  ),
-                                )
-                                    : const Text(
-                                  "Đổi mật khẩu",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.4,
+                                        ),
+                                      )
+                                    : Text(
+                                        LocalizationHelper.getLocalizedText(
+                                            context, 'changePassword'),
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                               ),
                             ),
                           ],
@@ -285,12 +295,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   // =========================
 
   InputDecoration _decoration(
-      BuildContext context, {
-        required String hint,
-        required IconData icon,
-        required bool isObscure,
-        required VoidCallback onToggle,
-      }) {
+    BuildContext context, {
+    required String hint,
+    required IconData icon,
+    required bool isObscure,
+    required VoidCallback onToggle,
+  }) {
     return InputDecoration(
       hintText: hint,
       prefixIcon: Icon(icon),

@@ -1,0 +1,333 @@
+@startuml Hệ thống khuyến nghị Pet Shop
+
+!define RECTANGLE class
+
+title Kiến trúc hệ thống khuyến nghị Pet Shop\n(Recommendation System Architecture)
+
+package "Presentation Layer" as PresentationLayer {
+    RECTANGLE ForYouTab {
+        + _loadRecommendations()
+        + initState()
+    }
+    
+    RECTANGLE SearchRecommendationsSection {
+        + _loadRecommendations()
+        + _buildRecommendationsList()
+        + _showCacheIndicator()
+    }
+    
+    RECTANGLE RecommendationSection {
+        + _buildRecommendationItem()
+        + _getTypeColor()
+        + _getTypeLabel()
+    }
+    
+    RECTANGLE RecommendationDemoPage {
+        + _buildPersonalizedTab()
+        + _buildTrendingTab()
+        + _buildSimilarUsersTab()
+        + _buildAnalysisTab()
+    }
+}
+
+package "BLoC State Management" as BlocLayer {
+    RECTANGLE RecommendationBloc {
+        + _onLoadRecommendations()
+        + _onLoadHybridRecommendations()
+        + _onLoadPersonalizedRecommendations()
+        + _onLoadSearchRecommendations()
+        + _onTrackUserInteraction()
+    }
+    
+    RECTANGLE SearchBloc {
+        + _onSearchQueryChanged()
+        + _onLoadSearchRecommendations()
+    }
+    
+    note right of RecommendationBloc
+        Quản lý state cho tất cả
+        các loại khuyến nghị:
+        - ContentBased
+        - Collaborative
+        - Trending
+        - Association
+        - Hybrid
+        - Personalized
+    end note
+}
+
+package "Domain Layer" as DomainLayer {
+    RECTANGLE RecommendationUseCase {
+        + getPersonalizedRecommendations()
+        + getHybridRecommendations()
+        + getRecommendationsByType()
+        + trackUserInteraction()
+        + getUserProfile()
+    }
+    
+    RECTANGLE AprioriUseCase {
+        + getSuggestedPetsFromMultipleBreeds()
+        + analyzeBreedAssociations()
+        + findFrequentItemsets()
+        + generateAssociationRules()
+    }
+    
+    RECTANGLE RecommendationEntities {
+        + RecommendationItem
+        + UserProfile
+        + UserInteraction
+        + RecommendationType
+        + RecommendationRequest
+        + RecommendationResponse
+        + SimilarUser
+    }
+    
+    note right of RecommendationEntities
+        Các loại khuyến nghị:
+        • collaborative (Người dùng tương tự)
+        • contentBased (Thuộc tính pet)
+        • hybrid (Kết hợp)
+        • trending (Hot trend)
+        • personalized (Cá nhân hóa)
+        • association (Mẫu mua hàng)
+    end note
+}
+
+package "Data Layer" as DataLayer {
+    RECTANGLE RecommendationRepositoryImpl {
+        + getRecommendations()
+        + getContentBasedRecommendations()
+        + getCollaborativeRecommendations()
+        + getTrendingPets()
+        + getAssociationRecommendations()
+        + _analyzeUserPreferences()
+        + _isPetAlreadyInteractedWith()
+    }
+    
+    note right of RecommendationRepositoryImpl
+        Thuật toán BREED-FIRST targeting:
+        1. PHASE 1: Breed-specific targeting
+           - Dynamic threshold (60% of top breed)
+           - Score weighting by breed preference
+        2. PHASE 2: Category-level fallback
+           - Lower scores than breed-specific
+           - Diverse category coverage
+        3. PHASE 3: General recommendations
+           - Discovery mode for new categories
+    end note
+}
+
+package "Core Services" as CoreServices {
+    RECTANGLE SearchRecommendationsCache {
+        + saveRecommendations()
+        + getRecommendations()
+        + isCacheValid()
+        + clearCache()
+    }
+    
+    RECTANGLE SearchRecommendationsManager {
+        + initialize()
+        + _refreshRecommendations()
+        + Timer.periodic(1 hour)
+    }
+    
+    RECTANGLE UserManager {
+        + getCurrentUserId()
+        + getUserPreferences()
+    }
+    
+    RECTANGLE RecommendationLogger {
+        + log()
+        + logPerformance()
+        + logRecommendations()
+        + saveToWorkspace()
+    }
+    
+    note right of SearchRecommendationsCache
+        Cache thông minh:
+        - Auto-expiry sau 1 giờ
+        - JSON serialization
+        - SharedPreferences storage
+        - Cache-first loading strategy
+    end note
+}
+
+package "External Services" as ExternalServices {
+    database Firebase {
+        rectangle "Pets Collection" as PetsDB
+        rectangle "Orders Collection" as OrdersDB  
+        rectangle "ViewedPets Collection" as ViewedDB
+        rectangle "UserFav Collection" as FavDB
+        rectangle "SearchHistory Collection" as SearchDB
+    }
+}
+
+' Connections
+ForYouTab --> RecommendationBloc : "BlocProvider.of(context)"
+SearchRecommendationsSection --> SearchBloc : "BlocProvider.of(context)"
+RecommendationSection --> RecommendationBloc : "BlocProvider.of(context)"
+RecommendationDemoPage --> RecommendationBloc : "BlocProvider.of(context)"
+
+RecommendationBloc --> RecommendationUseCase : "dependency injection"
+SearchBloc --> RecommendationUseCase : "dependency injection"
+
+RecommendationUseCase --> RecommendationRepositoryImpl : "implements interface"
+AprioriUseCase --> RecommendationRepositoryImpl : "breed analysis"
+
+RecommendationRepositoryImpl --> Firebase : "Firestore queries"
+RecommendationRepositoryImpl --> UserManager : "user preferences"
+RecommendationRepositoryImpl --> RecommendationLogger : "comprehensive logging"
+
+SearchRecommendationsManager --> RecommendationUseCase : "background refresh"
+SearchRecommendationsManager --> SearchRecommendationsCache : "cache management"
+
+SearchRecommendationsSection --> SearchRecommendationsCache : "cache-first loading"
+
+' Algorithm Flow
+package "Algorithm Flow" as AlgorithmFlow {
+    rectangle "1. Content-Based\nFiltering" as ContentBased {
+        + Analyze user preferences
+        + Match pet attributes
+        + Category/breed scoring
+        + Weight: 40%
+    }
+    
+    rectangle "2. Collaborative\nFiltering" as Collaborative {
+        + Find similar users
+        + Analyze purchase patterns
+        + Popularity scoring
+        + Weight: 30%
+    }
+    
+    rectangle "3. Trending\nAnalysis" as Trending {
+        + Hot pets detection
+        + Category distribution
+        + Recency multiplier
+        + Weight: 20%
+    }
+    
+    rectangle "4. Association\nRules" as Association {
+        + Apriori algorithm
+        + Breed correlations
+        + "Bought together" patterns
+        + Weight: 10%
+    }
+    
+    rectangle "5. Hybrid\nCombination" as Hybrid {
+        + Weighted combination
+        + Deduplication
+        + Score normalization
+        + Final ranking
+    }
+    
+    rectangle "6. Personalized\nRecommendations" as Personalized {
+        + User behavior analysis
+        + Dynamic thresholds
+        + Multi-phase targeting
+        + Context awareness
+    }
+}
+
+ContentBased --> Hybrid : "40% weight"
+Collaborative --> Hybrid : "30% weight" 
+Trending --> Hybrid : "20% weight"
+Association --> Hybrid : "10% weight"
+Hybrid --> Personalized : "smart combination"
+
+' Data Sources
+package "Data Sources Analysis" as DataSources {
+    rectangle "Orders Data\n(Highest Priority)" as Orders {
+        + Purchase history
+        + Category preferences
+        + Breed preferences
+        + Recency multiplier (30d=2x, 90d=1.5x)
+    }
+    
+    rectangle "Viewed Pets\n(Medium Priority)" as Viewed {
+        + Browse behavior
+        + Interest tracking
+        + Category analysis
+        + Interaction weight: 1.0
+    }
+    
+    rectangle "Favorites\n(High Priority)" as Favorites {
+        + Explicit preferences
+        + Strong signals
+        + Category/breed scoring
+        + Interaction weight: 3.0
+    }
+    
+    rectangle "Search History\n(Lower Priority)" as SearchHistory {
+        + Query analysis
+        + Intent detection
+        + Category mapping
+        + Interaction weight: 1.5
+    }
+}
+
+Orders --> RecommendationRepositoryImpl : "score: 5.0"
+Viewed --> RecommendationRepositoryImpl : "score: 1.0"
+Favorites --> RecommendationRepositoryImpl : "score: 3.0"
+SearchHistory --> RecommendationRepositoryImpl : "score: 1.5"
+
+' Performance & Monitoring
+package "Performance & Monitoring" as Performance {
+    rectangle "Cache System" as CacheSystem {
+        + 1-hour auto-refresh
+        + Instant loading
+        + Background updates
+        + SharedPreferences
+    }
+    
+    rectangle "Logging System" as LoggingSystem {
+        + Comprehensive tracking
+        + Performance metrics
+        + Algorithm analysis
+        + Workspace integration
+    }
+    
+    rectangle "Error Handling" as ErrorHandling {
+        + Graceful degradation
+        + Fallback mechanisms
+        + Try-catch wrapping
+        + Default recommendations
+    }
+}
+
+CacheSystem --> SearchRecommendationsCache
+LoggingSystem --> RecommendationLogger
+ErrorHandling --> RecommendationRepositoryImpl
+
+' Main algorithm phases
+note bottom
+    **Kiến trúc thuật toán chính:**
+    
+    **PHASE 1: BREED-FIRST TARGETING**
+    • Dynamic threshold = 60% of top breed score
+    • Max 5 breeds for comprehensive coverage
+    • High scores (0.85-0.95) for exact breed matches
+    
+    **PHASE 2: CATEGORY-LEVEL FALLBACK**
+    • Lower scores (0.45-0.65) than breed-specific
+    • Triggered when < 2 good breed matches
+    • Category exploration and discovery
+    
+    **PHASE 3: GENERAL RECOMMENDATIONS**
+    • Diverse category coverage (Dogs, Cats, Birds, Fish)
+    • Discovery mode for new categories
+    • Avoid already interacted pets
+    
+    **Scoring System:**
+    • Purchase: 5.0 (highest priority)
+    • Favorites: 3.0 (explicit preference)
+    • Search: 1.5 (intent signal)
+    • View: 1.0 (browse behavior)
+    
+    **Performance Optimizations:**
+    • Cache-first loading strategy
+    • 1-hour auto-refresh background
+    • Comprehensive logging system
+    • Graceful error handling
+end note
+
+@enduml

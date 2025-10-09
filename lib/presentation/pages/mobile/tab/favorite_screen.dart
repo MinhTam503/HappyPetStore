@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
@@ -76,8 +77,8 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
         centerTitle: true,
         backgroundColor: secondaryColor,
         elevation: 0,
-        title: const Text(
-          "Favorite",
+        title: Text(
+          LocalizationHelper.getLocalizedText(context, 'favorites'),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -94,18 +95,20 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.favorite_border,
+                      const Icon(Icons.favorite_border,
                           size: 56, color: Colors.black26),
                       const SizedBox(height: 10),
                       Text(
-                        "No Favorite yet",
+                        LocalizationHelper.getLocalizedText(
+                            context, 'noFavoriteYet'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Hãy thêm vài thú cưng vào danh sách yêu thích nhé!",
+                        LocalizationHelper.getLocalizedText(
+                            context, 'addFavoritePetsMessage'),
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: Colors.black54),
                       ),
@@ -174,8 +177,10 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                                     RemoveFromFav(userIdentifier!, productId));
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text("Đã có lỗi xảy ra")),
+                                  SnackBar(
+                                      content: Text(
+                                          LocalizationHelper.getLocalizedText(
+                                              context, 'errorOccurred'))),
                                 );
                               }
                             },
@@ -189,7 +194,9 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
             } else if (state is FavError) {
               return Center(child: Text("Error: ${state.message}"));
             } else {
-              return const Center(child: Text("Unknown state"));
+              return Center(
+                  child: Text(LocalizationHelper.getLocalizedText(
+                      context, 'unknownState')));
             }
           },
         ),
@@ -304,7 +311,8 @@ class _FavoriteCard extends StatelessWidget {
                   shape: const CircleBorder(),
                   elevation: 3,
                   child: IconButton(
-                    tooltip: "Remove from Favorites",
+                    tooltip: LocalizationHelper.getLocalizedText(
+                        context, 'removeFromFavorites'),
                     icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: onDelete,
                   ),

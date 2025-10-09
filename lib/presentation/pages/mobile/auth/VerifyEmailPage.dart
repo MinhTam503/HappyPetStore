@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 
 
 class VerifyEmailPage extends StatefulWidget {
@@ -56,7 +57,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       appBar: AppBar(
         backgroundColor: secondaryColor,
         elevation: 0,
-        title: const Text("Xác nhận Email", style: TextStyle(color: Colors.black)),
+        title: Text(LocalizationHelper.getLocalizedText(context, 'verifyEmail'), 
+                   style: TextStyle(color: Colors.black)),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Center(
@@ -72,13 +74,13 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                 children: [
                   const Icon(Icons.email_outlined, size: 60, color: primaryColor),
                   const SizedBox(height: 18),
-                  const Text(
-                    "Xác minh tài khoản",
+                  Text(
+                    LocalizationHelper.getLocalizedText(context, 'verifyAccount'),
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    "Vui lòng kiểm tra email",
+                  Text(
+                    LocalizationHelper.getLocalizedText(context, 'pleaseCheckEmail'),
                     style: TextStyle(fontSize: 16, color: Colors.black87),
                   ),
                   const SizedBox(height: 4),
@@ -90,7 +92,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   ElevatedButton.icon(
                     onPressed: _checkEmailVerified,
                     icon: const Icon(Icons.verified, size: 20),
-                    label: const Text("Tôi đã xác nhận"),
+                    label: Text(LocalizationHelper.getLocalizedText(context, 'iHaveVerified')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -102,7 +104,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   TextButton.icon(
                     onPressed: _resendVerificationEmail,
                     icon: const Icon(Icons.refresh, color: primaryColor),
-                    label: const Text("Gửi lại email xác nhận", style: TextStyle(color: primaryColor)),
+                    label: Text(LocalizationHelper.getLocalizedText(context, 'resendVerificationEmail'), 
+                               style: TextStyle(color: primaryColor)),
                   ),
                   if (_isVerified)
                     const Padding(

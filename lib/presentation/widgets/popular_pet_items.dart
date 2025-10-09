@@ -13,6 +13,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/message_manager.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 
 class PopularPetItems extends StatefulWidget {
   final Map<String, dynamic> pet;
@@ -122,8 +123,8 @@ class _PetItemsAllState extends State<PopularPetItems> {
                                   
                                   if (userIdentifier == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text("Please login to continue")),
+                                      SnackBar(
+                                      content: Text(LocalizationHelper.getLocalizedText(context, 'pleaseLoginToContinue'))),
                                     );
                                     return;
                                   }
@@ -237,8 +238,8 @@ class _PetItemsAllState extends State<PopularPetItems> {
                               
                               if (userIdentifier == null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text("Please login to continue")),
+                                  SnackBar(
+                                      content: Text(LocalizationHelper.getLocalizedText(context, 'pleaseLoginToContinue'))),
                                 );
                                 return;
                               }

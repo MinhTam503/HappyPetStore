@@ -6,6 +6,7 @@ import 'package:pet_shop/presentation/widgets/components/my_button.dart';
 import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -80,12 +81,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     String account = _accountController.text.trim();
 
     if (account.isEmpty) {
-      _showSnackbar("Vui lòng nhập email hoặc số điện thoại!");
+      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'enterEmailOrPhone'));
       return;
     }
 
     if (!_isEmail(account) && !_isPhoneNumber(account)) {
-      _showSnackbar("Vui lòng nhập email hoặc số điện thoại hợp lệ!");
+      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone'));
       return;
     }
 
@@ -97,7 +98,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   }
 
   Future<void> _resetPasswordWithEmail(String email) async {
-    DialogHelper.showLoadingDialog(context, message: "Đang kiểm tra email...");
+    DialogHelper.showLoadingDialog(context, message: LocalizationHelper.getLocalizedText(context, 'checkingEmail'));
 
     try {
       // Check if email exists in Firestore
@@ -109,7 +110,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       if (emailQuery.docs.isEmpty) {
         await DialogHelper.hideLoadingDialog(context);
         if (mounted) {
-          _showSnackbar("Email không tồn tại trong hệ thống!");
+          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'emailNotExist'));
         }
         return;
       }
@@ -121,20 +122,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
 
       if (mounted) {
         _showSuccessDialog(
-          "Email đặt lại mật khẩu đã được gửi!",
-          "Vui lòng kiểm tra email $email và làm theo hướng dẫn để đặt lại mật khẩu.",
+          LocalizationHelper.getLocalizedText(context, 'resetEmailSent'),
+          "${LocalizationHelper.getLocalizedText(context, 'checkEmailInstructions')} ($email)",
         );
       }
     } on FirebaseAuthException catch (e) {
       await DialogHelper.hideLoadingDialog(context);
       
-      String errorMessage = "Gửi email thất bại";
+      String errorMessage = LocalizationHelper.getLocalizedText(context, 'sendEmailFailed');
       switch (e.code) {
         case 'user-not-found':
-          errorMessage = "Email không tồn tại!";
+          errorMessage = LocalizationHelper.getLocalizedText(context, 'emailNotExist');
           break;
         case 'invalid-email':
-          errorMessage = "Email không hợp lệ!";
+          errorMessage = LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone');
           break;
         default:
           errorMessage = "Lỗi gửi email: ${e.message}";
@@ -421,14 +422,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                     ),
                     const SizedBox(height: 40),
                     MyTextField(
-                      hintText: "Email hoặc Số điện thoại",
+                      hintText: LocalizationHelper.getLocalizedText(context, 'emailOrPhoneHint'),
                       icon: const Icon(Icons.contact_mail_outlined),
                       controller: _accountController,
                       obsecureText: false,
                     ),
                     const SizedBox(height: 30),
                     MyButton(
-                      text: 'GỬI YÊU CẦU',
+                      text: LocalizationHelper.getLocalizedText(context, 'sendRequestButton'),
                       onPressed: _resetPassword,
                     ),
                     const SizedBox(height: 20),

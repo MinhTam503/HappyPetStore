@@ -73,7 +73,7 @@ class _HomePageState extends State<BottomNavigator> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.favorite_border),
             activeIcon: const Icon(Icons.favorite),
-            label: l10n?.favorite ?? "Favorite",
+            label: l10n?.favorite ?? "Yêu thích",
           ),
           // BottomNavigationBarItem(
           //   icon: Icon(Iconsax.message),
@@ -83,12 +83,12 @@ class _HomePageState extends State<BottomNavigator> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.shopping_cart_outlined),
             activeIcon: const Icon(Icons.shopping_cart),
-            label: l10n?.cart ?? "Cart",
+            label: l10n?.cart ?? "Giỏ hàng",
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person_outline),
             activeIcon: const Icon(Icons.person),
-            label: l10n?.profile ?? "Profile",
+            label: l10n?.profile ?? "Hồ sơ",
           ),
         ],
       ),

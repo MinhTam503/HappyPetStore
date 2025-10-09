@@ -12,6 +12,8 @@ import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/core/services/settings_service.dart';
+import 'package:pet_shop/presentation/widgets/common/history_disabled_message.dart';
 
 class ViewedPage extends StatefulWidget {
   const ViewedPage({super.key});
@@ -22,11 +24,27 @@ class ViewedPage extends StatefulWidget {
 
 class _ViewedPageState extends State<ViewedPage> {
   final userManager = UserManager();
+  final SettingsService _settingsService = SettingsService();
+  bool _viewedPetsHistoryEnabled = true;
 
   @override
   void initState() {
     super.initState();
     context.read<RecentPetsBloc>().add(LoadRecentPets());
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final viewedPetsHistoryEnabled = await _settingsService.getViewedPetsHistoryEnabled();
+      if (mounted) {
+        setState(() {
+          _viewedPetsHistoryEnabled = viewedPetsHistoryEnabled;
+        });
+      }
+    } catch (e) {
+      print('Error loading settings: $e');
+    }
   }
 
   @override
@@ -51,46 +69,52 @@ class _ViewedPageState extends State<ViewedPage> {
           ),
         ],
       ),
-      body: BlocBuilder<RecentPetsBloc, RecentPetsState>(
-        builder: (context, state) {
-          if (state is RecentPetsLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: !_viewedPetsHistoryEnabled
+          ? HistoryDisabledMessage(
+              messageKey: 'viewedPetsHistoryDisabledMessage',
+              icon: Icons.pets_outlined,
+              iconColor: Colors.purple,
+            )
+          : BlocBuilder<RecentPetsBloc, RecentPetsState>(
+              builder: (context, state) {
+                if (state is RecentPetsLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (state is RecentPetsError) {
-            return Center(child: Text('Lỗi: ${state.message}'));
-          }
+                if (state is RecentPetsError) {
+                  return Center(child: Text('Lỗi: ${state.message}'));
+                }
 
-          if (state is RecentPetsEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.history, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n?.noRecentlyViewed ?? 'Chưa có thú cưng nào được xem',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
+                if (state is RecentPetsEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.history, size: 64, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n?.noRecentlyViewed ?? 'Chưa có thú cưng nào được xem',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-          if (state is RecentPetsLoaded) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: state.items.length,
-              itemBuilder: (context, index) {
-                final pet = state.items[index];
-                return _buildPetCard(pet);
+                if (state is RecentPetsLoaded) {
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: state.items.length,
+                    itemBuilder: (context, index) {
+                      final pet = state.items[index];
+                      return _buildPetCard(pet);
+                    },
+                  );
+                }
+
+                return const SizedBox.shrink();
               },
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
+            ),
     );
   }
 

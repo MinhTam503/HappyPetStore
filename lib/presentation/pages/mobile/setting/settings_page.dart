@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
@@ -18,7 +19,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _searchHistoryEnabled = true;
   bool _viewedPetsHistoryEnabled = true;
   bool _isLoading = true;
-  
+
   final SettingsService _settingsService = SettingsService();
 
   @override
@@ -29,19 +30,25 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final chatBubbleVisible = await _settingsService.getChatBubbleVisibility();
+      final chatBubbleVisible =
+          await _settingsService.getChatBubbleVisibility();
       final selectedLanguage = await _settingsService.getSelectedLanguage();
-      final searchHistoryEnabled = await _settingsService.getSearchHistoryEnabled();
-      final viewedPetsHistoryEnabled = await _settingsService.getViewedPetsHistoryEnabled();
-      
+      final searchHistoryEnabled =
+          await _settingsService.getSearchHistoryEnabled();
+      final viewedPetsHistoryEnabled =
+          await _settingsService.getViewedPetsHistoryEnabled();
+
       if (mounted) {
         // Sync with LocaleProvider
-        final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+        final localeProvider =
+            Provider.of<LocaleProvider>(context, listen: false);
         final currentLocale = localeProvider.locale.languageCode;
-        
+
         // If there's a mismatch, update SettingsService to match LocaleProvider
-        final finalLanguage = currentLocale != selectedLanguage ? currentLocale : selectedLanguage;
-        
+        final finalLanguage = currentLocale != selectedLanguage
+            ? currentLocale
+            : selectedLanguage;
+
         setState(() {
           _showChatBubble = chatBubbleVisible;
           _selectedLanguage = finalLanguage;
@@ -49,7 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _viewedPetsHistoryEnabled = viewedPetsHistoryEnabled;
           _isLoading = false;
         });
-        
+
         // Update SettingsService if there was a mismatch
         if (currentLocale != selectedLanguage) {
           await _settingsService.setSelectedLanguage(finalLanguage);
@@ -69,15 +76,16 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _showChatBubble = value;
       });
-      
+
       // Show feedback to user
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value ? (l10n?.chatbotEnabled ?? 'Chatbot bubble đã được bật') 
-                    : (l10n?.chatbotDisabled ?? 'Chatbot bubble đã được tắt'),
+              value
+                  ? (l10n?.chatbotEnabled ?? 'Chatbot bubble đã được bật')
+                  : (l10n?.chatbotDisabled ?? 'Chatbot bubble đã được tắt'),
             ),
             backgroundColor: value ? Colors.green : Colors.orange,
             duration: const Duration(seconds: 2),
@@ -102,26 +110,27 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       // Update both SettingsService and LocaleProvider
       await _settingsService.setSelectedLanguage(value);
-      
+
       // Use LocaleProvider to change the app's locale
       if (mounted) {
-        final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+        final localeProvider =
+            Provider.of<LocaleProvider>(context, listen: false);
         localeProvider.setLocale(Locale(value));
       }
-      
+
       setState(() {
         _selectedLanguage = value;
       });
-      
+
       // Show feedback to user using localized strings
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value == 'vi' 
-                ? (l10n?.switchedToVietnamese ?? 'Đã chuyển sang Tiếng Việt')
-                : (l10n?.switchedToEnglish ?? 'Switched to English'),
+              value == 'vi'
+                  ? (l10n?.switchedToVietnamese ?? 'Đã chuyển sang Tiếng Việt')
+                  : (l10n?.switchedToEnglish ?? 'Switched to English'),
             ),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
@@ -134,7 +143,8 @@ class _SettingsPageState extends State<SettingsPage> {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n?.errorSavingLanguage ?? 'Lỗi khi lưu cài đặt ngôn ngữ'),
+            content: Text(
+                l10n?.errorSavingLanguage ?? 'Lỗi khi lưu cài đặt ngôn ngữ'),
             backgroundColor: Colors.red,
           ),
         );
@@ -148,15 +158,18 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _searchHistoryEnabled = value;
       });
-      
+
       // Show feedback to user
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value ? (l10n?.searchHistoryEnabled ?? 'Đã bật lưu lịch sử tìm kiếm') 
-                    : (l10n?.searchHistoryDisabled ?? 'Đã tắt lưu lịch sử tìm kiếm'),
+              value
+                  ? (l10n?.searchHistoryEnabled ??
+                      'Đã bật lưu lịch sử tìm kiếm')
+                  : (l10n?.searchHistoryDisabled ??
+                      'Đã tắt lưu lịch sử tìm kiếm'),
             ),
             backgroundColor: value ? Colors.green : Colors.orange,
             duration: const Duration(seconds: 2),
@@ -183,15 +196,18 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _viewedPetsHistoryEnabled = value;
       });
-      
+
       // Show feedback to user
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value ? (l10n?.viewedPetsHistoryEnabled ?? 'Đã bật lưu lịch sử xem thú cưng') 
-                    : (l10n?.viewedPetsHistoryDisabled ?? 'Đã tắt lưu lịch sử xem thú cưng'),
+              value
+                  ? (l10n?.viewedPetsHistoryEnabled ??
+                      'Đã bật lưu lịch sử xem thú cưng')
+                  : (l10n?.viewedPetsHistoryDisabled ??
+                      'Đã tắt lưu lịch sử xem thú cưng'),
             ),
             backgroundColor: value ? Colors.green : Colors.orange,
             duration: const Duration(seconds: 2),
@@ -228,7 +244,13 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: secondaryColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BottomNavigator(
+                  initialIndex: 3,
+                ),
+              )),
         ),
         title: Text(
           l10n?.settings ?? 'Settings',
@@ -261,7 +283,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       iconBg: const Color(0xffe3f2fd),
                       iconColor: Colors.blue,
                       title: l10n?.showChatbot ?? 'Hiển thị Chatbot',
-                      subtitle: l10n?.chatbotToggleSubtitle ?? 'Bật/tắt biểu tượng chatbot trên màn hình',
+                      subtitle: l10n?.chatbotToggleSubtitle ??
+                          'Bật/tắt biểu tượng chatbot trên màn hình',
                       value: _showChatBubble,
                       onChanged: _saveChatBubbleSetting,
                     ),
@@ -300,17 +323,21 @@ class _SettingsPageState extends State<SettingsPage> {
                       iconBg: const Color(0xffe8f5e8),
                       iconColor: Colors.green,
                       title: l10n?.saveSearchHistory ?? 'Lưu lịch sử tìm kiếm',
-                      subtitle: l10n?.searchHistoryDescription ?? 'Lưu các truy vấn tìm kiếm để truy cập nhanh',
+                      subtitle: l10n?.searchHistoryDescription ??
+                          'Lưu các truy vấn tìm kiếm để truy cập nhanh',
                       value: _searchHistoryEnabled,
                       onChanged: _saveSearchHistorySetting,
                     ),
-                    const Divider(height: 0, indent: 16 + 44 + 12, endIndent: 12),
+                    const Divider(
+                        height: 0, indent: 16 + 44 + 12, endIndent: 12),
                     _SettingsToggle(
                       icon: Icons.pets,
                       iconBg: const Color(0xfff3e5f5),
                       iconColor: Colors.purple,
-                      title: l10n?.saveViewedPetsHistory ?? 'Lưu lịch sử xem thú cưng',
-                      subtitle: l10n?.viewedPetsHistoryDescription ?? 'Theo dõi các thú cưng bạn đã xem gần đây',
+                      title: l10n?.saveViewedPetsHistory ??
+                          'Lưu lịch sử xem thú cưng',
+                      subtitle: l10n?.viewedPetsHistoryDescription ??
+                          'Theo dõi các thú cưng bạn đã xem gần đây',
                       value: _viewedPetsHistoryEnabled,
                       onChanged: _saveViewedPetsHistorySetting,
                     ),
@@ -526,7 +553,8 @@ class _SettingsItem extends StatelessWidget {
           color: Colors.black54,
         ),
       ),
-      trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.black38),
+      trailing:
+          trailing ?? const Icon(Icons.chevron_right, color: Colors.black38),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       horizontalTitleGap: 12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -547,7 +575,7 @@ class _LanguageSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     return Column(
       children: [
         _LanguageOption(
@@ -598,18 +626,17 @@ class _LanguageOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isSelected = value == groupValue;
-    
+
     return ListTile(
       onTap: () => onChanged(value),
       leading: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withOpacity(0.1) : Colors.grey.shade100,
+          color:
+              isSelected ? primaryColor.withOpacity(0.1) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
-          border: isSelected 
-              ? Border.all(color: primaryColor, width: 2)
-              : null,
+          border: isSelected ? Border.all(color: primaryColor, width: 2) : null,
         ),
         child: Center(
           child: Text(

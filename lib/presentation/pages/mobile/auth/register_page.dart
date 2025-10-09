@@ -4,164 +4,480 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/presentation/widgets/components/my_button.dart';
 import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/VerifyEmailPage.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pet_shop/presentation/pages/mobile/auth/login_page.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:flutter/foundation.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPageNew extends StatefulWidget {
   final void Function()? onTap;
 
-  const RegisterPage({super.key, required this.onTap});
+  const RegisterPageNew({super.key, required this.onTap});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  State<RegisterPageNew> createState() => _RegisterPageNewState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  final TextEditingController _emailController = TextEditingController();
-
+class _RegisterPageNewState extends State<RegisterPageNew> 
+    with TickerProviderStateMixin {
+  final TextEditingController _accountController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    ));
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutBack,
+    ));
+    _animationController.forward();
+  }
 
-  void _dangKy(BuildContext context) async {
-    String email = _emailController.text.trim();
+  @override
+  void dispose() {
+    _accountController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _nameController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  // Check if input is email or phone
+  bool _isEmail(String input) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(input);
+  }
+
+  bool _isPhoneNumber(String input) {
+    String cleaned = input.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
+    return RegExp(r'^(\+84|84|0)[0-9]{8,9}$').hasMatch(cleaned);
+  }
+
+  String _formatPhoneNumber(String phone) {
+    String cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (cleaned.startsWith('+84')) {
+      return cleaned;
+    } else if (cleaned.startsWith('84')) {
+      return '+$cleaned';
+    } else if (cleaned.startsWith('0')) {
+      return '+84${cleaned.substring(1)}';
+    } else {
+      return '+84$cleaned';
+    }
+  }
+
+  void _register(BuildContext context) async {
+    String account = _accountController.text.trim();
     String password = _passwordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
-    
-    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      _showSnackbar("Vui lòng nhập đầy đủ thông tin!");
-      return;
-    }
-    if (password.length < 6) {
-      _showSnackbar("Mật khẩu phải có ít nhất 6 ký tự!");
-      return;
-    }
-    if (password != confirmPassword) {
-      _showSnackbar("Mật khẩu xác nhận không khớp!");
+    String name = _nameController.text.trim();
+
+    // Validation
+    if (account.isEmpty || password.isEmpty || confirmPassword.isEmpty || name.isEmpty) {
+      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'fillAllFields'));
       return;
     }
 
-    // Show loading dialog
+    if (password.length < 6) {
+      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'passwordMinLength'));
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'passwordMismatch'));
+      return;
+    }
+
+    if (!_isEmail(account) && !_isPhoneNumber(account)) {
+      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone'));
+      return;
+    }
+
     DialogHelper.showLoadingDialog(context, message: "Đang tạo tài khoản...");
 
     try {
-      debugPrint('🔄 Creating account for: $email');
-      
+      if (_isEmail(account)) {
+        // Register with email - require email verification
+        await _registerWithEmail(account, password, name);
+      } else {
+        // Register with phone - require OTP verification
+        await _registerWithPhone(account, password, name);
+      }
+    } catch (e) {
+      await DialogHelper.hideLoadingDialog(context);
+      if (mounted) {
+        _showSnackbar("${LocalizationHelper.getLocalizedText(context, 'registrationError')}: $e");
+      }
+    }
+  }
+
+  Future<void> _registerWithEmail(String email, String password, String name) async {
+    try {
+      debugPrint('🔄 Creating account for email: $email');
+
+      // Check if email already exists
+      QuerySnapshot emailQuery = await FirebaseFirestore.instance
+          .collection("users")
+          .where("email", isEqualTo: email)
+          .get();
+
+      if (emailQuery.docs.isNotEmpty) {
+        await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'emailAlreadyUsed'));
+        }
+        return;
+      }
+
       UserCredential userCredential = await authService.value
           .createAccount(email: email, password: password);
       User? user = userCredential.user;
 
       if (user != null) {
         debugPrint('✅ Account created, sending verification email...');
-        
+
         await user.sendEmailVerification();
-        
-        // Hide loading dialog before showing verification page
+
         await DialogHelper.hideLoadingDialog(context);
-        
+
         if (!mounted) return;
-        
-        _showSnackbar("Email xác nhận đã gửi! Vui lòng kiểm tra email.");
-        
+
+        _showSnackbar(LocalizationHelper.getLocalizedText(context, 'verificationEmailSent'));
+
         // Navigate to verification page
-        await Navigator.push(
+        bool emailVerified = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VerifyEmailPage(email: email),
           ),
-        );
-        
+        ) ?? false;
+
         if (!mounted) return;
-        
-        // Check verification status after returning from verification page
-        await user.reload();
-        User? refreshedUser = FirebaseAuth.instance.currentUser;
-        
-        if (refreshedUser != null && refreshedUser.emailVerified) {
+
+        if (emailVerified) {
           debugPrint('✅ Email verified, creating user document...');
-          
+
           // Create user document in Firestore
-          await FirebaseFirestore.instance.collection("users").doc(refreshedUser.uid).set({
-            "email": refreshedUser.email,
+          await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+            "email": email,
             "role": "user",
-            "displayName": refreshedUser.displayName ?? "User",
-            "imageUrl": refreshedUser.photoURL ?? "https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg",
+            "displayName": name,
+            "imageUrl": "https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg",
             "address": [],
             "phone": "",
             "createdAt": FieldValue.serverTimestamp(),
+            "authProvider": "email",
           });
-          
-          // Sign out the user to prevent auto-login
+
+          // Sign out to prevent auto-login
           await authService.value.signOut();
-          
-          debugPrint('✅ User document created, signed out user');
-          
-          if (!mounted) return;
-          
-          // Clear form
-          _emailController.clear();
-          _passwordController.clear();
-          _confirmPasswordController.clear();
-          
-          // Show success message and navigate to login
-          _showSnackbar("Đăng ký thành công! Vui lòng đăng nhập.");
-          
-          // Navigate back to login page
-          widget.onTap?.call();
-          
+
+          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'registrationSuccess'));
+          _clearForm();
         } else {
-          debugPrint('❌ Email not verified, deleting account...');
-          
           // Email not verified, delete the account
-          if (refreshedUser != null) {
-            await refreshedUser.delete();
-          }
-          
-          if (!mounted) return;
-          
-          _emailController.clear();
-          _passwordController.clear();
-          _confirmPasswordController.clear();
-          _showSnackbar("Xác nhận email không thành công. Đăng ký bị hủy.");
+          debugPrint('❌ Email not verified, deleting account...');
+          await user.delete();
+          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'emailNotVerified'));
         }
       }
     } on FirebaseAuthException catch (e) {
       await DialogHelper.hideLoadingDialog(context);
-      
-      debugPrint('❌ Registration error: ${e.code} - ${e.message}');
-      
-      if (!mounted) return;
-      
-      if (e.code == 'email-already-in-use') {
-        _showSnackbar("Tài khoản đã tồn tại");
-      } else {
-        _showSnackbar("Đăng ký thất bại: ${e.message}");
+
+      String errorMessage = "Đăng ký thất bại";
+      switch (e.code) {
+        case 'weak-password':
+          errorMessage = "Mật khẩu quá yếu!";
+          break;
+        case 'email-already-in-use':
+          errorMessage = "Email đã được sử dụng!";
+          break;
+        case 'invalid-email':
+          errorMessage = "Email không hợp lệ!";
+          break;
+        default:
+          errorMessage = "Lỗi đăng ký: ${e.message}";
       }
-      
-      _emailController.clear();
-      _passwordController.clear();
-      _confirmPasswordController.clear();
-    } catch (e) {
-      await DialogHelper.hideLoadingDialog(context);
-      
-      debugPrint('❌ Unexpected error: $e');
-      
-      if (!mounted) return;
-      
-      _showSnackbar("Lỗi không xác định: $e");
-      _emailController.clear();
-      _passwordController.clear();
-      _confirmPasswordController.clear();
+
+      if (mounted) {
+        _showSnackbar(errorMessage);
+      }
     }
   }
 
+  Future<void> _registerWithPhone(String phone, String password, String name) async {
+    try {
+      String formattedPhone = _formatPhoneNumber(phone);
+      debugPrint('🔄 Creating account for phone: $formattedPhone');
+
+      // Check if phone already exists
+      QuerySnapshot phoneQuery = await FirebaseFirestore.instance
+          .collection("users")
+          .where("phone", isEqualTo: formattedPhone)
+          .get();
+
+      if (phoneQuery.docs.isNotEmpty) {
+        await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          _showSnackbar("Số điện thoại đã được sử dụng!");
+        }
+        return;
+      }
+
+      await DialogHelper.hideLoadingDialog(context);
+
+      if (!mounted) return;
+
+      // Navigate to OTP verification with registration data
+      bool otpVerified = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OtpVerificationPage(
+            phoneNumber: formattedPhone,
+            isRegistration: true,
+            registrationData: {
+              'phone': formattedPhone,
+              'password': password,
+              'name': name,
+            },
+          ),
+        ),
+      ) ?? false;
+
+      if (otpVerified && mounted) {
+        _showSnackbar("Đăng ký thành công! Vui lòng đăng nhập.");
+        _clearForm();
+      }
+    } catch (e) {
+      await DialogHelper.hideLoadingDialog(context);
+      if (mounted) {
+        _showSnackbar("${LocalizationHelper.getLocalizedText(context, 'phoneRegistrationError')}: $e");
+      }
+    }
+  }
+
+  void _signUpWithGoogle() async {
+    DialogHelper.showLoadingDialog(context, message: "Đang đăng ký với Google...");
+
+    try {
+      UserCredential? userCredential = await authService.value.signInWithGoogle();
+
+      if (userCredential?.user != null && mounted) {
+        // Check if user already exists in our system
+        User user = userCredential!.user!;
+        QuerySnapshot userQuery = await FirebaseFirestore.instance
+            .collection("users")
+            .where("email", isEqualTo: user.email)
+            .get();
+
+        await DialogHelper.hideLoadingDialog(context);
+
+        if (userQuery.docs.isNotEmpty) {
+          // User already exists - this is registration, not login
+          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'accountExistsPleaseLogin'));
+          // Sign out the user since they should login instead
+          await authService.value.signOut();
+          return;
+        }
+
+        // Create new user in our system
+        await _createSocialUser(user, 'google');
+        _showSnackbar("Đăng ký thành công với Google!");
+        _clearForm();
+      } else {
+        // User cancelled or authentication failed
+        await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          debugPrint('Google registration cancelled or no credential returned');
+        }
+      }
+    } catch (e) {
+      // Always ensure loading dialog is hidden first
+      await DialogHelper.hideLoadingDialog(context);
+      
+      if (mounted) {
+        debugPrint('Google Sign Up Error: $e');
+        
+        // Check if user cancelled the registration
+        if (e.toString().contains('sign_in_canceled') || 
+            e.toString().contains('CANCELLED') ||
+            e.toString().contains('popup_closed') ||
+            e.toString().contains('cancelled')) {
+          debugPrint('Google registration was cancelled by user');
+          return; // Don't show error for user cancellation
+        }
+        
+        String errorMessage = "Đăng ký Google thất bại";
+        
+        // Handle specific error cases
+        if (e.toString().contains('ApiException: 10')) {
+          // DEVELOPER_ERROR - Configuration issue
+          errorMessage = "Lỗi cấu hình Google Sign-In. Vui lòng sử dụng email thường hoặc thử trên thiết bị thật!";
+        } else if (e.toString().contains('sign_in_failed') && 
+                   e.toString().contains('ApiException')) {
+          // Other API exceptions
+          errorMessage = "Google Sign-In không khả dụng trên emulator. Vui lòng sử dụng email thường!";
+        } else if (e.toString().contains('network')) {
+          errorMessage = "Lỗi kết nối mạng. Vui lòng thử lại!";
+        } else {
+          errorMessage = "Đăng ký Google thất bại. Vui lòng thử lại với email thường!";
+        }
+        
+        _showSnackbar(errorMessage);
+      }
+    } finally {
+      // Additional safety net to ensure dialog is always hidden
+      try {
+        await DialogHelper.hideLoadingDialog(context);
+      } catch (e) {
+        debugPrint('Error hiding dialog in finally block: $e');
+      }
+    }
+  }
+
+  void _signUpWithFacebook() async {
+    DialogHelper.showLoadingDialog(context, message: "Đang đăng ký với Facebook...");
+
+    try {
+      UserCredential? userCredential = await authService.value.signInWithFacebook();
+
+      if (userCredential?.user != null && mounted) {
+        // Check if user already exists in our system
+        User user = userCredential!.user!;
+        QuerySnapshot userQuery = await FirebaseFirestore.instance
+            .collection("users")
+            .where("email", isEqualTo: user.email)
+            .get();
+
+        await DialogHelper.hideLoadingDialog(context);
+
+        if (userQuery.docs.isNotEmpty) {
+          // User already exists - this is registration, not login
+          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'accountExistsPleaseLogin'));
+          // Sign out the user since they should login instead
+          await authService.value.signOut();
+          return;
+        }
+
+        // Create new user in our system
+        await _createSocialUser(user, 'facebook');
+        _showSnackbar("Đăng ký thành công với Facebook!");
+        _clearForm();
+      } else {
+        // User cancelled or authentication failed
+        await DialogHelper.hideLoadingDialog(context);
+        if (mounted) {
+          debugPrint('Facebook registration cancelled or no credential returned');
+        }
+      }
+    } catch (e) {
+      // Always ensure loading dialog is hidden first
+      await DialogHelper.hideLoadingDialog(context);
+      
+      if (mounted) {
+        debugPrint('Facebook Sign Up Error: $e');
+        
+        String errorMessage = "Đăng ký Facebook thất bại";
+        
+        // Check if user cancelled the registration
+        if (e.toString().contains('sign_in_canceled') || 
+            e.toString().contains('CANCELLED') ||
+            e.toString().contains('popup_closed') ||
+            e.toString().contains('cancelled')) {
+          debugPrint('Facebook registration was cancelled by user');
+          return; // Don't show error for user cancellation
+        } else if (e.toString().contains('MissingPluginException')) {
+          errorMessage = "Facebook đăng ký chưa được cấu hình đầy đủ. Vui lòng sử dụng Google hoặc Email!";
+        } else if (e.toString().contains('network')) {
+          errorMessage = "Lỗi kết nối mạng. Vui lòng thử lại!";
+        } else if (e.toString().contains('WebView')) {
+          errorMessage = "Lỗi WebView Facebook. Vui lòng thử lại hoặc sử dụng Email!";
+        } else if (e.toString().contains('Facebook login failed')) {
+          errorMessage = "Facebook không thể đăng ký. Vui lòng thử lại!";
+        }
+        
+        _showSnackbar(errorMessage);
+      }
+    } finally {
+      // Additional safety net to ensure dialog is always hidden
+      try {
+        await DialogHelper.hideLoadingDialog(context);
+      } catch (e) {
+        debugPrint('Error hiding dialog in finally block: $e');
+      }
+    }
+  }
+
+  Future<void> _createSocialUser(User user, String provider) async {
+    try {
+      String? fullName = user.displayName ?? "";
+      
+      if (fullName.isEmpty) {
+        fullName = "User";
+      }
+
+      // Split full name into first and last name
+      List<String> nameParts = fullName.split(' ');
+      String firstName = nameParts.isNotEmpty ? nameParts.first : "User";
+      String lastName = nameParts.length > 1 ? nameParts.skip(1).join(' ') : "";
+
+      // Create user data directly in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'email': user.email,
+        'displayName': user.displayName,
+        'firstName': firstName,
+        'lastName': lastName,
+        'photoURL': user.photoURL ?? 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg',
+        'phoneNumber': user.phoneNumber,
+        'provider': provider,
+        'role': 'user',
+        'address': null,
+        'dateOfBirth': null,
+        'gender': null,
+        'bio': null,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+    } catch (e) {
+      debugPrint('Error creating social user: $e');
+      await authService.value.signOut();
+      throw Exception("Có lỗi xảy ra khi tạo tài khoản. Vui lòng thử lại!");
+    }
+  }
+
+  void _clearForm() {
+    _accountController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+    _nameController.clear();
+  }
+
   void _showSnackbar(String message) {
-    if (!mounted) return; // Kiểm tra mounted trước khi sử dụng context
-    
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.pink.shade300,
@@ -177,110 +493,241 @@ class _RegisterPageState extends State<RegisterPage> {
       body: SafeArea(
         child: Stack(
           children: [
+            // Background decorative circles
             Positioned(
-                top: 10,
-                left: 230,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                      color: Colors.pink.shade300, shape: BoxShape.circle),
-                )),
+              top: 10,
+              left: 230,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.pink.shade300,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
             Positioned(
-                top: 20,
-                left: 280,
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                      color: Colors.pink.shade300, shape: BoxShape.circle),
-                )),
+              top: 20,
+              left: 280,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.pink.shade300,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
             Positioned(
-                bottom: 100,
-                right: 280,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                      color: Colors.pink.shade300, shape: BoxShape.circle),
-                )),
+              bottom: 100,
+              right: 280,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.pink.shade300,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
             Positioned(
-                bottom: 20,
-                right: 320,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                      color: Colors.pink.shade300, shape: BoxShape.circle),
-                )),
+              bottom: 20,
+              right: 320,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.pink.shade300,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Đăng ký tài khoản",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 50,
-                    ),
-                    MyTextField(
-                      hintText: "Email",
-                      icon: const Icon(Icons.email_outlined),
-                      controller: _emailController,
-                      obsecureText: false,
-                    ),
-                    const SizedBox(
-                      height: 10,
-                    ),
-                    MyTextField(
-                      hintText: "Password",
-                      icon: const Icon(Icons.lock_outline),
-                      controller: _passwordController,
-                      obsecureText: true,
-                    ),
-                    const SizedBox(
-                      height: 25,
-                    ),
-                    MyTextField(
-                      hintText: "Xác nhận mật khẩu",
-                      icon: const Icon(Icons.lock_outline),
-                      controller: _confirmPasswordController,
-                      obsecureText: true,
-                    ),
-                    const SizedBox(
-                      height: 25,
-                    ),
-                    MyButton(
-                        text: 'Đăng ký', onPressed: () => _dangKy(context)),
-                    const SizedBox(
-                      height: 25,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Bạn đã có tài khoản? "),
-                        GestureDetector(
-                          onTap: widget.onTap,
-                          child: Text(
-                            "Đăng nhập ngay",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.pink.shade300),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Register Image
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: Center(
+                            child: Container(
+                              width: 180,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.pink.shade300.withOpacity(0.3),
+                                    spreadRadius: 5,
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Image.asset(
+                                  "assets/images/loginImage.png",
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
                           ),
-                        )
-                      ],
-                    ),
-                  ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Đăng ký tài khoản",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      MyTextField(
+                        hintText: LocalizationHelper.getLocalizedText(context, 'fullNameHint'),
+                        icon: const Icon(Icons.person_outline),
+                        controller: _nameController,
+                        obsecureText: false,
+                      ),
+                      const SizedBox(height: 10),
+                      MyTextField(
+                        hintText: LocalizationHelper.getLocalizedText(context, 'accountHint'),
+                        icon: const Icon(Icons.account_circle_outlined),
+                        controller: _accountController,
+                        obsecureText: false,
+                      ),
+                      const SizedBox(height: 10),
+                      MyTextField(
+                        hintText: LocalizationHelper.getLocalizedText(context, 'passwordHint'),
+                        icon: const Icon(Icons.lock_outline),
+                        controller: _passwordController,
+                        obsecureText: true,
+                      ),
+                      const SizedBox(height: 10),
+                      MyTextField(
+                        hintText: LocalizationHelper.getLocalizedText(context, 'confirmPasswordHint'),
+                        icon: const Icon(Icons.lock_outline),
+                        controller: _confirmPasswordController,
+                        obsecureText: true,
+                      ),
+                      const SizedBox(height: 25),
+                      MyButton(
+                        text: LocalizationHelper.getLocalizedText(context, 'registerButton'),
+                        onPressed: () => _register(context),
+                      ),
+                      const SizedBox(height: 15),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(LocalizationHelper.getLocalizedText(context, 'alreadyHaveAccount')),
+                          GestureDetector(
+                            onTap: widget.onTap,
+                            child: Text(
+                              LocalizationHelper.getLocalizedText(context, 'loginNow'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.pink.shade300,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: Text(
+                          LocalizationHelper.getLocalizedText(context, 'orRegisterWith'),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      // Social registration buttons
+                      Row(
+                        children: [
+                          // Google registration
+                          Expanded(
+                            child: Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: InkWell(
+                                onTap: _signUpWithGoogle,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: Image.asset("assets/images/google.png"),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    const Text(
+                                      "Google",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          // Facebook registration
+                          Expanded(
+                            child: Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1877F2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: InkWell(
+                                onTap: _signUpWithFacebook,
+                                borderRadius: BorderRadius.circular(12),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.facebook,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      "Facebook",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),

@@ -15,6 +15,8 @@ import 'package:pet_shop/domain/usecases/recommendation_usecase.dart';
 import 'package:pet_shop/data/repositories/recommendation_repository_impl.dart';
 import 'package:pet_shop/presentation/widgets/search_recommendations_section.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/core/services/settings_service.dart';
+import 'package:pet_shop/presentation/widgets/common/history_disabled_message.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -27,11 +29,13 @@ class _NewSearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final UserManager _userManager = UserManager();
+  final SettingsService _settingsService = SettingsService();
   late final SearchBloc _searchBloc;
   File? selectedImage;
   String? searchImagePath;
   bool isLoading = false;
   String? userId;
+  bool _searchHistoryEnabled = true;
 
   @override
   void initState() {
@@ -42,6 +46,7 @@ class _NewSearchPageState extends State<SearchPage> {
     );
     _searchBloc.add(LoadSearchHistory());
     _initializeUser();
+    _loadSettings();
 
     // Add search on text change
     _searchController.addListener(() {
@@ -63,6 +68,19 @@ class _NewSearchPageState extends State<SearchPage> {
       }
     } catch (e) {
       print('Error loading user: $e');
+    }
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final searchHistoryEnabled = await _settingsService.getSearchHistoryEnabled();
+      if (mounted) {
+        setState(() {
+          _searchHistoryEnabled = searchHistoryEnabled;
+        });
+      }
+    } catch (e) {
+      print('Error loading settings: $e');
     }
   }
 
@@ -581,11 +599,25 @@ class _NewSearchPageState extends State<SearchPage> {
                               ),
                             ),
 
-                          // Search History (chỉ hiển thị lịch sử text search, không hiển thị lịch sử image search)
+                          // Search History or Disabled Message
                           if (state.searchResults.isEmpty &&
                               state.suggestions.isEmpty &&
-                              state.searchHistory.where((search) => !search.isImageSearch).isNotEmpty)
-                            SliverToBoxAdapter(
+                              selectedImage == null &&
+                              _searchController.text.isEmpty)
+                            ...[
+                              // Show disabled message if search history is disabled
+                              if (!_searchHistoryEnabled)
+                                SliverToBoxAdapter(
+                                  child: HistoryDisabledMessage(
+                                    messageKey: 'searchHistoryDisabledMessage',
+                                    icon: Icons.search_off_outlined,
+                                    iconColor: Colors.orange,
+                                  ),
+                                ),
+                              // Show search history if enabled and has history  
+                              if (_searchHistoryEnabled && 
+                                  state.searchHistory.where((search) => !search.isImageSearch).isNotEmpty)
+                                SliverToBoxAdapter(
                               child: Container(
                                 margin: const EdgeInsets.all(8.0),
                                 decoration: BoxDecoration(
@@ -710,6 +742,7 @@ class _NewSearchPageState extends State<SearchPage> {
                                 ),
                               ),
                             ),
+                            ],
 
                           // Search Recommendations Section
                           if (userId != null && selectedImage == null && _searchController.text.isEmpty)

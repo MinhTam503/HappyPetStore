@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
         backgroundColor: secondaryColor,
         title: Text(
-          'Profile',
+          l10n?.profile ?? "Hồ sơ",
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -157,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Icons.pets,
                           iconBg: const Color(0xfffde2e2),
                           iconColor: primaryColor,
-                          title:l10n?.viewedPets ??  'Viewed Pets',
+                          title: l10n?.viewedPets ?? 'Viewed Pets',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -258,7 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 void _showLogoutDialog(BuildContext context) {
   final l10n = AppLocalizations.of(context);
-  
+
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -315,7 +315,8 @@ void _showLogoutDialog(BuildContext context) {
 
               // Message
               Text(
-                l10n?.logoutConfirm ?? 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
+                l10n?.logoutConfirm ??
+                    'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 16,
@@ -387,7 +388,7 @@ Future<void> _logout(BuildContext context) async {
   try {
     // Use AuthService signOut which handles Google, Facebook, and Firebase signOut
     await authService.value.signOut();
-    
+
     // Clear UserManager data
     final userManager = UserManager();
     await userManager.clearUserData();

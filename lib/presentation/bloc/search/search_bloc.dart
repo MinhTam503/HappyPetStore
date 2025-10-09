@@ -69,7 +69,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       ));
     }
     
-    print('State emitted successfully');
+    print('Trạng thái đã được phát ra thành công');
   }
 
   // ---- handlers ----
@@ -271,7 +271,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             : null,
       );
     } catch (e) {
-      print('Search error: $e');
+      print('Lỗi tìm kiếm: $e');
       if (!emit.isDone) emit(SearchError(e.toString()));
     }
   }
@@ -428,7 +428,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
       print('=== SEARCH SUBMITTED COMPLETED ===\n');
     } catch (e) {
-      print('Search submitted error: $e');
+      print('Lỗi submit tìm kiếm: $e');
       if (!emit.isDone) emit(SearchError(e.toString()));
     }
   }
@@ -528,7 +528,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       print('=== TOGGLE CATEGORY COMPLETED ===\n');
       
     } catch (e) {
-      print('Toggle category error: $e');
+      print('Lỗi chuyển đổi danh mục: $e');
       if (!emit.isDone) emit(SearchError(e.toString()));
     }
   }
@@ -599,10 +599,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         }
       } else {
         if (!emit.isDone)
-          emit(SearchError('Lỗi server: ${response.statusCode}'));
+          emit(SearchError('Lỗi máy chủ: ${response.statusCode}'));
       }
     } catch (e) {
-      print('Image search error: $e');
+      print('Lỗi tìm kiếm hình ảnh: $e');
       if (!emit.isDone) emit(SearchError('Lỗi tìm kiếm hình ảnh: $e'));
     }
   }

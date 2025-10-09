@@ -280,7 +280,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       
       emit(NotificationCreated(
         notificationId: notificationId,
-        message: 'Order notification sent successfully',
+        message: 'Thông báo đơn hàng đã được gửi thành công',
       ));
     } catch (e) {
       emit(NotificationError(message: e.toString()));
