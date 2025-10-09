@@ -607,7 +607,7 @@ class _NewSearchPageState extends State<SearchPage> {
                             ...[
                               // Show disabled message if search history is disabled
                               if (!_searchHistoryEnabled)
-                                SliverToBoxAdapter(
+                                const SliverToBoxAdapter(
                                   child: HistoryDisabledMessage(
                                     messageKey: 'searchHistoryDisabledMessage',
                                     icon: Icons.search_off_outlined,

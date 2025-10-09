@@ -167,8 +167,8 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                Icon(Icons.recommend, color: primaryColor, size: 20),
-                const SizedBox(width: 8),
+                // Icon(Icons.recommend, color: primaryColor, size: 20),
+                // const SizedBox(width: 8),
                 const Text(
                   'Có thể bạn quan tâm',
                   style: TextStyle(
@@ -178,12 +178,12 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
                   ),
                 ),
                 const Spacer(),
-                if (_cachedRecommendations != null) // Hiển thị icon cache
-                  Icon(
-                    Icons.offline_bolt,
-                    color: Colors.green,
-                    size: 16,
-                  ),
+                // if (_cachedRecommendations != null) 
+                //   Icon(
+                //     Icons.offline_bolt,
+                //     color: Colors.green,
+                //     size: 16,
+                //   ),
               ],
             ),
           ),
@@ -234,7 +234,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
         
         widgets.add(_buildRecommendationGroup(
           context,
-          typeLabels[type] ?? 'Gợi ý',
+          // typeLabels[type] ?? 'Gợi ý',
           typeColors[type] ?? Colors.grey,
           items,
         ));
@@ -246,37 +246,37 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
 
   Widget _buildRecommendationGroup(
     BuildContext context,
-    String title,
+    // String title,
     Color color,
     List<RecommendationItem> items,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 3,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Padding(
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        //   child: Row(
+        //     children: [
+        //       Container(
+        //         width: 3,
+        //         height: 16,
+        //         decoration: BoxDecoration(
+        //           color: color,
+        //           borderRadius: BorderRadius.circular(2),
+        //         ),
+        //       ),
+        //       const SizedBox(width: 8),
+        //       Text(
+        //         title,
+        //         style: TextStyle(
+        //           fontWeight: FontWeight.w600,
+        //           fontSize: 14,
+        //           color: color,
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ),
         ...items.asMap().entries.map((entry) {
           final index = entry.key;
           final item = entry.value;
@@ -328,21 +328,21 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${(item.score * 100).round()}%',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                  ),
+                  // Container(
+                  //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  //   decoration: BoxDecoration(
+                  //     color: color.withOpacity(0.1),
+                  //     borderRadius: BorderRadius.circular(8),
+                  //   ),
+                  //   child: Text(
+                  //     '${(item.score * 100).round()}%',
+                  //     style: TextStyle(
+                  //       fontSize: 10,
+                  //       fontWeight: FontWeight.bold,
+                  //       color: color,
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
               trailing: Icon(
