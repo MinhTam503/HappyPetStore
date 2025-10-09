@@ -58,9 +58,9 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
             Tab(
                 icon: const Icon(Icons.shopping_cart),
                 text: AppLocalizations.of(context)!.sold),
-            Tab(
-                icon: const Icon(Icons.trending_up),
-                text: AppLocalizations.of(context)!.statistics),
+            // Tab(
+            //     icon: const Icon(Icons.trending_up),
+            //     text: AppLocalizations.of(context)!.statistics),
           ],
         ),
       ),
@@ -70,7 +70,7 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
           _buildOverviewTab(),
           _buildAvailablePetsTab(),
           _buildSoldPetsTab(),
-          _buildStatisticsTab(),
+          // _buildStatisticsTab(),
         ],
       ),
     );

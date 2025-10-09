@@ -1351,7 +1351,8 @@ class _RevenuePageState extends State<RevenuePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          '${l10n.revenue} ${_getDataSourceTitle()}',
+          // '${l10n.revenue} ${_getDataSourceTitle()}',
+          "${l10n.revenue}",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24,

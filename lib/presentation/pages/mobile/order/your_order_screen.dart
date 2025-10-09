@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
 import 'package:pet_shop/presentation/components/shipping_tracking_widget.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class YourOrderScreen extends StatefulWidget {
   const YourOrderScreen({super.key});
@@ -145,13 +146,13 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
   /// Hiển thị thời gian giao hàng thông minh
   Widget _buildDeliveryTimeDisplay(Map<String, dynamic> shippingInfo) {
     final status = shippingInfo['status'] ?? '';
-    
+
     // Nếu đã giao hoặc hủy, hiện thời gian thực tế
     if (status == 'delivered') {
       // Thử lấy thời gian giao thực tế từ nhiều field
-      final actualTime = shippingInfo['actualDeliveryTime'] ?? 
-                        shippingInfo['deliveredAt'] ?? 
-                        shippingInfo['timestamp'];
+      final actualTime = shippingInfo['actualDeliveryTime'] ??
+          shippingInfo['deliveredAt'] ??
+          shippingInfo['timestamp'];
       if (actualTime != null) {
         return Row(
           children: [
@@ -169,7 +170,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         );
       }
     }
-    
+
     if (status == 'failed' || status == 'returned') {
       return Row(
         children: [
@@ -186,9 +187,11 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         ],
       );
     }
-    
+
     // Các trạng thái khác hiện thời gian dự kiến
-    if (status == 'in_transit' || status == 'out_for_delivery' || status == 'pickup_pending') {
+    if (status == 'in_transit' ||
+        status == 'out_for_delivery' ||
+        status == 'pickup_pending') {
       final estimatedTime = shippingInfo['estimatedDelivery'];
       if (estimatedTime != null) {
         return Row(
@@ -206,7 +209,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         );
       }
     }
-    
+
     return const SizedBox.shrink();
   }
 
@@ -231,6 +234,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
@@ -238,7 +242,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         centerTitle: true,
         elevation: 0,
         title: Text(
-          "Your Orders",
+         l10n?.yourOrder??"Đơn hàng của bạn",
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -313,15 +317,17 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                 final shippingFee = order['shippingFee'] ?? 0;
                 final statusPay = order['statusPayment'] ?? '';
                 final id = order['orderId'] ?? order.id;
-                
+
                 // Safely get tracking number and shipping info
                 final orderData = order.data() as Map<String, dynamic>?;
-                final trackingNumber = orderData?.containsKey('trackingNumber') == true 
-                    ? orderData!['trackingNumber'] 
-                    : null;
-                final shippingInfo = orderData?.containsKey('shippingInfo') == true 
-                    ? orderData!['shippingInfo'] 
-                    : null;
+                final trackingNumber =
+                    orderData?.containsKey('trackingNumber') == true
+                        ? orderData!['trackingNumber']
+                        : null;
+                final shippingInfo =
+                    orderData?.containsKey('shippingInfo') == true
+                        ? orderData!['shippingInfo']
+                        : null;
 
                 return Card(
                   elevation: 2,
@@ -376,22 +382,28 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     // Show breakdown if subtotal exists (new orders), otherwise just total (old orders)
-                                    if (subtotal != totalRaw && shippingFee > 0) ...[
+                                    if (subtotal != totalRaw &&
+                                        shippingFee > 0) ...[
                                       _ChipBadge(
-                                        label: "Hàng: ${CurrencyHelper.formatVND(subtotal)}",
+                                        label:
+                                            "Hàng: ${CurrencyHelper.formatVND(subtotal)}",
                                         icon: Icons.shopping_cart_outlined,
                                         bg: Colors.blue.shade50,
                                         fg: Colors.blue.shade700,
                                       ),
                                       _ChipBadge(
-                                        label: "Ship: ${CurrencyHelper.formatVND(shippingFee)}",
+                                        label:
+                                            "Ship: ${CurrencyHelper.formatVND(shippingFee)}",
                                         icon: Icons.local_shipping_outlined,
                                         bg: Colors.orange.shade50,
                                         fg: Colors.orange.shade700,
                                       ),
                                     ],
                                     _ChipBadge(
-                                      label: (subtotal != totalRaw && shippingFee > 0) ? "Tổng: ${CurrencyHelper.formatVND(totalRaw)}" : "${CurrencyHelper.formatVND(totalRaw)}",
+                                      label: (subtotal != totalRaw &&
+                                              shippingFee > 0)
+                                          ? "Tổng: ${CurrencyHelper.formatVND(totalRaw)}"
+                                          : "${CurrencyHelper.formatVND(totalRaw)}",
                                       icon: Icons.payments_outlined,
                                       bg: Colors.green.shade50,
                                       fg: Colors.green.shade700,
@@ -410,25 +422,39 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                       fg: getStatusColor(status),
                                     ),
                                     // Hiển thị trạng thái vận chuyển nếu có tracking number
-                                    if (trackingNumber != null && trackingNumber.toString().isNotEmpty && shippingInfo != null)
+                                    if (trackingNumber != null &&
+                                        trackingNumber.toString().isNotEmpty &&
+                                        shippingInfo != null)
                                       _ChipBadge(
-                                        label: getShippingStatusText(shippingInfo['status'] ?? 'pickup_pending'),
-                                        icon: getShippingStatusIcon(shippingInfo['status'] ?? 'pickup_pending'),
-                                        bg: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending').withOpacity(.12),
-                                        fg: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending'),
+                                        label: getShippingStatusText(
+                                            shippingInfo['status'] ??
+                                                'pickup_pending'),
+                                        icon: getShippingStatusIcon(
+                                            shippingInfo['status'] ??
+                                                'pickup_pending'),
+                                        bg: getShippingStatusColor(
+                                                shippingInfo['status'] ??
+                                                    'pickup_pending')
+                                            .withOpacity(.12),
+                                        fg: getShippingStatusColor(
+                                            shippingInfo['status'] ??
+                                                'pickup_pending'),
                                       ),
                                   ],
                                 ),
                                 // Hiển thị tracking number nếu có
-                                if (trackingNumber != null && trackingNumber.toString().isNotEmpty) ...[
+                                if (trackingNumber != null &&
+                                    trackingNumber.toString().isNotEmpty) ...[
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      Icon(Icons.local_shipping, size: 16, color: Colors.grey[600]),
+                                      Icon(Icons.local_shipping,
+                                          size: 16, color: Colors.grey[600]),
                                       const SizedBox(width: 4),
                                       Text(
                                         "Tracking: $trackingNumber",
-                                        style: theme.textTheme.bodySmall?.copyWith(
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
                                           color: Colors.grey[600],
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -507,14 +533,14 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         final shippingFee = order['shippingFee'] ?? 0;
         final statusPay = order['statusPayment'] ?? '';
         final email = order['email'] ?? '';
-        
+
         // Safely get tracking number and shipping info
         final orderData = order.data() as Map<String, dynamic>?;
-        final trackingNumber = orderData?.containsKey('trackingNumber') == true 
-            ? orderData!['trackingNumber'] 
+        final trackingNumber = orderData?.containsKey('trackingNumber') == true
+            ? orderData!['trackingNumber']
             : null;
-        final shippingInfo = orderData?.containsKey('shippingInfo') == true 
-            ? orderData!['shippingInfo'] 
+        final shippingInfo = orderData?.containsKey('shippingInfo') == true
+            ? orderData!['shippingInfo']
             : null;
 
         // Debug logging for order details
@@ -529,27 +555,32 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         try {
           if (order.data() is Map<String, dynamic>) {
             final orderData = order.data() as Map<String, dynamic>;
-            
+
             // Lấy số điện thoại từ nhiều nguồn theo thứ tự ưu tiên
             // 1. Từ shipping info customerPhone
-            if (shippingInfo is Map<String, dynamic> && shippingInfo['customerPhone'] != null) {
+            if (shippingInfo is Map<String, dynamic> &&
+                shippingInfo['customerPhone'] != null) {
               customerPhone = shippingInfo['customerPhone'].toString();
             }
             // 2. Từ deliveryInfo phone
-            else if (orderData.containsKey('deliveryInfo') && orderData['deliveryInfo'] is Map<String, dynamic>) {
-              final deliveryInfo = orderData['deliveryInfo'] as Map<String, dynamic>;
-              if (deliveryInfo['phone'] != null && deliveryInfo['phone'].toString().isNotEmpty) {
+            else if (orderData.containsKey('deliveryInfo') &&
+                orderData['deliveryInfo'] is Map<String, dynamic>) {
+              final deliveryInfo =
+                  orderData['deliveryInfo'] as Map<String, dynamic>;
+              if (deliveryInfo['phone'] != null &&
+                  deliveryInfo['phone'].toString().isNotEmpty) {
                 customerPhone = deliveryInfo['phone'].toString();
               }
             }
             // 3. Từ phone field cũ
-            else if (orderData.containsKey('phone') && orderData['phone'].toString().isNotEmpty) {
+            else if (orderData.containsKey('phone') &&
+                orderData['phone'].toString().isNotEmpty) {
               customerPhone = orderData['phone'].toString();
             }
-            
+
             // Ưu tiên shippingAddress field mới
-            if (orderData.containsKey('shippingAddress') && 
-                orderData['shippingAddress'] != null && 
+            if (orderData.containsKey('shippingAddress') &&
+                orderData['shippingAddress'] != null &&
                 orderData['shippingAddress'].toString().isNotEmpty) {
               address = orderData['shippingAddress'].toString();
               // Thêm số điện thoại nếu có
@@ -572,10 +603,11 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                 }
               }
             }
-            // Fallback to shippingInfo format  
+            // Fallback to shippingInfo format
             else if (orderData.containsKey('shippingInfo')) {
               final shippingInfo = orderData['shippingInfo'];
-              if (shippingInfo is Map<String, dynamic> && shippingInfo['address'] != null) {
+              if (shippingInfo is Map<String, dynamic> &&
+                  shippingInfo['address'] != null) {
                 final name = shippingInfo['name'] ?? '';
                 final phone = shippingInfo['phone'] ?? customerPhone;
                 final addr = shippingInfo['address'] ?? '';
@@ -674,14 +706,17 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                           fg: Colors.blue.shade700,
                         ),
                         _ChipBadge(
-                          label: "Ship: ${CurrencyHelper.formatVND(shippingFee)}",
+                          label:
+                              "Ship: ${CurrencyHelper.formatVND(shippingFee)}",
                           icon: Icons.local_shipping_outlined,
                           bg: Colors.orange.shade50,
                           fg: Colors.orange.shade700,
                         ),
                       ],
                       _ChipBadge(
-                        label: (subtotal != totalRaw && shippingFee > 0) ? "Tổng: ${CurrencyHelper.formatVND(totalRaw)}" : "${CurrencyHelper.formatVND(totalRaw)}",
+                        label: (subtotal != totalRaw && shippingFee > 0)
+                            ? "Tổng: ${CurrencyHelper.formatVND(totalRaw)}"
+                            : "${CurrencyHelper.formatVND(totalRaw)}",
                         icon: Icons.payments_outlined,
                         bg: Colors.green.shade50,
                         fg: Colors.green.shade700,
@@ -706,9 +741,10 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     ),
                   const SizedBox(height: 12),
                   const Divider(height: 1),
-                  
+
                   // Hiển thị trạng thái vận chuyển nếu có tracking number
-                  if (trackingNumber != null && trackingNumber.toString().isNotEmpty) ...[
+                  if (trackingNumber != null &&
+                      trackingNumber.toString().isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
                       "Thông tin vận chuyển",
@@ -729,8 +765,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.local_shipping, 
-                                   color: Colors.blue.shade600, size: 20),
+                              Icon(Icons.local_shipping,
+                                  color: Colors.blue.shade600, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 "Mã vận đơn: $trackingNumber",
@@ -741,20 +777,27 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                               ),
                             ],
                           ),
-                          if (shippingInfo != null && shippingInfo is Map<String, dynamic>) ...[
+                          if (shippingInfo != null &&
+                              shippingInfo is Map<String, dynamic>) ...[
                             const SizedBox(height: 12),
                             Row(
                               children: [
                                 Icon(
-                                  getShippingStatusIcon(shippingInfo['status'] ?? 'pickup_pending'),
-                                  color: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending'),
+                                  getShippingStatusIcon(
+                                      shippingInfo['status'] ??
+                                          'pickup_pending'),
+                                  color: getShippingStatusColor(
+                                      shippingInfo['status'] ??
+                                          'pickup_pending'),
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   "Trạng thái: ${getShippingStatusText(shippingInfo['status'] ?? 'pickup_pending')}",
                                   style: TextStyle(
-                                    color: getShippingStatusColor(shippingInfo['status'] ?? 'pickup_pending'),
+                                    color: getShippingStatusColor(
+                                        shippingInfo['status'] ??
+                                            'pickup_pending'),
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
                                   ),
@@ -765,7 +808,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Icon(Icons.business, color: Colors.grey.shade600, size: 18),
+                                  Icon(Icons.business,
+                                      color: Colors.grey.shade600, size: 18),
                                   const SizedBox(width: 8),
                                   Text(
                                     "Đơn vị vận chuyển: ${shippingInfo['shippingCompany']}",
@@ -777,18 +821,21 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                 ],
                               ),
                             ],
-                            
+
                             // Hiển thị thời gian thông minh
                             const SizedBox(height: 8),
                             _buildDeliveryTimeDisplay(shippingInfo),
-                            
+
                             // Hiển thị số điện thoại customer nếu có
-                            if (shippingInfo['customerPhone'] != null && 
-                                shippingInfo['customerPhone'].toString().isNotEmpty) ...[
+                            if (shippingInfo['customerPhone'] != null &&
+                                shippingInfo['customerPhone']
+                                    .toString()
+                                    .isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Icon(Icons.phone, color: Colors.grey.shade600, size: 18),
+                                  Icon(Icons.phone,
+                                      color: Colors.grey.shade600, size: 18),
                                   const SizedBox(width: 8),
                                   Text(
                                     "SĐT người nhận: ${shippingInfo['customerPhone']}",
@@ -804,7 +851,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         ],
                       ),
                     ),
-                    
+
                     // Add ShippingTrackingWidget for real-time tracking
                     const SizedBox(height: 8),
                     Container(
@@ -818,11 +865,11 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         isAdminView: false, // Customer view
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
                     const Divider(height: 1),
                   ],
-                  
+
                   const SizedBox(height: 10),
                   Text(
                     "Items",
@@ -923,7 +970,7 @@ class _FilterBar extends StatelessWidget {
     final filterItems = [
       'All',
       'Pending',
-      'Processing', 
+      'Processing',
       'Shipped',
       'Completed',
       'Cancelled'

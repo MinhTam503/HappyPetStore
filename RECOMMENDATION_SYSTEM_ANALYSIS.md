@@ -1,5 +1,3 @@
-# Phân tích Hệ thống Khuyến nghị Pet Shop
-
 ## Tổng quan Kiến trúc
 
 Hệ thống khuyến nghị Pet Shop được xây dựng theo kiến trúc **Clean Architecture** với 6 thuật toán khuyến nghị chính và hệ thống cache thông minh.

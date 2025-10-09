@@ -3,7 +3,6 @@ import 'package:bloc/bloc.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_event_web.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_state_web.dart';
 
-
 /// Web-only in-memory cart: đóng tab / refresh là mất.
 /// Vẫn dùng CartEvent/CartState cũ để không phải sửa UI nhiều.
 class CartBlocWeb extends Bloc<CartEventWeb, CartStateWeb> {
@@ -17,7 +16,8 @@ class CartBlocWeb extends Bloc<CartEventWeb, CartStateWeb> {
 
     on<AddToCart>((event, emit) {
       final exists = _items.any(
-            (e) => e['productId']?.toString() == event.item['productId']?.toString(),
+        (e) =>
+            e['productId']?.toString() == event.item['productId']?.toString(),
       );
       if (exists) {
         emit(CartLoaded(List<Map<String, dynamic>>.from(_items),
@@ -26,7 +26,7 @@ class CartBlocWeb extends Bloc<CartEventWeb, CartStateWeb> {
       }
       _items.add(Map<String, dynamic>.from(event.item));
       emit(CartLoaded(List<Map<String, dynamic>>.from(_items),
-          message: 'added_to_cart'));
+          message: 'Đã thêm vào giỏ hàng'));
     });
 
     // Các event khác không dùng, nhưng nếu lỡ bắn thì vẫn phản hồi lại danh sách hiện tại.

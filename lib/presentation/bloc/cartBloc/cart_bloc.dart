@@ -33,17 +33,17 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           ? List<Map<String, dynamic>>.from(doc['items'])
           : <Map<String, dynamic>>[];
 
-      final exists = items.any(
-              (item) => item['productId'] == event.item['productId']);
-      
+      final exists =
+          items.any((item) => item['productId'] == event.item['productId']);
+
       if (exists) {
         emit(CartLoaded(items, message: 'Sản phẩm đã có trong giỏ hàng'));
         return;
       } else {
         items.add(event.item);
         await docRef.set({'items': items});
-  // Localization context not directly available here; keep key-like English fallback or integrate via UI.
-  emit(CartLoaded(items, message: 'added_to_cart'));
+        // Localization context not directly available here; keep key-like English fallback or integrate via UI.
+        emit(CartLoaded(items, message: 'Đã thêm vào giỏ hàng'));
       }
     } catch (e) {
       emit(CartError(e.toString()));

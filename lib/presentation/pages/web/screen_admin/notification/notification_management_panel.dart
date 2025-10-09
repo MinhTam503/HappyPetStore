@@ -7,13 +7,16 @@ class NotificationManagementPanel extends StatefulWidget {
   const NotificationManagementPanel({super.key});
 
   @override
-  State<NotificationManagementPanel> createState() => _NotificationManagementPanelState();
+  State<NotificationManagementPanel> createState() =>
+      _NotificationManagementPanelState();
 }
 
-class _NotificationManagementPanelState extends State<NotificationManagementPanel> with SingleTickerProviderStateMixin {
+class _NotificationManagementPanelState
+    extends State<NotificationManagementPanel>
+    with SingleTickerProviderStateMixin {
   int selectedTabIndex = 0;
   TabController? _tabController;
-  
+
   final Map<String, dynamic> _notificationStats = {};
   final List<Map<String, dynamic>> _usersWithUnread = [];
   bool _isLoadingStats = false;
@@ -38,7 +41,7 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
       setState(() {
         selectedTabIndex = _tabController!.index;
       });
-      
+
       // Refresh data when switching to analytics tab
       if (selectedTabIndex == 0) {
         _loadNotificationAnalytics();
@@ -53,8 +56,9 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
 
     try {
       final stats = await OrderNotificationHelper.getNotificationAnalytics();
-      final usersWithUnread = await OrderNotificationHelper.getUsersWithMostUnreadNotifications();
-      
+      final usersWithUnread =
+          await OrderNotificationHelper.getUsersWithMostUnreadNotifications();
+
       setState(() {
         _notificationStats.clear();
         _notificationStats.addAll(stats);
@@ -73,7 +77,7 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return DefaultTabController(
       length: 4,
       child: Scaffold(
@@ -81,11 +85,11 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
           title: Text(l10n.notification),
           bottom: TabBar(
             controller: _tabController,
-            tabs: [
-              Tab(icon: const Icon(Icons.analytics), text: 'Thống kê'),
-              Tab(icon: const Icon(Icons.campaign), text: 'Khuyến mãi'),
-              Tab(icon: const Icon(Icons.notifications), text: 'Thông báo chung'),
-              Tab(icon: const Icon(Icons.schedule), text: 'Lịch hẹn'),
+            tabs: const [
+              Tab(icon: Icon(Icons.analytics), text: 'Thống kê'),
+              // Tab(icon: Icon(Icons.campaign), text: 'Khuyến mãi'),
+              Tab(icon: Icon(Icons.notifications), text: 'Thông báo chung'),
+              // Tab(icon: Icon(Icons.schedule), text: 'Lịch hẹn'),
             ],
           ),
         ),
@@ -93,9 +97,9 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
           controller: _tabController,
           children: [
             _buildAnalyticsTab(),
-            _buildPromotionTab(),
+            // _buildPromotionTab(),
             _buildGeneralNotificationTab(),
-            _buildAppointmentTab(),
+            // _buildAppointmentTab(),
           ],
         ),
       ),
@@ -140,13 +144,13 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Refresh Button
           ElevatedButton.icon(
             onPressed: _isLoadingStats ? null : _loadNotificationAnalytics,
-            icon: _isLoadingStats 
+            icon: _isLoadingStats
                 ? const SizedBox(
                     width: 16,
                     height: 16,
@@ -155,9 +159,9 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
                 : const Icon(Icons.refresh),
             label: const Text('Làm mới thống kê'),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Type Statistics
           if (_notificationStats['typeStats'] != null) ...[
             const Text(
@@ -167,9 +171,9 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
             const SizedBox(height: 16),
             ..._buildTypeStatsList(),
           ],
-          
+
           const SizedBox(height: 24),
-          
+
           // Users with most unread
           const Text(
             'Users có nhiều thông báo chưa đọc',
@@ -182,7 +186,8 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -202,16 +207,17 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
   }
 
   List<Widget> _buildTypeStatsList() {
-    final typeStats = _notificationStats['typeStats'] as Map<String, dynamic>? ?? {};
-    
+    final typeStats =
+        _notificationStats['typeStats'] as Map<String, dynamic>? ?? {};
+
     return typeStats.entries.map((entry) {
       final type = entry.key;
       final count = entry.value;
-      
+
       String displayName;
       IconData iconData;
       Color color;
-      
+
       switch (type) {
         case 'orderPlaced':
           displayName = 'Đơn hàng mới';
@@ -253,7 +259,7 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
           iconData = Icons.notifications;
           color = Colors.grey;
       }
-      
+
       return Card(
         child: ListTile(
           leading: Icon(iconData, color: color),
@@ -278,11 +284,11 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
         ),
       ];
     }
-    
+
     return _usersWithUnread.map((user) {
       final userId = user['userId']?.toString() ?? '';
       final unreadCount = user['unreadCount']?.toString() ?? '0';
-      
+
       return Card(
         child: ListTile(
           leading: const Icon(Icons.person),
@@ -295,7 +301,8 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
             ),
             child: Text(
               unreadCount,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -331,9 +338,9 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Send promotion to VIP users
           Card(
             child: Padding(
@@ -376,7 +383,8 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(isVIPOnly ? 'Tạo khuyến mãi VIP' : 'Tạo khuyến mãi cho tất cả'),
+          title: Text(
+              isVIPOnly ? 'Tạo khuyến mãi VIP' : 'Tạo khuyến mãi cho tất cả'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -429,9 +437,11 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
                       onPressed: () async {
                         final date = await showDatePicker(
                           context: context,
-                          initialDate: DateTime.now().add(const Duration(days: 30)),
+                          initialDate:
+                              DateTime.now().add(const Duration(days: 30)),
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
                         );
                         if (date != null) {
                           setDialogState(() {
@@ -453,23 +463,28 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
             ),
             ElevatedButton(
               onPressed: () async {
-                if (titleController.text.isEmpty || contentController.text.isEmpty) {
+                if (titleController.text.isEmpty ||
+                    contentController.text.isEmpty) {
                   return;
                 }
 
                 Navigator.pop(context);
-                
+
                 // Show DialogHelper loading
-                DialogHelper.showLoadingDialog(context, message: 'Đang gửi khuyến mãi...');
+                DialogHelper.showLoadingDialog(context,
+                    message: 'Đang gửi khuyến mãi...');
 
                 try {
-                  final discountValue = double.tryParse(discountController.text);
-                  
+                  final discountValue =
+                      double.tryParse(discountController.text);
+
                   if (isVIPOnly) {
                     await OrderNotificationHelper.sendPromotionToVIPCustomers(
                       title: titleController.text,
                       content: contentController.text,
-                      promoCode: promoCodeController.text.isEmpty ? null : promoCodeController.text,
+                      promoCode: promoCodeController.text.isEmpty
+                          ? null
+                          : promoCodeController.text,
                       discountPercentage: discountValue,
                       expiryDate: expiryDate,
                     );
@@ -477,7 +492,9 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
                     await OrderNotificationHelper.sendPromotionToAllCustomers(
                       title: titleController.text,
                       content: contentController.text,
-                      promoCode: promoCodeController.text.isEmpty ? null : promoCodeController.text,
+                      promoCode: promoCodeController.text.isEmpty
+                          ? null
+                          : promoCodeController.text,
                       discountPercentage: discountValue,
                       expiryDate: expiryDate,
                     );
@@ -485,20 +502,20 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
 
                   if (!mounted) return;
                   DialogHelper.hideLoadingDialog(context);
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Khuyến mãi đã được gửi thành công!'),
                       backgroundColor: Colors.green,
                     ),
                   );
-                  
+
                   // Refresh analytics after successful send
                   _loadNotificationAnalytics();
                 } catch (e) {
                   if (!mounted) return;
                   DialogHelper.hideLoadingDialog(context);
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Lỗi gửi khuyến mãi: $e'),
@@ -588,14 +605,16 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
           ),
           ElevatedButton(
             onPressed: () async {
-              if (titleController.text.isEmpty || contentController.text.isEmpty) {
+              if (titleController.text.isEmpty ||
+                  contentController.text.isEmpty) {
                 return;
               }
 
               Navigator.pop(context);
-              
+
               // Show DialogHelper loading
-              DialogHelper.showLoadingDialog(context, message: 'Đang gửi thông báo...');
+              DialogHelper.showLoadingDialog(context,
+                  message: 'Đang gửi thông báo...');
 
               try {
                 await OrderNotificationHelper.sendGeneralNotificationToAll(
@@ -605,20 +624,20 @@ class _NotificationManagementPanelState extends State<NotificationManagementPane
 
                 if (!mounted) return;
                 DialogHelper.hideLoadingDialog(context);
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Thông báo đã được gửi thành công!'),
                     backgroundColor: Colors.green,
                   ),
                 );
-                
+
                 // Refresh analytics after successful send
                 _loadNotificationAnalytics();
               } catch (e) {
                 if (!mounted) return;
                 DialogHelper.hideLoadingDialog(context);
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Lỗi gửi thông báo: $e'),

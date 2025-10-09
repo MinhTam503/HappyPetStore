@@ -674,9 +674,9 @@ class _CartScreenState extends State<CartScreen> {
         totalValue: totalAmount,
         items: items.map((item) => {
           'name': item['name']?.toString() ?? 'Pet Store Item',
-          'quantity': item['quantity'] ?? 1,
-          'price': item['price'] ?? 0,
-          'weight': (item['weight'] ?? 1500).toInt(), // in grams, default 1.5kg
+          'quantity': _safeToInt(item['quantity']) ?? 1,
+          'price': _safeToDouble(item['price']) ?? 0,
+          'weight': _safeToInt(item['weight']) ?? 1500, // in grams, default 1.5kg
         }).toList(),
       );
 
@@ -1003,6 +1003,28 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Helper methods for safe type conversion
+  int? _safeToInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
+
+  double? _safeToDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
