@@ -23,6 +23,7 @@ import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/shipping_management_page.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/home_page_web_user.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/payment_success_screen.dart';
@@ -80,10 +81,10 @@ void main() async {
   try {
     await setupRecommendationDI();
     await RecommendationTrackingService().initialize();
-    
+
     // Initialize search recommendations manager with auto-refresh
     await SearchRecommendationsManager().initialize();
-    
+
     if (kDebugMode) {
       debugPrint('🎯 Recommendation system initialized successfully');
     }
@@ -112,10 +113,10 @@ class MyApp extends StatelessWidget {
                 notificationRepository: NotificationRepository())),
         BlocProvider(create: (_) => serviceLocator.createAprioriBloc()),
         BlocProvider(
-          create: (_) =>
-              RecentPetsBloc(RecentPetsRepositoryImpl(
-                settingsService: SettingsService(),
-              ))..add(LoadRecentPets()),
+          create: (_) => RecentPetsBloc(RecentPetsRepositoryImpl(
+            settingsService: SettingsService(),
+          ))
+            ..add(LoadRecentPets()),
         ),
         BlocProvider(create: (_) => getIt<RecommendationBloc>()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
@@ -231,8 +232,8 @@ class MyApp extends StatelessWidget {
               },
               '/home': (context) => const HomePageWebUser(),
               '/cart': (context) => const CartScreenWeb(),
+              '/shipping': (context) => const ShippingManagementPage(),
               '/debug': (context) => const DebugConnectionScreen(),
-            
               '/payment-success': (context) {
                 // Parse session_id from URL
                 String? sessionId;
