@@ -143,94 +143,6 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
     return '-';
   }
 
-  /// Hiển thị thời gian giao hàng thông minh
-  Widget _buildDeliveryTimeDisplay(Map<String, dynamic> shippingInfo) {
-    final status = shippingInfo['status'] ?? '';
-
-    // Nếu đã giao hoặc hủy, hiện thời gian thực tế
-    if (status == 'delivered') {
-      // Thử lấy thời gian giao thực tế từ nhiều field
-      final actualTime = shippingInfo['actualDeliveryTime'] ??
-          shippingInfo['deliveredAt'] ??
-          shippingInfo['timestamp'];
-      if (actualTime != null) {
-        return Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              "Đã giao lúc: ${_formatDeliveryTime(actualTime)}",
-              style: TextStyle(
-                color: Colors.green.shade700,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        );
-      }
-    }
-
-    if (status == 'failed' || status == 'returned') {
-      return Row(
-        children: [
-          Icon(Icons.cancel, color: Colors.red, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            "Giao hàng thất bại",
-            style: TextStyle(
-              color: Colors.red.shade700,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Các trạng thái khác hiện thời gian dự kiến
-    if (status == 'in_transit' ||
-        status == 'out_for_delivery' ||
-        status == 'pickup_pending') {
-      final estimatedTime = shippingInfo['estimatedDelivery'];
-      if (estimatedTime != null) {
-        return Row(
-          children: [
-            Icon(Icons.schedule, color: Colors.orange, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              "Dự kiến giao: ${_formatDeliveryTime(estimatedTime)}",
-              style: TextStyle(
-                color: Colors.orange.shade700,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        );
-      }
-    }
-
-    return const SizedBox.shrink();
-  }
-
-  /// Format thời gian giao hàng
-  String _formatDeliveryTime(dynamic timeString) {
-    try {
-      if (timeString is String) {
-        final dateTime = DateTime.parse(timeString);
-        final day = dateTime.day.toString().padLeft(2, '0');
-        final month = dateTime.month.toString().padLeft(2, '0');
-        final year = dateTime.year.toString();
-        final hour = dateTime.hour.toString().padLeft(2, '0');
-        final minute = dateTime.minute.toString().padLeft(2, '0');
-        return '$day/$month/$year • $hour:$minute';
-      }
-    } catch (e) {
-      print('Error formatting delivery time: $e');
-    }
-    return '-';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -356,7 +268,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        "Order #$id",
+                                        "Đơn hàng #$id",
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: theme.textTheme.titleMedium
@@ -409,7 +321,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                       fg: Colors.green.shade700,
                                     ),
                                     _ChipBadge(
-                                      label: "Pay: $statusPay",
+                                      label: "Thanh toán: $statusPay",
                                       icon: Icons.verified_outlined,
                                       bg: Colors.grey.shade100,
                                       fg: Colors.black87,
@@ -452,7 +364,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                           size: 16, color: Colors.grey[600]),
                                       const SizedBox(width: 4),
                                       Text(
-                                        "Tracking: $trackingNumber",
+                                        "Mã vận đơn: $trackingNumber",
                                         style:
                                             theme.textTheme.bodySmall?.copyWith(
                                           color: Colors.grey[600],
@@ -539,9 +451,6 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         final trackingNumber = orderData?.containsKey('trackingNumber') == true
             ? orderData!['trackingNumber']
             : null;
-        final shippingInfo = orderData?.containsKey('shippingInfo') == true
-            ? orderData!['shippingInfo']
-            : null;
 
         // Debug logging for order details
         print(
@@ -549,87 +458,74 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         print(
             "🐛 Order Details: formatted = '${CurrencyHelper.formatVND(totalRaw)}'");
 
-        // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
+        // Lấy địa chỉ và số điện thoại từ cấu trúc mới (đồng bộ với cart_screen)
         String address = '';
         String customerPhone = '';
+        String customerName = '';
+        
         try {
           if (order.data() is Map<String, dynamic>) {
             final orderData = order.data() as Map<String, dynamic>;
 
-            // Lấy số điện thoại từ nhiều nguồn theo thứ tự ưu tiên
-            // 1. Từ shipping info customerPhone
-            if (shippingInfo is Map<String, dynamic> &&
-                shippingInfo['customerPhone'] != null) {
-              customerPhone = shippingInfo['customerPhone'].toString();
+            // 1. Ưu tiên lấy từ customerInfo (format mới)
+            if (orderData.containsKey('customerInfo') &&
+                orderData['customerInfo'] is Map<String, dynamic>) {
+              final customerInfo = orderData['customerInfo'] as Map<String, dynamic>;
+              customerName = customerInfo['name']?.toString() ?? '';
+              customerPhone = customerInfo['phone']?.toString() ?? '';
             }
-            // 2. Từ deliveryInfo phone
-            else if (orderData.containsKey('deliveryInfo') &&
-                orderData['deliveryInfo'] is Map<String, dynamic>) {
-              final deliveryInfo =
-                  orderData['deliveryInfo'] as Map<String, dynamic>;
-              if (deliveryInfo['phone'] != null &&
-                  deliveryInfo['phone'].toString().isNotEmpty) {
-                customerPhone = deliveryInfo['phone'].toString();
-              }
-            }
-            // 3. Từ phone field cũ
-            else if (orderData.containsKey('phone') &&
-                orderData['phone'].toString().isNotEmpty) {
-              customerPhone = orderData['phone'].toString();
+            // 2. Fallback: Lấy từ top-level fields
+            else {
+              customerName = orderData['displayName']?.toString() ?? '';
+              customerPhone = orderData['phone']?.toString() ?? '';
             }
 
-            // Ưu tiên shippingAddress field mới
+            // 3. Lấy địa chỉ từ shippingAddress (single source of truth)
             if (orderData.containsKey('shippingAddress') &&
                 orderData['shippingAddress'] != null &&
                 orderData['shippingAddress'].toString().isNotEmpty) {
-              address = orderData['shippingAddress'].toString();
-              // Thêm số điện thoại nếu có
-              if (customerPhone.isNotEmpty) {
-                address = '$customerPhone\n$address';
+              final shippingAddr = orderData['shippingAddress'].toString();
+              
+              // Format: Name • Phone\nAddress
+              if (customerName.isNotEmpty && customerPhone.isNotEmpty) {
+                address = '$customerName • $customerPhone\n$shippingAddr';
+              } else if (customerPhone.isNotEmpty) {
+                address = '$customerPhone\n$shippingAddr';
+              } else {
+                address = shippingAddr;
               }
             }
-            // Fallback to deliveryInfo format
-            else if (orderData.containsKey('deliveryInfo')) {
-              final deliveryInfo = orderData['deliveryInfo'];
-              if (deliveryInfo is Map<String, dynamic>) {
-                final name = deliveryInfo['name'] ?? '';
-                final phone = deliveryInfo['phone'] ?? customerPhone;
-                final addr = deliveryInfo['address'] ?? '';
+            // 4. Fallback: Lấy từ deliveryInfo
+            else if (orderData.containsKey('deliveryInfo') &&
+                orderData['deliveryInfo'] is Map<String, dynamic>) {
+              final deliveryInfo = orderData['deliveryInfo'] as Map<String, dynamic>;
+              final name = deliveryInfo['name']?.toString() ?? customerName;
+              final phone = deliveryInfo['phone']?.toString() ?? customerPhone;
+              final addr = deliveryInfo['address']?.toString() ?? '';
+              
+              if (name.isNotEmpty && phone.isNotEmpty) {
                 address = '$name • $phone\n$addr';
-              } else if (deliveryInfo is String) {
-                address = deliveryInfo;
-                if (customerPhone.isNotEmpty) {
-                  address = '$customerPhone\n$address';
-                }
+              } else if (phone.isNotEmpty) {
+                address = '$phone\n$addr';
+              } else {
+                address = addr;
               }
             }
-            // Fallback to shippingInfo format
-            else if (orderData.containsKey('shippingInfo')) {
-              final shippingInfo = orderData['shippingInfo'];
-              if (shippingInfo is Map<String, dynamic> &&
-                  shippingInfo['address'] != null) {
-                final name = shippingInfo['name'] ?? '';
-                final phone = shippingInfo['phone'] ?? customerPhone;
-                final addr = shippingInfo['address'] ?? '';
-                address = '$name • $phone\n$addr';
-              } else if (shippingInfo is String) {
-                address = shippingInfo;
-                if (customerPhone.isNotEmpty) {
-                  address = '$customerPhone\n$address';
-                }
-              }
-            }
-            // Final fallback to old address field
+            // 5. Final fallback: old address field
             else if (orderData.containsKey('address')) {
-              address = orderData['address']?.toString() ?? '';
-              if (customerPhone.isNotEmpty) {
-                address = '$customerPhone\n$address';
+              final addr = orderData['address']?.toString() ?? '';
+              if (customerName.isNotEmpty && customerPhone.isNotEmpty) {
+                address = '$customerName • $customerPhone\n$addr';
+              } else if (customerPhone.isNotEmpty) {
+                address = '$customerPhone\n$addr';
+              } else {
+                address = addr;
               }
             }
           }
         } catch (e) {
           print('Error getting address: $e');
-          address = '';
+          address = 'Không có thông tin địa chỉ';
         }
 
         return DraggableScrollableSheet(
@@ -665,7 +561,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          "Order Details",
+                          "Chi tiết đơn hàng",
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w800,
@@ -692,7 +588,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         fg: Colors.black87,
                       ),
                       _ChipBadge(
-                        label: "Pay: $statusPay",
+                        label: "Thanh toán: $statusPay",
                         icon: Icons.verified_outlined,
                         bg: Colors.grey.shade100,
                         fg: Colors.black87,
@@ -777,94 +673,26 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                               ),
                             ],
                           ),
-                          if (shippingInfo != null &&
-                              shippingInfo is Map<String, dynamic>) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(
-                                  getShippingStatusIcon(
-                                      shippingInfo['status'] ??
-                                          'pickup_pending'),
-                                  color: getShippingStatusColor(
-                                      shippingInfo['status'] ??
-                                          'pickup_pending'),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Trạng thái: ${getShippingStatusText(shippingInfo['status'] ?? 'pickup_pending')}",
-                                  style: TextStyle(
-                                    color: getShippingStatusColor(
-                                        shippingInfo['status'] ??
-                                            'pickup_pending'),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (shippingInfo['shippingCompany'] != null) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.business,
-                                      color: Colors.grey.shade600, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Đơn vị vận chuyển: ${shippingInfo['shippingCompany']}",
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-
-                            // Hiển thị thời gian thông minh
-                            const SizedBox(height: 8),
-                            _buildDeliveryTimeDisplay(shippingInfo),
-
-                            // Hiển thị số điện thoại customer nếu có
-                            if (shippingInfo['customerPhone'] != null &&
-                                shippingInfo['customerPhone']
-                                    .toString()
-                                    .isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.phone,
-                                      color: Colors.grey.shade600, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "SĐT người nhận: ${shippingInfo['customerPhone']}",
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
                         ],
                       ),
                     ),
 
                     // Add ShippingTrackingWidget for real-time tracking
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
+                    if (trackingNumber != null &&
+                        trackingNumber.toString().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: ShippingTrackingWidget(
+                          trackingNumber: trackingNumber,
+                          isAdminView: false, // Customer view
+                        ),
                       ),
-                      child: ShippingTrackingWidget(
-                        trackingNumber: trackingNumber,
-                        isAdminView: false, // Customer view
-                      ),
-                    ),
+                    ],
 
                     const SizedBox(height: 16),
                     const Divider(height: 1),
@@ -935,7 +763,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
+                      child: const Text('Đóng'),
                     ),
                   ),
                 ],
@@ -967,14 +795,14 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filterItems = [
-      'All',
-      'Pending',
-      'Processing',
-      'Shipped',
-      'Completed',
-      'Cancelled'
-    ];
+    final filterItems = {
+      'All': 'Tất cả',
+      'Pending': 'Chờ xử lý',
+      'Processing': 'Đang xử lý',
+      'Shipped': 'Đang giao hàng',
+      'Completed': 'Hoàn thành',
+      'Cancelled': 'Đã hủy',
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
@@ -995,8 +823,8 @@ class _FilterBar extends StatelessWidget {
             child: DropdownButtonFormField<String>(
               value: statusFilter,
               onChanged: (v) => v != null ? onStatusChanged(v) : null,
-              items: filterItems
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+              items: filterItems.entries
+                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                   .toList(),
               decoration: InputDecoration(
                 labelText: 'Trạng thái',
@@ -1109,7 +937,7 @@ class _EmptyOrders extends StatelessWidget {
             const Icon(Icons.inbox_outlined, size: 72, color: Colors.black26),
             const SizedBox(height: 12),
             Text(
-              "No orders found",
+              "Không tìm thấy đơn hàng",
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: Colors.black54,

@@ -105,10 +105,10 @@ class _ShippingTrackingWidgetState extends State<ShippingTrackingWidget> {
             _buildShippingInfo(),
             const SizedBox(height: 16),
             _buildTrackingHistory(),
-            if (widget.isAdminView) ...[
-              const SizedBox(height: 16),
-              _buildAdminActions(),
-            ],
+            // if (widget.isAdminView) ...[
+            //   const SizedBox(height: 16),
+            //   _buildAdminActions(),
+            // ],
           ],
         ),
       ),
@@ -298,7 +298,7 @@ class _ShippingTrackingWidgetState extends State<ShippingTrackingWidget> {
     );
   }
 
-  Widget _buildAdminActions() {
+ Widget _buildAdminActions() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -319,7 +319,7 @@ class _ShippingTrackingWidgetState extends State<ShippingTrackingWidget> {
                   fontWeight: FontWeight.bold,
                   color: Colors.blue.shade700,
                 ),
-              ),
+               ),
             ],
           ),
           const SizedBox(height: 12),

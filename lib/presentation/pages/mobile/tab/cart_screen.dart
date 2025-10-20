@@ -19,7 +19,6 @@ import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dar
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
-import 'package:pet_shop/services/shipping_service.dart';
 import '../../../../data/models/cart_model.dart';
 import '../../../bloc/apriori/apriori_bloc.dart';
 import '../../../bloc/apriori/apriori_event.dart';
@@ -50,9 +49,8 @@ class _CartScreenState extends State<CartScreen> {
   Map<String, dynamic>? selectedDeliveryInfo;
   Map<String, dynamic>? userInfo;
   
-  // Shipping fee calculation
-  double shippingFee = 0.0;
-  bool isCalculatingShipping = false;
+  // NO SHIPPING FEE - Mock only
+  final double shippingFee = 0.0; // Always free
 
   @override
   void initState() {
@@ -142,54 +140,6 @@ class _CartScreenState extends State<CartScreen> {
     print(
         "👤 Fetched user info: email=${userInfo?['email']}, phone=${userInfo?['phone']}");
     setState(() {});
-  }
-
-  Future<void> calculateShippingFee(List<CartModel> cartItems) async {
-    if (selectedDeliveryInfo == null || cartItems.isEmpty) {
-      setState(() {
-        shippingFee = 0.0;
-      });
-      return;
-    }
-
-    setState(() {
-      isCalculatingShipping = true;
-    });
-
-    try {
-      final totalValue = _calculateTotal(cartItems);
-      final totalWeight = cartItems.length * 1.5; // Estimate 1.5kg per pet
-      
-      final result = await ShippingService.calculateShippingFee(
-        shippingAddress: selectedDeliveryInfo!['address'] ?? '',
-        totalValue: totalValue,
-        totalWeight: totalWeight,
-        customerInfo: {
-          'name': selectedDeliveryInfo!['name'] ?? '',
-          'phone': selectedDeliveryInfo!['phone'] ?? '',
-        },
-      );
-      
-      if (result['success']) {
-        setState(() {
-          shippingFee = result['data']['shippingFee'].toDouble();
-        });
-      } else {
-        // Fallback to default shipping fee
-        setState(() {
-          shippingFee = 30000.0; // Default 30k VND
-        });
-      }
-    } catch (e) {
-      print('❌ Error calculating shipping fee: $e');
-      setState(() {
-        shippingFee = 30000.0; // Default 30k VND
-      });
-    } finally {
-      setState(() {
-        isCalculatingShipping = false;
-      });
-    }
   }
 
   void onOrderSuccessWithBreeds(List<String> breeds) async {
@@ -456,25 +406,7 @@ class _CartScreenState extends State<CartScreen> {
             });
             
             // Calculate shipping fee when address changes
-            if (userIdentifier != null) {
-              final currentState = context.read<CartBloc>().state;
-              if (currentState is CartLoaded) {
-                final cartItems = currentState.items;
-                final carts = cartItems.map((item) {
-                  return CartModel(
-                    grocery: {
-                      ...item,
-                      'price': item["price"]?.toString() ?? '0',
-                      'productId': item["productId"]?.toString() ?? '',
-                      'name': item["name"]?.toString() ?? '',
-                      'imageUrl': item["imageUrl"]?.toString() ?? '',
-                    },
-                    quantity: item["quantity"] ?? 1,
-                  );
-                }).toList();
-                calculateShippingFee(carts);
-              }
-            }
+            // Address selection listener - no longer needs to calculate shipping fee
           },
         ),
       ),
@@ -483,31 +415,9 @@ class _CartScreenState extends State<CartScreen> {
     // Refresh addresses after returning from address list
     if (result != null) {
       fetchAddresses();
-      
-      // Calculate shipping fee after address update
-      if (userIdentifier != null) {
-        final currentState = context.read<CartBloc>().state;
-        if (currentState is CartLoaded) {
-          final cartItems = currentState.items;
-          final carts = cartItems.map((item) {
-            return CartModel(
-              grocery: {
-                ...item,
-                'price': item["price"]?.toString() ?? '0',
-                'productId': item["productId"]?.toString() ?? '',
-                'name': item["name"]?.toString() ?? '',
-                'imageUrl': item["imageUrl"]?.toString() ?? '',
-              },
-              quantity: item["quantity"] ?? 1,
-            );
-          }).toList();
-          calculateShippingFee(carts);
-        }
-      }
+      // No need to calculate shipping fee - always free
     }
-  }
-
-  double _calculateTotal(List<CartModel> carts) {
+  }  double _calculateTotal(List<CartModel> carts) {
     double total = 0.0;
     print("🧮 Calculating total for ${carts.length} items:");
     
@@ -600,19 +510,26 @@ class _CartScreenState extends State<CartScreen> {
     final userInfoForOrder = await userManager.getUserInfoForOrder();
     final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
 
-    // Extract address from selectedDeliveryInfo
+    // Extract shipping information from selectedDeliveryInfo
     final shippingAddress = selectedDeliveryInfo?['address'] ?? "Địa chỉ không xác định";
     final shippingName = selectedDeliveryInfo?['name'] ?? userInfoForOrder?['displayName'] ?? "";
     final shippingPhone = selectedDeliveryInfo?['phone'] ?? userInfoForOrder?['phone'] ?? "";
+    
+    // Chuẩn bị customer info cho shipping (đồng bộ với ShippingService)
+    final customerInfo = {
+      'name': shippingName,
+      'phone': shippingPhone.isNotEmpty ? shippingPhone : '0987654321',
+      'email': userInfoForOrder?['email'] ?? currentUserEmail ?? userIdentifier,
+    };
     
     final orderData = {
       "orderId": orderRef.id,
       "userIdentifier": userIdentifier,
       "userId": userInfoForOrder?['userId'] ?? userIdentifier,
-      "email": userInfoForOrder?['email'] ?? currentUserEmail ?? userIdentifier,
-      "phone": userInfoForOrder?['phone'] ?? (userInfo?["phone"] ?? ""),
-      "displayName": userInfoForOrder?['displayName'] ?? "",
-      "address": shippingAddress, // Add shipping address directly
+      "email": customerInfo['email'],
+      "phone": customerInfo['phone'],
+      "displayName": customerInfo['name'],
+      "shippingAddress": shippingAddress, // Single source of truth for address
       "totalAmount": grandTotal, // Include shipping fee in total
       "subtotal": totalAmount, // Keep subtotal separate
       "shippingFee": shippingFee, // Store shipping fee separately
@@ -622,9 +539,8 @@ class _CartScreenState extends State<CartScreen> {
       "statusOrder": "Pending",
       "timestamp": FieldValue.serverTimestamp(),
       "paymentMethod": paymentMethod,
-      // Complete shipping information
-      "shippingAddress": shippingAddress,
-      "shippingInfo": selectedDeliveryInfo ?? {},
+      // Customer và delivery info - đồng bộ với ShippingService format
+      "customerInfo": customerInfo,
       "deliveryInfo": selectedDeliveryInfo != null ? {
         "name": shippingName,
         "phone": shippingPhone,
@@ -632,72 +548,32 @@ class _CartScreenState extends State<CartScreen> {
         "isDefault": selectedDeliveryInfo!['isDefault'] ?? false,
         "latitude": selectedDeliveryInfo!['latitude'],
         "longitude": selectedDeliveryInfo!['longitude'],
-      } : {},
+      } : {
+        "name": shippingName,
+        "phone": shippingPhone,
+        "address": shippingAddress,
+      },
       "items": items,
     };
 
-    print("💾 Saving order with user info:");
+    print("💾 Saving order with standardized fields:");
+    print("  - orderId: ${orderData['orderId']}");
     print("  - userId: ${orderData['userId']}");
     print("  - email: ${orderData['email']}");
     print("  - phone: ${orderData['phone']}");
     print("  - displayName: ${orderData['displayName']}");
-    print("  - address: ${orderData['address']}");
     print("  - shippingAddress: ${orderData['shippingAddress']}");
-    print("  - shippingInfo: ${orderData['shippingInfo']}");
+    print("  - customerInfo: ${orderData['customerInfo']}");
     print("  - deliveryInfo: ${orderData['deliveryInfo']}");
     print("🌱 Collected breeds for Apriori: $breeds");
 
     await orderRef.set(orderData);
 
-    // Create shipping after saving order
-    try {
-      final totalWeight = cartItems.length * 1.5; // Estimate 1.5kg per pet
-      final customerInfo = {
-        'name': shippingName,
-        'phone': shippingPhone.isNotEmpty ? shippingPhone : '0987654321', // Ensure phone exists
-        'email': orderData['email'],
-      };
-
-      print('📦 Creating shipment with info:');
-      print('  - Name: ${customerInfo['name']}');
-      print('  - Phone: ${customerInfo['phone']}');
-      print('  - Email: ${customerInfo['email']}');
-      print('  - Address: $shippingAddress');
-      print('  - Total weight: ${totalWeight}kg');
-      print('  - Items count: ${items.length}');
-
-      final shippingResult = await ShippingService.createShipment(
-        orderId: orderRef.id,
-        shippingAddress: shippingAddress,
-        customerInfo: customerInfo,
-        totalWeight: totalWeight,
-        totalValue: totalAmount,
-        items: items.map((item) => {
-          'name': item['name']?.toString() ?? 'Pet Store Item',
-          'quantity': _safeToInt(item['quantity']) ?? 1,
-          'price': _safeToDouble(item['price']) ?? 0,
-          'weight': _safeToInt(item['weight']) ?? 1500, // in grams, default 1.5kg
-        }).toList(),
-      );
-
-      if (shippingResult['success']) {
-        final shipmentData = shippingResult['data'];
-        final trackingNumber = shipmentData['trackingNumber'];
-
-        // Update order with shipping info
-        await orderRef.update({
-          'trackingNumber': trackingNumber,
-          'shippingInfo': shipmentData,
-        });
-
-        print('✅ Shipping created successfully: $trackingNumber');
-      } else {
-        print('⚠️ Shipping creation failed: ${shippingResult['message']}');
-      }
-    } catch (e) {
-      print('❌ Error creating shipping: $e');
-      // Continue even if shipping fails - order is already saved
-    }
+    // NOTE: Shipment will be created by admin when order status changes to "Processing"
+    // This ensures proper workflow: Order → Admin Review → Create Shipment
+    print('✅ Order created successfully: ${orderRef.id}');
+    print('📋 Order status: Pending (waiting for admin to process)');
+    print('🚫 Shipment NOT created yet - will be created when admin changes status to Processing');
 
     // Gửi thông báo đơn hàng đã được đặt
     final orderUserId = orderData['userId']?.toString();
@@ -1004,27 +880,6 @@ class _CartScreenState extends State<CartScreen> {
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Helper methods for safe type conversion
-  int? _safeToInt(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    if (value is String) {
-      return int.tryParse(value);
-    }
-    return null;
-  }
-
-  double? _safeToDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) {
-      return double.tryParse(value);
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1072,13 +927,8 @@ class _CartScreenState extends State<CartScreen> {
                 );
               }).toList();
 
-              // Calculate shipping fee when cart loads/changes
-              if (selectedDeliveryInfo != null && shippingFee == 0.0 && !isCalculatingShipping) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  calculateShippingFee(carts);
-                });
-              }
-
+              // No shipping fee calculation needed - always free
+              
               final double totalPrice = _calculateTotal(carts);
               return Column(
                 children: [
@@ -1286,26 +1136,15 @@ class _CartScreenState extends State<CartScreen> {
                                         ),
                                       ],
                                     ),
-                                    if (isCalculatingShipping)
-                                      const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                                        ),
-                                      )
-                                    else
-                                      Text(
-                                        shippingFee > 0 
-                                          ? CurrencyHelper.formatVND(shippingFee)
-                                          : 'Miễn phí',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: shippingFee > 0 ? Colors.blue.shade700 : Colors.green,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                    // Always free shipping
+                                    Text(
+                                      'Miễn phí',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w600,
                                       ),
+                                    ),
                                   ],
                                 ),
                                 const Divider(height: 16),

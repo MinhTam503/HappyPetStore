@@ -879,11 +879,11 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                 child: Icon(icon, color: color, size: 24),
               ),
               const Spacer(),
-              Icon(Icons.trending_up,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.lightGreenAccent
-                      : Colors.green,
-                  size: 16),
+              // Icon(Icons.trending_up,
+              //     color: Theme.of(context).brightness == Brightness.dark
+              //         ? Colors.lightGreenAccent
+              //         : Colors.green,
+              //     size: 16),
             ],
           ),
           const SizedBox(height: 16),
@@ -973,22 +973,22 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: (Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF2196F3)
-                        : const Color(0xFF4CAF50)).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.trending_up,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF2196F3)
-                        : const Color(0xFF4CAF50),
-                    size: 20,
-                  ),
-                ),
+                // Container(
+                //   padding: const EdgeInsets.all(8),
+                //   decoration: BoxDecoration(
+                //     color: (Theme.of(context).brightness == Brightness.dark
+                //         ? const Color(0xFF2196F3)
+                //         : const Color(0xFF4CAF50)).withOpacity(0.1),
+                //     borderRadius: BorderRadius.circular(8),
+                //   ),
+                //   child: Icon(
+                //     Icons.trending_up,
+                //     color: Theme.of(context).brightness == Brightness.dark
+                //         ? const Color(0xFF2196F3)
+                //         : const Color(0xFF4CAF50),
+                //     size: 20,
+                //   ),
+                // ),
                 const SizedBox(width: 12),
                 Text(
                   l10n.revenue,
@@ -999,22 +999,22 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
                   ),
                 ),
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '(${_getChartUnit()})',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
+                // Container(
+                //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                //   decoration: BoxDecoration(
+                //     color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                //   child: Text(
+                //     '(${_getChartUnit()})',
+                //     style: TextStyle(
+                //       fontSize: 12,
+                //       fontWeight: FontWeight.w600,
+                //       color: Theme.of(context).colorScheme.primary,
+                //       fontStyle: FontStyle.italic,
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),

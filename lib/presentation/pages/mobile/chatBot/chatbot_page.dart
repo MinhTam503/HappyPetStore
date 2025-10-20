@@ -84,7 +84,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             centerTitle: true,
-            title: const Text('Pet Assistant'),
+            title: const Text('Trợ lý ảo'),
             backgroundColor: const Color(0xff08A045),
             foregroundColor: Colors.white,
             elevation: 2,

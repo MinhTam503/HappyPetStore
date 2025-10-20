@@ -45,7 +45,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
   }
 
   int _computeCrossAxisCount(double width) {
-    if (width < 500) return 1; // phone
+    if (width < 500) return 2; // phone
     if (width < 800) return 2; // small tablet
     if (width < 1200) return 3; // large tablet / small desktop
     return 4; // desktop
@@ -126,11 +126,12 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
 
                   return GridView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: aspect,
+                      childAspectRatio: 0.72, // tỷ lệ phù hợp card dạng dọc
                     ),
                     itemCount: favoriteItems.length,
                     itemBuilder: (context, index) {
@@ -221,105 +222,222 @@ class _FavoriteCard extends StatelessWidget {
     final name = (data["name"] ?? "").toString();
     final price = data["price"];
     final imageUrl = (data["imageUrl"] ?? "").toString();
+    final breed = (data["breed"] ?? "").toString();
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onOpen,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                spreadRadius: 2,
-                offset: Offset(0, 2),
-              )
-            ],
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Stack(
+        ],
+      ),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onOpen,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Nội dung
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
+              // Image section with flexible expand
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    // Ảnh vuông, bo góc
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: AspectRatio(
-                        aspectRatio: 1, // vuông
-                        child: imageUrl.isNotEmpty
-                            ? Image.network(
-                                imageUrl,
+                    // Pet Image
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFEFEF),
+                        image: imageUrl.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(imageUrl),
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: Colors.grey.shade200,
-                                  alignment: Alignment.center,
-                                  child:
-                                      const Icon(Icons.broken_image_outlined),
-                                ),
                               )
-                            : Container(
-                                color: Colors.grey.shade200,
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                    Icons.image_not_supported_outlined),
-                              ),
+                            : null,
                       ),
+                      child: imageUrl.isEmpty ? const _ImageSkeleton() : null,
                     ),
-                    const SizedBox(width: 12),
-                    // Text
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            CurrencyHelper.formatVND(price),
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade800,
-                            ),
-                          ),
-                        ],
+
+                    // Favorite Button (top right)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: _CircleIconButton(
+                        icon: Icons.favorite,
+                        foreground: Colors.red,
+                        background: Colors.white,
+                        onTap: onDelete,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Nút delete nổi góc phải
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Material(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: const CircleBorder(),
-                  elevation: 3,
-                  child: IconButton(
-                    tooltip: LocalizationHelper.getLocalizedText(
-                        context, 'removeFromFavorites'),
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: onDelete,
-                  ),
+              // Pet Information
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Pet Name
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
+                      ),
+                    ),
+
+                    // Breed
+                    if (breed.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          breed,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+
+                    // Price
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        CurrencyHelper.formatVND(price),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: primaryColor,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(
+                height: 20,
+              ),
+              // View Details Button
+              // Padding(
+              //   padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+              //   child: SizedBox(
+              //     width: double.infinity,
+              //     child: ElevatedButton.icon(
+              //       onPressed: onOpen,
+              //       style: ElevatedButton.styleFrom(
+              //         backgroundColor: primaryColor,
+              //         foregroundColor: Colors.white,
+              //         elevation: 0,
+              //         padding: const EdgeInsets.symmetric(
+              //           horizontal: 12,
+              //           vertical: 10,
+              //         ),
+              //         shape: RoundedRectangleBorder(
+              //           borderRadius: BorderRadius.circular(12),
+              //         ),
+              //         textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              //         minimumSize: const Size.fromHeight(0),
+              //         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              //       ),
+              //       icon: const Icon(Icons.visibility, size: 18),
+              //       label: Text(
+              //         LocalizationHelper.getLocalizedText(
+              //             context, 'viewDetails'),
+              //         maxLines: 1,
+              //         overflow: TextOverflow.ellipsis,
+              //       ),
+              //     ),
+              //   ),
+              // ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Image skeleton placeholder
+class _ImageSkeleton extends StatelessWidget {
+  const _ImageSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const ColoredBox(color: Color(0xFFF3F4F6)),
+        Align(
+          alignment: Alignment.center,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(6.0),
+              child: CircularProgressIndicator(strokeWidth: 2.2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Circle icon button (favorite)
+class _CircleIconButton extends StatelessWidget {
+  final IconData icon;
+  final Color foreground;
+  final Color background;
+  final VoidCallback onTap;
+
+  const _CircleIconButton({
+    required this.icon,
+    required this.foreground,
+    required this.background,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: background,
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(icon, size: 20, color: foreground),
         ),
       ),
     );
@@ -334,30 +452,102 @@ class _FavoriteSkeleton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // khung ảnh
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: Colors.black12,
-              borderRadius: BorderRadius.circular(16),
+          // Image skeleton
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const ColoredBox(color: Color(0xFFF3F4F6)),
+                Align(
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          // khung text
-          Expanded(
+
+          // Info skeleton
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(height: 18, width: 140, color: Colors.black12),
-                const SizedBox(height: 10),
-                Container(height: 16, width: 90, color: Colors.black12),
+                // Name
+                Container(
+                  height: 16,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Breed
+                Container(
+                  height: 13,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // Price
+                Container(
+                  height: 15,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
               ],
+            ),
+          ),
+
+          // Button skeleton
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+            child: Container(
+              height: 38,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
