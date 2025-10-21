@@ -9,6 +9,7 @@ import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/change_password_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/viewed_pets/viewed_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
@@ -114,10 +115,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           iconColor: Colors.red,
                           title: l10n?.favorites ?? 'Favorites',
                           onTap: () {
-                            Navigator.push(
+                            Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const FavoriteScreen(),
+                                builder: (context) =>
+                                    const BottomNavigator(initialIndex: 1),
                               ),
                             );
                           },

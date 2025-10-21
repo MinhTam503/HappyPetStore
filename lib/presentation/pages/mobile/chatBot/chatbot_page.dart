@@ -98,14 +98,14 @@ class _ChatBotPageState extends State<ChatBotPage> {
                         context: context,
                         builder: (BuildContext dialogContext) {
                           return AlertDialog(
-                            title: const Text('Clear Chat History'),
+                            title: const Text('Xóa lịch sử chat'),
                             content: const Text(
-                                'Are you sure you want to clear all chat history?'),
+                                'Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện không?'),
                             actions: [
                               TextButton(
                                 onPressed: () =>
                                     Navigator.of(dialogContext).pop(),
-                                child: const Text('Cancel'),
+                                child: const Text('Hủy'),
                               ),
                               TextButton(
                                 onPressed: () {
@@ -114,7 +114,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
                                       .add(ClearChatBotHistory(widget.userId));
                                   Navigator.of(dialogContext).pop();
                                 },
-                                child: const Text('Clear'),
+                                child: const Text('Xóa'),
                               ),
                             ],
                           );
@@ -180,7 +180,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Hello! I\'m your Pet Assistant.',
+                                  'Xin chào! Tôi là trợ lý thú cưng của bạn.',
                                   style: TextStyle(
                                     fontSize: 18,
                                     color: Theme.of(context).primaryColor,
@@ -189,7 +189,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Ask me anything about pets!',
+                                  'Hãy hỏi tôi bất cứ điều gì về thú cưng!',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],
@@ -344,7 +344,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Typing...',
+                  'Đang trả lời...',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 16,
@@ -378,7 +378,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: 'Ask about pets...',
+                hintText: 'Hỏi về thú cưng...',
                 hintStyle: TextStyle(color: Colors.grey[600]),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
@@ -677,12 +677,15 @@ class _ChatBotPageState extends State<ChatBotPage> {
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'dog':
+      case 'dogs':
         return Icons.pets;
       case 'cat':
+      case 'cats':
         return Icons.pets;
       case 'fish':
         return Icons.water;
       case 'bird':
+      case 'birds':
         return Icons.flutter_dash;
       default:
         return Icons.pets;

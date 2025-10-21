@@ -105,10 +105,10 @@ class _ShippingTrackingWidgetState extends State<ShippingTrackingWidget> {
             _buildShippingInfo(),
             const SizedBox(height: 16),
             _buildTrackingHistory(),
-            // if (widget.isAdminView) ...[
-            //   const SizedBox(height: 16),
-            //   _buildAdminActions(),
-            // ],
+            if (widget.isAdminView) ...[
+              const SizedBox(height: 16),
+              _buildAdminActions(),
+            ],
           ],
         ),
       ),

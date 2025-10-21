@@ -1034,7 +1034,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                   title: Text(name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis),
-                                  subtitle: Text('Qty: $qty • Price: ${CurrencyHelper.formatVND(price)}'),
+                                  subtitle: Text('Giá: ${CurrencyHelper.formatVND(price)}'),
                                   trailing: Text(
                                     CurrencyHelper.formatVND(_safeMul(price, qty)),
                                     style: const TextStyle(

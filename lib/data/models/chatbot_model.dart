@@ -426,7 +426,13 @@ class ChatBotResponseModel extends ChatBotResponse {
 
   // Extract pets from reply text with format "Name - Price - Status - Info - (id: ID)"
   static (String, List<ChatBotPet>) _extractPetsFromReply(String reply) {
-    final petPattern = RegExp(r'([^-]+) - (\d+) - ([^-]+) - ([^-]+) - \(id: ([^)]+)\)');
+    // Updated pattern to match both formats:
+    // Format 1: "Name - Price ₫ - Status - Info - (id: ID)"
+    // Format 2: "Name - Price - Status - Breed, Sex, Age, Weight - (id: ID)"
+    final petPattern = RegExp(
+      r'([^-\n]+) - ([\d.]+(?:\.\d+)?)[\s₫]+(?:₫\s*)?- ([^-]+) - ([^-]+) - \(id: ([^)]+)\)',
+      multiLine: true
+    );
     final matches = petPattern.allMatches(reply);
     
     if (matches.isEmpty) {
@@ -434,11 +440,12 @@ class ChatBotResponseModel extends ChatBotResponse {
     }
     
     final pets = <ChatBotPet>[];
-    String cleanReply = reply;
+    final List<String> petLines = [];
     
     for (final match in matches) {
       final name = match.group(1)?.trim() ?? '';
-      final priceStr = match.group(2)?.trim() ?? '0';
+      final priceStr = match.group(2)?.trim().replaceAll('.', '').replaceAll('₫', '').trim() ?? '0';
+      // final status = match.group(3)?.trim() ?? ''; // Not used - usually "Còn hàng"
       final info = match.group(4)?.trim() ?? '';
       final id = match.group(5)?.trim() ?? '';
       
@@ -450,17 +457,21 @@ class ChatBotResponseModel extends ChatBotResponse {
       String sex = 'Không rõ';
       String age = 'Không rõ';
       String weight = 'Không rõ';
+      String category = 'Dogs';
       
-      if (infoParts.isNotEmpty) breed = infoParts[0];
+      if (infoParts.isNotEmpty) {
+        breed = infoParts[0];
+        category = _getCategoryFromBreed(breed);
+      }
       if (infoParts.length > 1) sex = infoParts[1];
-      if (infoParts.length > 2) age = infoParts[2];
-      if (infoParts.length > 3) weight = infoParts[3];
+      if (infoParts.length > 2) age = infoParts[2].replaceAll(' tuổi', '');
+      if (infoParts.length > 3) weight = infoParts[3].replaceAll(' nặng ', '').replaceAll('kg', '');
       
       pets.add(ChatBotPetModel(
         id: id,
         name: name,
         breed: breed,
-        category: _getCategoryFromBreed(breed),
+        category: category,
         age: age,
         sex: sex,
         weight: weight,
@@ -469,26 +480,78 @@ class ChatBotResponseModel extends ChatBotResponse {
         about: info,
       ));
       
-      // Remove pet info from reply text
-      cleanReply = cleanReply.replaceAll(match.group(0)!, '').trim();
+      // Track which lines contain pet info
+      petLines.add(match.group(0)!);
     }
     
-    // Clean up any leftover lines
+    // Remove pet info lines from reply
+    String cleanReply = reply;
+    for (final line in petLines) {
+      cleanReply = cleanReply.replaceAll(line, '');
+    }
+    
+    // Clean up empty lines and keep only meaningful text
     cleanReply = cleanReply.split('\n')
-        .where((line) => line.trim().isNotEmpty && !line.contains(' - ') && !line.contains('(id:'))
+        .map((line) => line.trim())
+        .where((line) => 
+          line.isNotEmpty && 
+          !line.startsWith('(id:') &&
+          !petPattern.hasMatch(line))
         .join('\n')
         .trim();
+    
+    // If no meaningful text remains, use a default message
+    if (cleanReply.isEmpty && pets.isNotEmpty) {
+      cleanReply = 'Tôi tìm thấy ${pets.length} thú cưng phù hợp với yêu cầu của bạn:';
+    }
     
     return (cleanReply, pets);
   }
   
   static String _getCategoryFromBreed(String breed) {
     final lowerBreed = breed.toLowerCase();
-    if (lowerBreed.contains('husky') || lowerBreed.contains('golden') || 
-        lowerBreed.contains('chihuahua') || lowerBreed.contains('phốc')) {
+    
+    // Dog breeds
+    if (lowerBreed.contains('husky') || 
+        lowerBreed.contains('golden') || 
+        lowerBreed.contains('chihuahua') || 
+        lowerBreed.contains('phốc') ||
+        lowerBreed.contains('bacgie') ||
+        lowerBreed.contains('retriever')) {
       return 'Dogs';
     }
-    return 'Dogs'; // Default for now
+    
+    // Cat breeds
+    if (lowerBreed.contains('mèo') || 
+        lowerBreed.contains('ba tư') || 
+        lowerBreed.contains('xiêm') ||
+        lowerBreed.contains('scottish') ||
+        lowerBreed.contains('munchkin') ||
+        lowerBreed.contains('anh lông ngắn')) {
+      return 'Cats';
+    }
+    
+    // Fish species
+    if (lowerBreed.contains('cá') || 
+        lowerBreed.contains('koi') || 
+        lowerBreed.contains('betta') ||
+        lowerBreed.contains('vàng') ||
+        lowerBreed.contains('neon') ||
+        lowerBreed.contains('bảy màu')) {
+      return 'Fish';
+    }
+    
+    // Birds
+    if (lowerBreed.contains('chim') || 
+        lowerBreed.contains('yến phụng') || 
+        lowerBreed.contains('hoạ mi') ||
+        lowerBreed.contains('chào mào') ||
+        lowerBreed.contains('sáo') ||
+        lowerBreed.contains('cu gáy')) {
+      return 'Birds';
+    }
+    
+    return 'Dogs'; // Default
   }
 
   Map<String, dynamic> toJson() {
