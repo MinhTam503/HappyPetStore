@@ -177,7 +177,7 @@ class MyApp extends StatelessWidget {
                                   children: [
                                     CircularProgressIndicator(
                                         color: Colors.pink),
-                                    SizedBox(height: 16),
+                                    SizedBox(height : 16),
                                     Text(
                                         'Đang kiểm tra trạng thái đăng nhập...'),
                                   ],

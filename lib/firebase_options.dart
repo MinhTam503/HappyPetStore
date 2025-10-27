@@ -72,6 +72,6 @@ class DefaultFirebaseOptions {
     storageBucket: 'adopt-pet-d1c88.appspot.com',
     androidClientId: '1025178678813-02hukhn8rjlp3s4bkt3c6c0ftfvcrvj9.apps.googleusercontent.com',
     iosClientId: '1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o.apps.googleusercontent.com',
-    iosBundleId: 'com.example.petShop',
+    iosBundleId: 'com.minhtam.petShop',
   );
 }
