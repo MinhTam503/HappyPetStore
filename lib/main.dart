@@ -9,8 +9,12 @@ import 'package:pet_shop/core/di/recommendation_di.dart';
 import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
 import 'package:pet_shop/core/services/search_recommendations_manager.dart';
 import 'package:pet_shop/core/services/settings_service.dart';
+import 'package:pet_shop/data/datasources/vnpay_service.dart';
 import 'package:pet_shop/data/repositories/notification_repository.dart';
 import 'package:pet_shop/data/repositories/viewed_pets/recent_pets_repository_impl.dart';
+import 'package:pet_shop/data/repositories/vnpay_repository_impl.dart';
+import 'package:pet_shop/domain/usecases/create_vnpay_payment_url.dart';
+import 'package:pet_shop/domain/usecases/verify_vnpay_payment.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
@@ -21,6 +25,7 @@ import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
 import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
+import 'package:pet_shop/presentation/bloc/vnpay/vnpay_bloc.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/shipping_management_page.dart';
@@ -102,12 +107,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final service = VnpayService();
+    final repository = VnpayRepositoryImpl(service);
     return MultiProvider(
       providers: [
         BlocProvider(create: (_) => CartBloc()),
         BlocProvider(create: (_) => FavBloc()),
         BlocProvider(create: (_) => CartBlocWeb()),
         BlocProvider(create: (_) => PopularBloc()),
+        BlocProvider(
+            create: (_) => VnpayBloc(
+                  createPaymentUrl: CreateVnpayPaymentUrl(repository),
+                  verifyPayment: VerifyVnpayPayment(repository),
+                )),
         BlocProvider(
             create: (_) => NotificationBloc(
                 notificationRepository: NotificationRepository())),
@@ -177,7 +189,7 @@ class MyApp extends StatelessWidget {
                                   children: [
                                     CircularProgressIndicator(
                                         color: Colors.pink),
-                                    SizedBox(height : 16),
+                                    SizedBox(height: 16),
                                     Text(
                                         'Đang kiểm tra trạng thái đăng nhập...'),
                                   ],

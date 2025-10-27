@@ -15,6 +15,10 @@ import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/orderSuccess.dart';
+import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
+// VNPay package không hoạt động, quay lại dùng custom implementation
+// import '../../../../services/vnpay_service_simple.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
@@ -28,6 +32,9 @@ import '../../../widgets/cart_item.dart';
 import '../../../bloc/cartBloc/cart_bloc.dart';
 import '../../../bloc/cartBloc/cart_event.dart';
 import '../../../bloc/cartBloc/cart_state.dart';
+import '../../../bloc/vnpay/vnpay_bloc.dart';
+import '../../../bloc/vnpay/vnpay_event.dart';
+import '../../../bloc/vnpay/vnpay_state.dart';
 
 import '../pet/detail_pet.dart';
 
@@ -44,7 +51,7 @@ class _CartScreenState extends State<CartScreen> {
   String? userIdentifier;
 
   // Thêm biến cho phương thức thanh toán và thông tin giao hàng
-  String paymentMethod = 'paypal';
+  String paymentMethod = 'cod'; // Mặc định là COD
   List<Map<String, dynamic>> deliveryInfos = [];
   Map<String, dynamic>? selectedDeliveryInfo;
   Map<String, dynamic>? userInfo;
@@ -140,6 +147,19 @@ class _CartScreenState extends State<CartScreen> {
     print(
         "👤 Fetched user info: email=${userInfo?['email']}, phone=${userInfo?['phone']}");
     setState(() {});
+  }
+
+  String _getPaymentStatus() {
+    switch (paymentMethod) {
+      case 'stripe':
+        return "Payment Completed (Stripe)";
+      case 'vnpay':
+        return "Payment Completed (VNPay)";
+      case 'cod':
+        return "COD";
+      default:
+        return "COD";
+    }
   }
 
   void onOrderSuccessWithBreeds(List<String> breeds) async {
@@ -534,7 +554,7 @@ class _CartScreenState extends State<CartScreen> {
       "subtotal": totalAmount, // Keep subtotal separate
       "shippingFee": shippingFee, // Store shipping fee separately
       "statusPayment": isPaid
-          ? (paymentMethod == 'paypal' ? "Payment Completed" : "COD")
+          ? _getPaymentStatus()
           : "COD",
       "statusOrder": "Pending",
       "timestamp": FieldValue.serverTimestamp(),
@@ -824,6 +844,46 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  Future<void> vnpayPaymentInit(
+    double amount,
+    String userIdentifier,
+    List<CartModel> carts,
+  ) async {
+    try {
+      // Include shipping fee in payment amount
+      final grandTotal = amount + shippingFee;
+      print("💰 VNPay Payment: Grand total = ${CurrencyHelper.formatVND(grandTotal)}");
+
+      // Generate order ID (timestamp based)
+      final orderId = 'ORDER_${DateTime.now().millisecondsSinceEpoch}';
+      
+      // TODO: Replace with your actual return URL
+      // This should be a deep link or web URL that redirects back to your app
+      final returnUrl = 'happypetstore://vnpay-return'; 
+      
+      final orderInfo = 'Thanh toán đơn hàng HappyPetStore $orderId';
+
+      // Trigger VNPay BLoC to create payment URL
+      context.read<VnpayBloc>().add(
+        CreateVnpayPayment(
+          orderId: orderId,
+          amount: grandTotal,
+          orderInfo: orderInfo,
+          returnUrl: returnUrl,
+        ),
+      );
+
+      print('🔄 VNPay payment initiated for order: $orderId');
+    } catch (e) {
+      print('❌ Error initiating VNPay payment: $e');
+      NotificationHelper.showError(
+        context,
+        'Lỗi thanh toán VNPay',
+        'Đã có lỗi xảy ra: $e',
+      );
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getSuggestionsForCart(
       List<CartModel> carts) async {
     if (carts.isEmpty) {
@@ -904,7 +964,112 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
       body: SafeArea(
-        child: BlocBuilder<CartBloc, CartState>(
+        child: BlocListener<VnpayBloc, VnpayState>(
+          listener: (context, vnpayState) async {
+            if (vnpayState is VnpayPaymentUrlCreated) {
+              // Payment URL created, open in WebView
+              final paymentUrl = vnpayState.payment.paymentUrl;
+              if (paymentUrl != null) {
+                print('🌐 Opening VNPay payment in WebView: $paymentUrl');
+                
+                // Open WebView
+                final result = await Navigator.push<Map<String, String>>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => VnpayWebViewScreen(
+                      paymentUrl: paymentUrl,
+                      returnUrl: 'happypetstore://vnpay-return',
+                      onPaymentCallback: (params) {
+                        print('💰 Payment callback received: $params');
+                      },
+                    ),
+                  ),
+                );
+
+                // Handle result from WebView
+                if (result != null && mounted) {
+                  print('📦 WebView returned params: $result');
+                  
+                  // Verify payment with BLoC
+                  context.read<VnpayBloc>().add(
+                    VerifyVnpayCallback(result),
+                  );
+                  
+                  // Navigate to result screen
+                  if (mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => VnpayPaymentResultScreen(
+                          vnpayResponse: result,
+                          onPaymentResult: (isSuccess, orderId) async {
+                            if (isSuccess && userIdentifier != null) {
+                              // Payment successful - save order
+                              print('✅ Payment successful for order: $orderId');
+                              
+                              final carts = (context.read<CartBloc>().state as CartLoaded)
+                                  .items
+                                  .map((item) => CartModel(
+                                        grocery: {
+                                          ...item,
+                                          'price': item["price"]?.toString() ?? '0',
+                                          'productId': item["productId"]?.toString() ?? '',
+                                          'name': item["name"]?.toString() ?? '',
+                                          'imageUrl': item["imageUrl"]?.toString() ?? '',
+                                        },
+                                        quantity: item["quantity"] ?? 1,
+                                      ))
+                                  .toList();
+                              
+                              // Save order to Firestore
+                              final breeds = await saveOrderToFirestore(
+                                userIdentifier!,
+                                carts,
+                                isPaid: true,
+                              );
+                              
+                              // Clear cart
+                              context.read<CartBloc>().add(ClearCart(userIdentifier!));
+                              
+                              // Show success and navigate to order success
+                              if (mounted) {
+                                NotificationHelper.showSuccess(
+                                  context,
+                                  'Thanh toán thành công!',
+                                  'Đơn hàng đã được thanh toán qua VNPay.',
+                                );
+                                
+                                // Navigate to order success with suggestions
+                                if (breeds.isNotEmpty) {
+                                  onOrderSuccessWithBreeds(breeds);
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const OrderSuccess(suggestions: []),
+                                    ),
+                                  );
+                                }
+                              }
+                            } else {
+                              print('❌ Payment failed for order: $orderId');
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                }
+              }
+            } else if (vnpayState is VnpayError) {
+              NotificationHelper.showError(
+                context,
+                'Lỗi thanh toán VNPay',
+                vnpayState.message,
+              );
+            }
+          },
+          child: BlocBuilder<CartBloc, CartState>(
           builder: (context, state) {
             if (state is CartLoading) {
               return const Center(child: CircularProgressIndicator());
@@ -1065,8 +1230,12 @@ class _CartScreenState extends State<CartScreen> {
                                   value: paymentMethod,
                                   items: const [
                                     DropdownMenuItem(
-                                      value: 'paypal',
-                                      child: Text('Thanh toán qua PayPal'),
+                                      value: 'stripe',
+                                      child: Text('Thanh toán qua Stripe'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'vnpay',
+                                      child: Text('Thanh toán qua VNPay'),
                                     ),
                                     DropdownMenuItem(
                                       value: 'cod',
@@ -1255,11 +1424,20 @@ class _CartScreenState extends State<CartScreen> {
                                   return;
                                 }
 
-                                if (paymentMethod == 'paypal') {
+                                // Xử lý theo payment method
+                                if (paymentMethod == 'stripe') {
                                   DialogHelper.hideLoadingDialog(context);
-                                  print("Starting PayPal payment...");
+                                  print("Starting Stripe payment...");
                                   paymentInit(totalPrice, "vnd",
                                       currentUserIdentifier, carts);
+                                } else if (paymentMethod == 'vnpay') {
+                                  DialogHelper.hideLoadingDialog(context);
+                                  print("Starting VNPay payment...");
+                                  vnpayPaymentInit(
+                                    totalPrice,
+                                    currentUserIdentifier,
+                                    carts,
+                                  );
                                 } else {
                                   print(
                                       "🛒 COD PAYMENT: Starting COD payment process...");
@@ -1338,6 +1516,7 @@ class _CartScreenState extends State<CartScreen> {
               return const Center(child: Text("Unexpected error occurred"));
             }
           },
+          ),
         ),
       ),
     );
