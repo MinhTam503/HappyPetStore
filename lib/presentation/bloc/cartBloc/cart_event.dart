@@ -24,3 +24,9 @@ class ClearCart extends CartEvent {
   final String email;
   ClearCart(this.email);
 }
+
+class UpdateCartSelection extends CartEvent {
+  final String email;
+  final List<String> selectedIds;
+  UpdateCartSelection(this.email, this.selectedIds);
+}

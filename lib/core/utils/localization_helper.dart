@@ -4,6 +4,8 @@ class LocalizationHelper {
   static String getLocalizedText(BuildContext context, String key,
       {String? fallback}) {
     switch (key) {
+       case 'total':
+        return fallback ?? 'Tổng tiền';
       // Auth messages with Vietnamese fallbacks
       case 'verifyEmail':
         return fallback ?? 'Xác nhận Email';

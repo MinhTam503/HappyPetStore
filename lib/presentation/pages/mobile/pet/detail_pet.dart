@@ -175,12 +175,16 @@ class _DetailPetState extends State<DetailPet> {
         'breed': data['breed'] ?? '',
         'age': data['age'] ?? '',
         'weight': data['weight'] ?? '',
-        'gender': data['sex'] ?? data['color'] ?? '',
+        'gender': data['sex'] ?? data['gender'] ?? '',
+        'color': data['color'] ?? '',
         'description':
             data['about'] ?? data['breed'] ?? 'Sản phẩm gợi ý từ hệ thống',
         'category': data['category'] ?? 'Pet',
         'quantity': 1,
         'addedAt': DateTime.now().millisecondsSinceEpoch,
+        // also provide consistent fields used elsewhere
+        'createdAtMillis': DateTime.now().millisecondsSinceEpoch,
+        'createdAt': DateTime.now().toIso8601String(),
       };
 
       // Thêm vào giỏ hàng sử dụng BLoC

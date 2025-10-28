@@ -76,6 +76,7 @@ dependencies:
   path_provider: ^2.1.4
   share_plus: ^7.2.2
   webview_flutter: ^4.4.2
+  flutter_launcher_icons: ^0.14.4
   # vnpay_flutter: ^2.0.0  # Removed - có vấn đề AndroidX compatibility
 
 
@@ -147,3 +148,8 @@ flutter_native_splash:
     color: "#08A045"
     color_dark: "#08A045"
     image: assets/images/splash_screen_mobile.png
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/splash_screen_mobile.png"

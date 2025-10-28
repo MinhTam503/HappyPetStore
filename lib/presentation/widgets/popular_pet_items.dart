@@ -243,11 +243,20 @@ class _PetItemsAllState extends State<PopularPetItems> {
                                 );
                                 return;
                               }
+                              final now = DateTime.now();
                               context.read<CartBloc>().add(AddToCart(userIdentifier, {
                                     'productId': widget.pet['id'],
                                     'name': name,
                                     'imageUrl': imageUrl,
                                     'price': widget.pet['price'],
+                                    // meta for cart display
+                                    'breed': widget.pet['breed'] ?? '',
+                                    'gender': widget.pet['sex'] ?? widget.pet['gender'] ?? '',
+                                    'color': widget.pet['color'] ?? '',
+                                    'quantity': 1,
+                                    // timestamps
+                                    'createdAtMillis': now.millisecondsSinceEpoch,
+                                    'createdAt': now.toIso8601String(),
                                   }));
                             },
                             listenCart: (ctx, state) {

@@ -1,116 +1,220 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
+import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
-import 'package:pet_shop/core/services/user_manager.dart';
-
-import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:provider/provider.dart';
-
 import '../../data/models/cart_model.dart';
 
 class CartItem extends StatelessWidget {
   final CartModel cart;
-
-  const CartItem({super.key, required this.cart});
+  final bool showRemoveButton;
+  const CartItem({super.key, required this.cart, this.showRemoveButton = true});
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = (cart.grocery["imageUrl"] ?? '').toString();
+    final name = (cart.grocery['name'] ?? '').toString();
+    final priceText = CurrencyHelper.formatVND(cart.grocery['price']);
     return Container(
-      margin: const EdgeInsets.only(bottom: 13, left: 10, right: 10),
-      child: Stack(
-        children: [
-          Row(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Material(
+        color: Colors.white,
+        elevation: 1,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              Container(
-                width: 85,
-                height: 85,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  image: DecorationImage(
-                    fit: BoxFit.cover,
-                    image: NetworkImage(cart.grocery["imageUrl"]),
+              // Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  color: Colors.grey.shade200,
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(imageUrl, fit: BoxFit.cover)
+                      : const Icon(Icons.pets, color: Colors.black45),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Info
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _MetaRow(cart: cart),
+                            const SizedBox(height: 8),
+                            Text(
+                              priceText,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                        // Remove button
+                        if (showRemoveButton) _RemoveButton(cart: cart),
+                    ],
                   ),
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(left: 30),
-                    child: Text(
-                      cart.grocery['name'],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(top: 5),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(left: 30),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Price: ",
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black),
-                              ),
-                              Text(
-                                CurrencyHelper.formatVND(cart.grocery['price']),
-                                style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                ],
-              )
             ],
           ),
-          Positioned(
-              right: 10,
-              bottom: 40,
-              child: GestureDetector(
-                onTap: () async {
-                  UserManager userManager = UserManager();
-                  String? userIdentifier =
-                      await userManager.getUserIdentifier();
-                  if (userIdentifier == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Please login to continue")),
-                    );
-                    return;
-                  }
-                  context.read<CartBloc>().add(RemoveFromCart(
-                      userIdentifier, cart.grocery['productId']));
-                },
-                child: const Icon(
-                  Icons.cancel_rounded,
-                  size: 32,
-                  color: Colors.red,
-                ),
-              ))
-        ],
+        ),
       ),
     );
   }
 }
+
+class _MetaRow extends StatefulWidget {
+  final CartModel cart;
+  const _MetaRow({required this.cart});
+
+  @override
+  State<_MetaRow> createState() => _MetaRowState();
+}
+
+class _MetaRowState extends State<_MetaRow> {
+  String? _breed;
+  String? _color;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    // Prefer data from cart item if available
+    String? breed = widget.cart.grocery['breed']?.toString();
+    String? gender =
+        (widget.cart.grocery['gender'] ?? widget.cart.grocery['sex'])
+            ?.toString();
+    String? color = widget.cart.grocery['color']?.toString();
+
+    if ((breed == null || breed.isEmpty) ||
+        (gender == null || gender.isEmpty) ||
+        (color == null || color.isEmpty)) {
+      final productId = widget.cart.grocery['productId']?.toString();
+      if (productId != null && productId.isNotEmpty) {
+        try {
+          final doc = await FirebaseFirestore.instance
+              .collection('Pets')
+              .doc(productId)
+              .get();
+          if (doc.exists) {
+            final data = doc.data();
+            breed =
+                breed?.isNotEmpty == true ? breed : data?['breed']?.toString();
+            final g = data?['sex'] ?? data?['gender'];
+            gender = gender?.isNotEmpty == true ? gender : g?.toString();
+            color =
+                color?.isNotEmpty == true ? color : data?['color']?.toString();
+          }
+        } catch (_) {
+          // ignore fetch error silently
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _breed = breed;
+
+        _color = color;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = [
+      _breed ?? widget.cart.grocery['breed']?.toString(),
+      _color ?? widget.cart.grocery['color']?.toString(),
+    ]
+        .where((e) => e != null && e.toString().isNotEmpty)
+        .map((e) => e!)
+        .toList();
+
+    if (parts.isEmpty) {
+      // Show nothing to keep UI clean; could show a small placeholder if wanted
+      return const SizedBox.shrink();
+    }
+
+    return Text(
+      parts.join(' • '),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+    );
+  }
+}
+
+class _RemoveButton extends StatelessWidget {
+  final CartModel cart;
+  const _RemoveButton({required this.cart});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () async {
+        final userManager = UserManager();
+        final userIdentifier = await userManager.getUserIdentifier();
+        if (userIdentifier == null) {
+          NotificationHelper.showWarning(
+            context,
+            LocalizationHelper.getLocalizedText(context, 'notificationTitle'),
+            LocalizationHelper.getLocalizedText(
+                context, 'pleaseLoginToContinue'),
+          );
+          return;
+        }
+        context
+            .read<CartBloc>()
+            .add(RemoveFromCart(userIdentifier, cart.grocery['productId']));
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Icon(Icons.close_rounded, size: 18, color: Colors.red),
+      ),
+    );
+  }
+}
+
+// Note: Navigation to detail is handled by parent list item. This widget is display-only.

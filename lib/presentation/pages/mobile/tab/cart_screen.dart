@@ -1,25 +1,19 @@
-import 'dart:convert';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
-import 'package:http/http.dart' as http;
-import 'package:pet_shop/auth/payment/keys.dart';
-import 'package:pet_shop/auth/stripe_helper.dart';
+// Stripe payments moved to CheckoutScreen
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
-import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/orderSuccess.dart';
+import 'package:pet_shop/presentation/pages/mobile/payment/checkout_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
-// VNPay package không hoạt động, quay lại dùng custom implementation
-// import '../../../../services/vnpay_service_simple.dart';
-import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
+// Address selection is handled in CheckoutScreen
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
@@ -37,6 +31,7 @@ import '../../../bloc/vnpay/vnpay_event.dart';
 import '../../../bloc/vnpay/vnpay_state.dart';
 
 import '../pet/detail_pet.dart';
+import 'package:pet_shop/core/config/vnpay_config.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -49,13 +44,16 @@ class _CartScreenState extends State<CartScreen> {
   Map<String, dynamic>? intentPaymentData;
   final UserManager userManager = UserManager();
   String? userIdentifier;
+  // Multi-select state for checkout
+  final Set<String> _selectedProductIds = <String>{};
+  bool _selectAll = true;
 
   // Thêm biến cho phương thức thanh toán và thông tin giao hàng
   String paymentMethod = 'cod'; // Mặc định là COD
   List<Map<String, dynamic>> deliveryInfos = [];
   Map<String, dynamic>? selectedDeliveryInfo;
   Map<String, dynamic>? userInfo;
-  
+
   // NO SHIPPING FEE - Mock only
   final double shippingFee = 0.0; // Always free
 
@@ -71,6 +69,24 @@ class _CartScreenState extends State<CartScreen> {
       context.read<CartBloc>().add(LoadCart(userIdentifier!));
       fetchAddresses();
       fetchUserInfo();
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPetById(String petId) async {
+    try {
+      final docSnapshot =
+          await FirebaseFirestore.instance.collection('Pets').doc(petId).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (data != null) data['id'] = docSnapshot.id;
+        return data;
+      } else {
+        print('Không tìm thấy thú cưng với ID: $petId');
+        return null;
+      }
+    } catch (e) {
+      print('Lỗi khi lấy dữ liệu thú cưng: $e');
+      return null;
     }
   }
 
@@ -373,7 +389,8 @@ class _CartScreenState extends State<CartScreen> {
                         'phone': phone.trim(),
                         'address': newAddress,
                         'isDefault': deliveryInfos.isEmpty,
-                        'latitude': null, // Will be set when user chooses location on map
+                        'latitude':
+                            null, // Will be set when user chooses location on map
                         'longitude': null,
                       };
 
@@ -400,7 +417,8 @@ class _CartScreenState extends State<CartScreen> {
                       NotificationHelper.showWarning(
                         context,
                         'Thông tin chưa đầy đủ',
-                        LocalizationHelper.getLocalizedText(context, 'pleaseEnterShippingInfo'),
+                        LocalizationHelper.getLocalizedText(
+                            context, 'pleaseEnterShippingInfo'),
                       );
                     }
                   },
@@ -414,47 +432,34 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Future<void> _navigateToAddressList() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddressListPage(
-          selectedAddress: selectedDeliveryInfo,
-          onAddressSelected: (address) {
-            setState(() {
-              selectedDeliveryInfo = address;
-            });
-            
-            // Calculate shipping fee when address changes
-            // Address selection listener - no longer needs to calculate shipping fee
-          },
-        ),
-      ),
-    );
-    
-    // Refresh addresses after returning from address list
-    if (result != null) {
-      fetchAddresses();
-      // No need to calculate shipping fee - always free
-    }
-  }  double _calculateTotal(List<CartModel> carts) {
+  double _calculateTotal(List<CartModel> carts) {
     double total = 0.0;
     print("🧮 Calculating total for ${carts.length} items:");
-    
+
     for (var item in carts) {
       final priceStr = item.grocery["price"].toString();
       final price = double.tryParse(priceStr) ?? 0.0;
       final quantity = item.quantity;
       final itemTotal = quantity * price;
-      
-      print("  - ${item.grocery["name"]}: $priceStr (parsed: $price) x $quantity = ${CurrencyHelper.formatVND(itemTotal)}");
+
+      print(
+          "  - ${item.grocery["name"]}: $priceStr (parsed: $price) x $quantity = ${CurrencyHelper.formatVND(itemTotal)}");
       total += itemTotal;
     }
-    
+
     print("🧮 Subtotal: ${CurrencyHelper.formatVND(total)}");
     print("🚚 Shipping fee: ${CurrencyHelper.formatVND(shippingFee)}");
-    print("🧮 Total with shipping: ${CurrencyHelper.formatVND(total + shippingFee)}");
+    print(
+        "🧮 Total with shipping: ${CurrencyHelper.formatVND(total + shippingFee)}");
     return total;
+  }
+
+  double _calculateSelectedTotal(List<CartModel> carts) {
+    final selected = carts.where((c) {
+      final id = c.grocery['productId']?.toString() ?? '';
+      return _selectedProductIds.contains(id);
+    }).toList();
+    return _calculateTotal(selected);
   }
 
   Future<List<String>> saveOrderToFirestore(
@@ -467,8 +472,9 @@ class _CartScreenState extends State<CartScreen> {
     final grandTotal = totalAmount + shippingFee;
     print("💰 Subtotal: ${CurrencyHelper.formatVND(totalAmount)}");
     print("🚚 Shipping fee: ${CurrencyHelper.formatVND(shippingFee)}");
-    print("💰 Grand total to save to Firestore: ${CurrencyHelper.formatVND(grandTotal)}");
-    
+    print(
+        "💰 Grand total to save to Firestore: ${CurrencyHelper.formatVND(grandTotal)}");
+
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
     // Lấy đầy đủ thông tin thú cưng từ Firestore
@@ -496,21 +502,21 @@ class _CartScreenState extends State<CartScreen> {
         // Đảm bảo lấy đúng field price
         final petRawData = petDoc.data()!;
         double price = 0.0;
-        
+
         if (petRawData.containsKey('price')) {
-          price = (petRawData['price'] is num) 
+          price = (petRawData['price'] is num)
               ? (petRawData['price'] as num).toDouble()
               : double.tryParse(petRawData['price'].toString()) ?? 0.0;
           print("🔍 Pet ${petDoc.id}: Using 'price' field = $price");
         } else if (petRawData.containsKey('weight')) {
-          price = (petRawData['weight'] is num) 
+          price = (petRawData['weight'] is num)
               ? (petRawData['weight'] as num).toDouble()
               : double.tryParse(petRawData['weight'].toString()) ?? 0.0;
           print("⚠️ Pet ${petDoc.id}: Using 'weight' field as price = $price");
         } else {
           print("❌ Pet ${petDoc.id}: No price or weight field found!");
         }
-        
+
         petData['price'] = price;
         petData['quantity'] = item.quantity;
         print("Saving pet data with breed: ${petData['breed']}");
@@ -531,17 +537,20 @@ class _CartScreenState extends State<CartScreen> {
     final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
 
     // Extract shipping information from selectedDeliveryInfo
-    final shippingAddress = selectedDeliveryInfo?['address'] ?? "Địa chỉ không xác định";
-    final shippingName = selectedDeliveryInfo?['name'] ?? userInfoForOrder?['displayName'] ?? "";
-    final shippingPhone = selectedDeliveryInfo?['phone'] ?? userInfoForOrder?['phone'] ?? "";
-    
+    final shippingAddress =
+        selectedDeliveryInfo?['address'] ?? "Địa chỉ không xác định";
+    final shippingName =
+        selectedDeliveryInfo?['name'] ?? userInfoForOrder?['displayName'] ?? "";
+    final shippingPhone =
+        selectedDeliveryInfo?['phone'] ?? userInfoForOrder?['phone'] ?? "";
+
     // Chuẩn bị customer info cho shipping (đồng bộ với ShippingService)
     final customerInfo = {
       'name': shippingName,
       'phone': shippingPhone.isNotEmpty ? shippingPhone : '0987654321',
       'email': userInfoForOrder?['email'] ?? currentUserEmail ?? userIdentifier,
     };
-    
+
     final orderData = {
       "orderId": orderRef.id,
       "userIdentifier": userIdentifier,
@@ -553,26 +562,26 @@ class _CartScreenState extends State<CartScreen> {
       "totalAmount": grandTotal, // Include shipping fee in total
       "subtotal": totalAmount, // Keep subtotal separate
       "shippingFee": shippingFee, // Store shipping fee separately
-      "statusPayment": isPaid
-          ? _getPaymentStatus()
-          : "COD",
+      "statusPayment": isPaid ? _getPaymentStatus() : "COD",
       "statusOrder": "Pending",
       "timestamp": FieldValue.serverTimestamp(),
       "paymentMethod": paymentMethod,
       // Customer và delivery info - đồng bộ với ShippingService format
       "customerInfo": customerInfo,
-      "deliveryInfo": selectedDeliveryInfo != null ? {
-        "name": shippingName,
-        "phone": shippingPhone,
-        "address": shippingAddress,
-        "isDefault": selectedDeliveryInfo!['isDefault'] ?? false,
-        "latitude": selectedDeliveryInfo!['latitude'],
-        "longitude": selectedDeliveryInfo!['longitude'],
-      } : {
-        "name": shippingName,
-        "phone": shippingPhone,
-        "address": shippingAddress,
-      },
+      "deliveryInfo": selectedDeliveryInfo != null
+          ? {
+              "name": shippingName,
+              "phone": shippingPhone,
+              "address": shippingAddress,
+              "isDefault": selectedDeliveryInfo!['isDefault'] ?? false,
+              "latitude": selectedDeliveryInfo!['latitude'],
+              "longitude": selectedDeliveryInfo!['longitude'],
+            }
+          : {
+              "name": shippingName,
+              "phone": shippingPhone,
+              "address": shippingAddress,
+            },
       "items": items,
     };
 
@@ -593,7 +602,8 @@ class _CartScreenState extends State<CartScreen> {
     // This ensures proper workflow: Order → Admin Review → Create Shipment
     print('✅ Order created successfully: ${orderRef.id}');
     print('📋 Order status: Pending (waiting for admin to process)');
-    print('🚫 Shipment NOT created yet - will be created when admin changes status to Processing');
+    print(
+        '🚫 Shipment NOT created yet - will be created when admin changes status to Processing');
 
     // Gửi thông báo đơn hàng đã được đặt
     final orderUserId = orderData['userId']?.toString();
@@ -612,331 +622,238 @@ class _CartScreenState extends State<CartScreen> {
     return breeds.toSet().toList();
   }
 
-  Future<void> showPaymentSheet(
-      String userIdentifier, List<CartModel> cartItems) async {
-    try {
-      await Stripe.instance.presentPaymentSheet();
+  // Future<void> showPaymentSheet(
+  //     String userIdentifier, List<CartModel> cartItems) async {
+  //   try {
+  //     await Stripe.instance.presentPaymentSheet();
 
-      for (var item in cartItems) {
-        final docRef = FirebaseFirestore.instance
-            .collection('Pets')
-            .doc(item.grocery["id"]);
-        final docSnap = await docRef.get();
-        if (docSnap.exists) {
-          await docRef.update({
-            "status": "sold",
-            "isAvailable": false,
-          });
-        } else {
-          print("Pet with id ${item.grocery["id"]} not found in Firestore.");
-        }
-      }
+  //     for (var item in cartItems) {
+  //       final petId = item.grocery["productId"] ?? item.grocery["id"];
+  //       final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId);
+  //       final docSnap = await docRef.get();
+  //       if (docSnap.exists) {
+  //         await docRef.update({
+  //           "status": "sold",
+  //           "isAvailable": false,
+  //         });
+  //       } else {
+  //         print("Pet with id $petId not found in Firestore.");
+  //       }
+  //     }
 
-      // Save order and get breeds for Apriori analysis
-      final breeds =
-          await saveOrderToFirestore(userIdentifier, cartItems, isPaid: true);
-      context.read<CartBloc>().add(ClearCart(userIdentifier));
+  //     // Save order and get breeds for Apriori analysis
+  //     final breeds =
+  //         await saveOrderToFirestore(userIdentifier, cartItems, isPaid: true);
+  //     context.read<CartBloc>().add(ClearCart(userIdentifier));
 
-      if (!context.mounted) return;
+  //     if (!context.mounted) return;
 
-      // Show success notification
-      NotificationHelper.showSuccess(
-        context,
-        'Thanh toán thành công!',
-        'Đơn hàng của bạn đã được thanh toán và sẽ được giao sớm nhất.',
-      );
+  //     // Show success notification
+  //     NotificationHelper.showSuccess(
+  //       context,
+  //       'Thanh toán thành công!',
+  //       'Đơn hàng của bạn đã được thanh toán và sẽ được giao sớm nhất.',
+  //     );
 
-      // Use new multi-breed analysis with extracted breeds
-      if (breeds.isNotEmpty) {
-        print("🌱 Stripe payment: Using breeds for Apriori: $breeds");
-        onOrderSuccessWithBreeds(breeds);
-      } else {
-        print("⚠️ Stripe payment: No breeds found, using fallback");
-        onOrderSuccessWithSuggestions(cartItems);
-      }
+  //     // Use new multi-breed analysis with extracted breeds
+  //     if (breeds.isNotEmpty) {
+  //       print("🌱 Stripe payment: Using breeds for Apriori: $breeds");
+  //       onOrderSuccessWithBreeds(breeds);
+  //     } else {
+  //       print("⚠️ Stripe payment: No breeds found, using fallback");
+  //       onOrderSuccessWithSuggestions(cartItems);
+  //     }
 
-      setState(() {
-        intentPaymentData = null;
-      });
-    } on StripeException catch (e) {
-      NotificationHelper.showError(
-        context,
-        'Thanh toán thất bại',
-        e.error.message ?? 'Đã xảy ra lỗi trong quá trình thanh toán',
-      );
-    } catch (error) {
-      NotificationHelper.showError(
-        context,
-        'Lỗi thanh toán',
-        'Lỗi không mong muốn: ${error.toString()}',
-      );
-    }
-  }
+  //     setState(() {
+  //       intentPaymentData = null;
+  //     });
+  //   } on StripeException catch (e) {
+  //     NotificationHelper.showError(
+  //       context,
+  //       'Thanh toán thất bại',
+  //       e.error.message ?? 'Đã xảy ra lỗi trong quá trình thanh toán',
+  //     );
+  //   } catch (error) {
+  //     NotificationHelper.showError(
+  //       context,
+  //       'Lỗi thanh toán',
+  //       'Lỗi không mong muốn: ${error.toString()}',
+  //     );
+  //   }
+  // }
 
-  Future<Map<String, dynamic>?> makeIntentForPayment(amount, currency) async {
-    try {
-      // Debug: Check if keys are available (safe substring)
-      final pubKeyPreview = PublishableKey.length > 20
-          ? "${PublishableKey.substring(0, 20)}..."
-          : PublishableKey.isNotEmpty
-              ? "$PublishableKey (short)"
-              : "EMPTY!";
-      final secKeyPreview = SecretKey.length > 20
-          ? "${SecretKey.substring(0, 20)}..."
-          : SecretKey.isNotEmpty
-              ? "$SecretKey (short)"
-              : "EMPTY!";
+  // Future<Map<String, dynamic>?> makeIntentForPayment(amount, currency) async {
+  //   try {
+  //     // Debug: Check if keys are available (safe substring)
+  //     final pubKeyPreview = PublishableKey.length > 20
+  //         ? "${PublishableKey.substring(0, 20)}..."
+  //         : PublishableKey.isNotEmpty
+  //             ? "$PublishableKey (short)"
+  //             : "EMPTY!";
+  //     final secKeyPreview = SecretKey.length > 20
+  //         ? "${SecretKey.substring(0, 20)}..."
+  //         : SecretKey.isNotEmpty
+  //             ? "$SecretKey (short)"
+  //             : "EMPTY!";
 
-      print("🔐 PublishableKey: $pubKeyPreview");
-      print("🔐 SecretKey: $secKeyPreview");
+  //     print("🔐 PublishableKey: $pubKeyPreview");
+  //     print("🔐 SecretKey: $secKeyPreview");
 
-      if (SecretKey.isEmpty) {
-        print("❌ ERROR: SecretKey is empty!");
-        return null;
-      }
+  //     if (SecretKey.isEmpty) {
+  //       print("❌ ERROR: SecretKey is empty!");
+  //       return null;
+  //     }
 
-      Map<String, dynamic>? paymentInfo = {
-        "amount": (amount * 100).round().toString(),
-        "currency": currency,
-        "payment_method_types[]": "card",
-      };
+  //     Map<String, dynamic>? paymentInfo = {
+  //       "amount": (amount * 100).round().toString(),
+  //       "currency": currency,
+  //       "payment_method_types[]": "card",
+  //     };
 
-      var response = await http.post(
-        Uri.parse("https://api.stripe.com/v1/payment_intents"),
-        body: paymentInfo,
-        headers: {
-          "Authorization": "Bearer $SecretKey",
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-      );
+  //     var response = await http.post(
+  //       Uri.parse("https://api.stripe.com/v1/payment_intents"),
+  //       body: paymentInfo,
+  //       headers: {
+  //         "Authorization": "Bearer $SecretKey",
+  //         "Content-Type": "application/x-www-form-urlencoded"
+  //       },
+  //     );
 
-      if (response.statusCode != 200) {
-        print(" Stripe API Error: ${response.body}");
-        return null;
-      }
+  //     if (response.statusCode != 200) {
+  //       print(" Stripe API Error: ${response.body}");
+  //       return null;
+  //     }
 
-      print(" Payment intent created successfully");
-      return jsonDecode(response.body);
-    } catch (error) {
-      print(" Stripe Error: $error");
-      return null;
-    }
-  }
+  //     print(" Payment intent created successfully");
+  //     return jsonDecode(response.body);
+  //   } catch (error) {
+  //     print(" Stripe Error: $error");
+  //     return null;
+  //   }
+  // }
 
-  void paymentInit(double amount, String currency, String userIdentifier,
-      List<CartModel> carts) async {
-    try {
-      // Include shipping fee in payment amount
-      final grandTotal = amount + shippingFee;
-      
-      // Check if Stripe is ready for use
-      final canUse = await StripeHelper.canUseStripe();
-      if (!canUse) {
-        // Show error and ask user what to do
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Lỗi thanh toán Stripe'),
-            content: const Text(
-              'Không thể khởi tạo thanh toán Stripe. Bạn có muốn chuyển sang thanh toán khi nhận hàng không?'
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Hủy'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  
-                  try {
-                    final breeds = await saveOrderToFirestore(userIdentifier, carts, isPaid: false);
-                    context.read<CartBloc>().add(ClearCart(userIdentifier));
-                    
-                    if (!context.mounted) return;
-                    
-                    NotificationHelper.showSuccess(
-                      context,
-                      'Đặt hàng thành công!',
-                      'Đơn hàng sẽ được thanh toán khi nhận hàng.',
-                    );
-                    
-                    if (breeds.isNotEmpty) {
-                      onOrderSuccessWithBreeds(breeds);
-                    } else {
-                      onOrderSuccessWithSuggestions(carts);
-                    }
-                  } catch (fallbackError) {
-                    NotificationHelper.showError(
-                      context,
-                      'Lỗi đặt hàng',
-                      'Không thể tạo đơn hàng: $fallbackError',
-                    );
-                  }
-                },
-                child: const Text('Chuyển COD'),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
+  // void paymentInit(double amount, String currency, String userIdentifier,
+  //     List<CartModel> carts) async {
+  //   try {
+  //     // Include shipping fee in payment amount
+  //     final grandTotal = amount + shippingFee;
 
-      // Convert VND to USD (approximate rate: 1 USD = 24,000 VND)
-      double amountInUSD = grandTotal;
-      print("💱 Payment conversion: Original amount = ${CurrencyHelper.formatVND(grandTotal)}");
-      
-      if (currency.toLowerCase() == 'vnd') {
-        amountInUSD = grandTotal / 24000; // Convert VND to USD
-        currency = 'usd';
-        print("💱 Converted to USD: \$${amountInUSD.toStringAsFixed(2)}");
-      } else {
-        print("💱 Currency is already: $currency");
-      }
+  //     // Check if Stripe is ready for use
+  //     final canUse = await StripeHelper.canUseStripe();
+  //     if (!canUse) {
+  //       // Show error and ask user what to do
+  //       showDialog(
+  //         context: context,
+  //         builder: (context) => AlertDialog(
+  //           title: const Text('Lỗi thanh toán Stripe'),
+  //           content: const Text(
+  //               'Không thể khởi tạo thanh toán Stripe. Bạn có muốn chuyển sang thanh toán khi nhận hàng không?'),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () => Navigator.pop(context),
+  //               child: const Text('Hủy'),
+  //             ),
+  //             TextButton(
+  //               onPressed: () async {
+  //                 Navigator.pop(context);
 
-      // Check Stripe limits (max $999,999 USD per transaction)
-      if (amountInUSD > 999999) {
-        NotificationHelper.showWarning(
-          context,
-          'Số tiền vượt quá giới hạn',
-          'Số tiền quá lớn cho thanh toán Stripe (tối đa \$999,999 USD ≈ ${CurrencyHelper.formatVND(999999 * 24000)}). Vui lòng chọn thanh toán khi nhận hàng.',
-        );
-        return;
-      }
+  //                 try {
+  //                   final breeds = await saveOrderToFirestore(
+  //                       userIdentifier, carts,
+  //                       isPaid: false);
+  //                   context.read<CartBloc>().add(ClearCart(userIdentifier));
 
-      // Check minimum amount (Stripe minimum is $0.50 USD)
-      if (amountInUSD < 0.5) {
-        NotificationHelper.showWarning(
-          context,
-          'Số tiền quá nhỏ',
-          'Số tiền quá nhỏ cho thanh toán Stripe (tối thiểu \$0.50 USD)',
-        );
-        return;
-      }
+  //                   if (!context.mounted) return;
 
-      intentPaymentData = await makeIntentForPayment(amountInUSD, currency);
-      if (intentPaymentData == null) {
-        NotificationHelper.showError(
-          context,
-          'Lỗi thanh toán',
-          'Không thể tạo giao dịch thanh toán. Vui lòng thử lại.',
-        );
-        return;
-      }
+  //                   NotificationHelper.showSuccess(
+  //                     context,
+  //                     'Đặt hàng thành công!',
+  //                     'Đơn hàng sẽ được thanh toán khi nhận hàng.',
+  //                   );
 
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          allowsDelayedPaymentMethods: true,
-          paymentIntentClientSecret: intentPaymentData?["client_secret"],
-          style: ThemeMode.light,
-          merchantDisplayName: "Pet Shop",
-        ),
-      );
+  //                   if (breeds.isNotEmpty) {
+  //                     onOrderSuccessWithBreeds(breeds);
+  //                   } else {
+  //                     onOrderSuccessWithSuggestions(carts);
+  //                   }
+  //                 } catch (fallbackError) {
+  //                   NotificationHelper.showError(
+  //                     context,
+  //                     'Lỗi đặt hàng',
+  //                     'Không thể tạo đơn hàng: $fallbackError',
+  //                   );
+  //                 }
+  //               },
+  //               child: const Text('Chuyển COD'),
+  //             ),
+  //           ],
+  //         ),
+  //       );
+  //       return;
+  //     }
 
-      showPaymentSheet(userIdentifier, carts);
-    } catch (e, s) {
-      print("Payment Init Error: $e\n$s");
-      NotificationHelper.showError(
-        context,
-        'Lỗi thanh toán Stripe',
-        'Đã có lỗi xảy ra: $e',
-      );
-    }
-  }
+  //     // Convert VND to USD (approximate rate: 1 USD = 24,000 VND)
+  //     double amountInUSD = grandTotal;
+  //     print(
+  //         "💱 Payment conversion: Original amount = ${CurrencyHelper.formatVND(grandTotal)}");
 
-  Future<void> vnpayPaymentInit(
-    double amount,
-    String userIdentifier,
-    List<CartModel> carts,
-  ) async {
-    try {
-      // Include shipping fee in payment amount
-      final grandTotal = amount + shippingFee;
-      print("💰 VNPay Payment: Grand total = ${CurrencyHelper.formatVND(grandTotal)}");
+  //     if (currency.toLowerCase() == 'vnd') {
+  //       amountInUSD = grandTotal / 24000; // Convert VND to USD
+  //       currency = 'usd';
+  //       print("💱 Converted to USD: \$${amountInUSD.toStringAsFixed(2)}");
+  //     } else {
+  //       print("💱 Currency is already: $currency");
+  //     }
 
-      // Generate order ID (timestamp based)
-      final orderId = 'ORDER_${DateTime.now().millisecondsSinceEpoch}';
-      
-      // TODO: Replace with your actual return URL
-      // This should be a deep link or web URL that redirects back to your app
-      final returnUrl = 'happypetstore://vnpay-return'; 
-      
-      final orderInfo = 'Thanh toán đơn hàng HappyPetStore $orderId';
+  //     // Check Stripe limits (max $999,999 USD per transaction)
+  //     if (amountInUSD > 999999) {
+  //       NotificationHelper.showWarning(
+  //         context,
+  //         'Số tiền vượt quá giới hạn',
+  //         'Số tiền quá lớn cho thanh toán Stripe (tối đa \$999,999 USD ≈ ${CurrencyHelper.formatVND(999999 * 24000)}). Vui lòng chọn thanh toán khi nhận hàng.',
+  //       );
+  //       return;
+  //     }
 
-      // Trigger VNPay BLoC to create payment URL
-      context.read<VnpayBloc>().add(
-        CreateVnpayPayment(
-          orderId: orderId,
-          amount: grandTotal,
-          orderInfo: orderInfo,
-          returnUrl: returnUrl,
-        ),
-      );
+  //     // Check minimum amount (Stripe minimum is $0.50 USD)
+  //     if (amountInUSD < 0.5) {
+  //       NotificationHelper.showWarning(
+  //         context,
+  //         'Số tiền quá nhỏ',
+  //         'Số tiền quá nhỏ cho thanh toán Stripe (tối thiểu \$0.50 USD)',
+  //       );
+  //       return;
+  //     }
 
-      print('🔄 VNPay payment initiated for order: $orderId');
-    } catch (e) {
-      print('❌ Error initiating VNPay payment: $e');
-      NotificationHelper.showError(
-        context,
-        'Lỗi thanh toán VNPay',
-        'Đã có lỗi xảy ra: $e',
-      );
-    }
-  }
+  //     intentPaymentData = await makeIntentForPayment(amountInUSD, currency);
+  //     if (intentPaymentData == null) {
+  //       NotificationHelper.showError(
+  //         context,
+  //         'Lỗi thanh toán',
+  //         'Không thể tạo giao dịch thanh toán. Vui lòng thử lại.',
+  //       );
+  //       return;
+  //     }
 
-  Future<List<Map<String, dynamic>>> getSuggestionsForCart(
-      List<CartModel> carts) async {
-    if (carts.isEmpty) {
-      print("Cart is empty, no suggestions needed");
-      return [];
-    }
+  //     await Stripe.instance.initPaymentSheet(
+  //       paymentSheetParameters: SetupPaymentSheetParameters(
+  //         allowsDelayedPaymentMethods: true,
+  //         paymentIntentClientSecret: intentPaymentData?["client_secret"],
+  //         style: ThemeMode.light,
+  //         merchantDisplayName: "Pet Shop",
+  //       ),
+  //     );
 
-    try {
-      final firstPet = carts.first.grocery;
-      print("First pet data: ${firstPet.toString()}");
-
-      // Lấy thông tin breed từ Firestore
-      final petDoc = await FirebaseFirestore.instance
-          .collection('Pets')
-          .doc(firstPet["productId"])
-          .get();
-
-      if (petDoc.exists) {
-        final breed = petDoc.data()?['breed'];
-        print("Getting Apriori suggestions for breed from Firestore: $breed");
-        if (breed != null) {
-          // Use Apriori BLoC instead of FP-Growth
-          context.read<AprioriBloc>().add(GetSuggestionsFromSingleBreed(breed));
-
-          // For now, return empty list - suggestions will be handled by BLoC
-          // This method should be refactored to use BLoC properly
-          print("Triggered Apriori BLoC analysis for breed: $breed");
-          return [];
-        }
-      }
-      print(
-          "No breed information found for pet with id: ${firstPet["productId"]}");
-    } catch (e) {
-      print("Error getting suggestions: $e");
-    }
-    return [];
-  }
-
-  Future<Map<String, dynamic>?> getPetById(String petId) async {
-    try {
-      final docSnapshot =
-          await FirebaseFirestore.instance.collection('Pets').doc(petId).get();
-      if (docSnapshot.exists) {
-        return docSnapshot.data();
-      } else {
-        print('Không tìm thấy thú cưng với ID: $petId');
-        return null;
-      }
-    } catch (e) {
-      print('Lỗi khi lấy dữ liệu thú cưng: $e');
-      return null;
-    }
-  }
+  //     showPaymentSheet(userIdentifier, carts);
+  //   } catch (e, s) {
+  //     print("Payment Init Error: $e\n$s");
+  //     NotificationHelper.showError(
+  //       context,
+  //       'Lỗi thanh toán Stripe',
+  //       'Đã có lỗi xảy ra: $e',
+  //     );
+  //   }
+  // }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -957,7 +874,7 @@ class _CartScreenState extends State<CartScreen> {
         centerTitle: true,
         title: Text(
           LocalizationHelper.getLocalizedText(context, 'myCart'),
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
           ),
@@ -971,14 +888,15 @@ class _CartScreenState extends State<CartScreen> {
               final paymentUrl = vnpayState.payment.paymentUrl;
               if (paymentUrl != null) {
                 print('🌐 Opening VNPay payment in WebView: $paymentUrl');
-                
+
                 // Open WebView
                 final result = await Navigator.push<Map<String, String>>(
                   context,
                   MaterialPageRoute(
                     builder: (context) => VnpayWebViewScreen(
                       paymentUrl: paymentUrl,
-                      returnUrl: 'happypetstore://vnpay-return',
+                      // Must match the returnUrl sent to VNPay
+                      returnUrl: VnpayConfig.returnUrl,
                       onPaymentCallback: (params) {
                         print('💰 Payment callback received: $params');
                       },
@@ -989,12 +907,12 @@ class _CartScreenState extends State<CartScreen> {
                 // Handle result from WebView
                 if (result != null && mounted) {
                   print('📦 WebView returned params: $result');
-                  
+
                   // Verify payment with BLoC
                   context.read<VnpayBloc>().add(
-                    VerifyVnpayCallback(result),
-                  );
-                  
+                        VerifyVnpayCallback(result),
+                      );
+
                   // Navigate to result screen
                   if (mounted) {
                     Navigator.push(
@@ -1006,31 +924,40 @@ class _CartScreenState extends State<CartScreen> {
                             if (isSuccess && userIdentifier != null) {
                               // Payment successful - save order
                               print('✅ Payment successful for order: $orderId');
-                              
-                              final carts = (context.read<CartBloc>().state as CartLoaded)
+
+                              final carts = (context.read<CartBloc>().state
+                                      as CartLoaded)
                                   .items
                                   .map((item) => CartModel(
                                         grocery: {
                                           ...item,
-                                          'price': item["price"]?.toString() ?? '0',
-                                          'productId': item["productId"]?.toString() ?? '',
-                                          'name': item["name"]?.toString() ?? '',
-                                          'imageUrl': item["imageUrl"]?.toString() ?? '',
+                                          'price':
+                                              item["price"]?.toString() ?? '0',
+                                          'productId':
+                                              item["productId"]?.toString() ??
+                                                  '',
+                                          'name':
+                                              item["name"]?.toString() ?? '',
+                                          'imageUrl':
+                                              item["imageUrl"]?.toString() ??
+                                                  '',
                                         },
                                         quantity: item["quantity"] ?? 1,
                                       ))
                                   .toList();
-                              
+
                               // Save order to Firestore
                               final breeds = await saveOrderToFirestore(
                                 userIdentifier!,
                                 carts,
                                 isPaid: true,
                               );
-                              
+
                               // Clear cart
-                              context.read<CartBloc>().add(ClearCart(userIdentifier!));
-                              
+                              context
+                                  .read<CartBloc>()
+                                  .add(ClearCart(userIdentifier!));
+
                               // Show success and navigate to order success
                               if (mounted) {
                                 NotificationHelper.showSuccess(
@@ -1038,7 +965,7 @@ class _CartScreenState extends State<CartScreen> {
                                   'Thanh toán thành công!',
                                   'Đơn hàng đã được thanh toán qua VNPay.',
                                 );
-                                
+
                                 // Navigate to order success with suggestions
                                 if (breeds.isNotEmpty) {
                                   onOrderSuccessWithBreeds(breeds);
@@ -1046,7 +973,8 @@ class _CartScreenState extends State<CartScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const OrderSuccess(suggestions: []),
+                                      builder: (_) =>
+                                          const OrderSuccess(suggestions: []),
                                     ),
                                   );
                                 }
@@ -1070,452 +998,265 @@ class _CartScreenState extends State<CartScreen> {
             }
           },
           child: BlocBuilder<CartBloc, CartState>(
-          builder: (context, state) {
-            if (state is CartLoading) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (state is CartLoaded) {
-              final List<Map<String, dynamic>> cartItems = state.items;
-              if (cartItems.isEmpty) {
-                return const Center(child: Text("No items in your cart."));
-              }
-              List<CartModel> carts = cartItems.map((item) {
-                return CartModel(
-                  grocery: {
-                    ...item,
-                    'price':
-                        item["price"]?.toString() ?? '0', // Convert to String
-                    'productId': item["productId"]?.toString() ?? '',
-                    'name': item["name"]?.toString() ?? '',
-                    'imageUrl': item["imageUrl"]?.toString() ?? '',
-                  },
-                  quantity: item["quantity"] ?? 1,
-                );
-              }).toList();
+            builder: (context, state) {
+              if (state is CartLoading) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (state is CartLoaded) {
+                final List<Map<String, dynamic>> cartItems = state.items;
+                if (cartItems.isEmpty) {
+                  return const Center(child: Text("No items in your cart."));
+                }
+                List<CartModel> carts = cartItems.map((item) {
+                  return CartModel(
+                    grocery: {
+                      ...item,
+                      'price':
+                          item["price"]?.toString() ?? '0', // Convert to String
+                      'productId': item["productId"]?.toString() ?? '',
+                      'name': item["name"]?.toString() ?? '',
+                      'imageUrl': item["imageUrl"]?.toString() ?? '',
+                    },
+                    quantity: item["quantity"] ?? 1,
+                  );
+                }).toList();
 
-              // No shipping fee calculation needed - always free
-              
-              final double totalPrice = _calculateTotal(carts);
-              return Column(
-                children: [
-                  // Thông tin giao hàng - New Design
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                    child: Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _navigateToAddressList(),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: primaryColor,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Địa chỉ giao hàng',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: primaryColor,
+                // Sync local selection with persisted selection from state
+                final persistedSelected = state.selectedIds;
+                if (_selectedProductIds.length != persistedSelected.length) {
+                  _selectedProductIds
+                    ..clear()
+                    ..addAll(persistedSelected);
+                }
+
+                final selectedCount = _selectedProductIds.length;
+                final selectedTotal = _calculateSelectedTotal(carts);
+
+                return Column(
+                  children: [
+                    // Selection toolbar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: selectedCount == carts.length &&
+                                carts.isNotEmpty,
+                            onChanged: (val) {
+                              setState(() {
+                                _selectAll = val ?? false;
+                                _selectedProductIds.clear();
+                                if (_selectAll) {
+                                  for (final c in carts) {
+                                    final id =
+                                        c.grocery['productId']?.toString() ??
+                                            '';
+                                    if (id.isNotEmpty)
+                                      _selectedProductIds.add(id);
+                                  }
+                                }
+                              });
+                              if (userIdentifier != null) {
+                                context.read<CartBloc>().add(
+                                    UpdateCartSelection(userIdentifier!,
+                                        _selectedProductIds.toList()));
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              LocalizationHelper.getLocalizedText(
+                                  context, 'Chọn tất cả'),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          Chip(
+                            backgroundColor: Colors.black12,
+                            label: Text(
+                              '${LocalizationHelper.getLocalizedText(context, 'Đã chọn')}: $selectedCount',
+                              style: const TextStyle(color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Cart items list
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: carts.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final cart = carts[index];
+                          final id =
+                              cart.grocery['productId']?.toString() ?? '';
+                          final checked = _selectedProductIds.contains(id);
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Material(
+                              elevation: 1,
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () async {
+                                  final Map<String, dynamic>? pet =
+                                      await getPetById(id);
+                                  if (pet != null && mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            DetailPet(pet: pet),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    if (selectedDeliveryInfo != null) ...[
-                                      Text(
-                                        '${selectedDeliveryInfo!['name']} • ${selectedDeliveryInfo!['phone']}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
+                                    );
+                                  }
+                                },
+                                child: SizedBox(
+                                  height: 120,
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: Padding(
+                                          padding:
+                                              const EdgeInsets.only(left: 40),
+                                          child: CartItem(cart: cart),
                                         ),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        selectedDeliveryInfo!['address'] ?? '',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ] else ...[
-                                      const Text(
-                                        'Chưa có địa chỉ giao hàng',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.orange,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Nhấn để thêm địa chỉ',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
+                                      Positioned(
+                                        left: 8,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Center(
+                                          child: Checkbox(
+                                            value: checked,
+                                            onChanged: (val) {
+                                              setState(() {
+                                                if ((val ?? false) &&
+                                                    id.isNotEmpty) {
+                                                  _selectedProductIds.add(id);
+                                                } else {
+                                                  _selectedProductIds.remove(id);
+                                                  _selectAll = false;
+                                                }
+                                              });
+                                              if (userIdentifier != null) {
+                                                context.read<CartBloc>().add(
+                                                    UpdateCartSelection(
+                                                        userIdentifier!,
+                                                        _selectedProductIds
+                                                            .toList()));
+                                              }
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  ],
+                                  ),
                                 ),
                               ),
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                                color: Colors.grey.shade400,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Phương thức thanh toán (Dropdown)
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: carts.length,
-                      itemBuilder: (context, index) => GestureDetector(
-                        onTap: () async {
-                          final Map<String, dynamic>? pet = await getPetById(
-                              carts[index].grocery['productId']);
-                          if (pet != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DetailPet(pet: pet),
-                              ),
-                            );
-                          }
-                        },
-                        child: SizedBox(
-                          height: 100,
-                          child: CartItem(cart: carts[index]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Divider(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 8),
-                          child: Row(
-                            children: [
-                              const Text("Phương thức \n thanh toán:",
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 30),
-                              Expanded(
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: paymentMethod,
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'stripe',
-                                      child: Text('Thanh toán qua Stripe'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'vnpay',
-                                      child: Text('Thanh toán qua VNPay'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'cod',
-                                      child: Text('Thanh toán khi nhận hàng'),
-                                    ),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      paymentMethod = value!;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        // Shipping fee calculation
-                        if (selectedDeliveryInfo != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue.shade200),
                             ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Bottom bar
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, -4),
+                          )
+                        ],
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      'Tạm tính',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    Text(
-                                      CurrencyHelper.formatVND(totalPrice),
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  LocalizationHelper.getLocalizedText(
+                                      context, 'total'),
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.black87),
                                 ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.local_shipping,
-                                          size: 16,
-                                          color: Colors.blue,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Phí vận chuyển',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.blue.shade700,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    // Always free shipping
-                                    Text(
-                                      'Miễn phí',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      'Tổng cộng',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    Text(
-                                      CurrencyHelper.formatVND(totalPrice + shippingFee),
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: primaryColor,
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  CurrencyHelper.formatVND(selectedTotal),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                        
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("Total",
-                                style: TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black)),
-                            Text(
-                              CurrencyHelper.formatVND(totalPrice + shippingFee),
-                              style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: primaryColor),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 2 / 3,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              print("Order button pressed");
-
-                              // Show loading dialog
-                              DialogHelper.showLoadingDialog(context);
-
-                              try {
-                                // Kiểm tra thông tin giao hàng
-                                print("🔍 DEBUG: Checking delivery info...");
-                                print("🔍 selectedDeliveryInfo: $selectedDeliveryInfo");
-                                print("🔍 deliveryInfos.length: ${deliveryInfos.length}");
-                                
-                                if (selectedDeliveryInfo == null ||
-                                    deliveryInfos.isEmpty) {
-                                  DialogHelper.hideLoadingDialog(context);
-                                  NotificationHelper.showWarning(
-                                    context,
-                                    'Thiếu thông tin giao hàng',
-                                    LocalizationHelper.getLocalizedText(context, 'pleaseAddShippingInfo'),
-                                  );
-                                  return;
-                                }
-
-                                // Kiểm tra số điện thoại từ Firestore
-                                final currentUser =
-                                    FirebaseAuth.instance.currentUser;
-                                if (currentUser != null) {
-                                  final userDoc = await FirebaseFirestore
-                                      .instance
-                                      .collection('users')
-                                      .doc(currentUser.uid)
-                                      .get();
-
-                                  if (userDoc.exists) {
-                                    final userData = userDoc.data()!;
-                                    final phoneFromFirestore =
-                                        userData['phone'];
-
-                                    if (phoneFromFirestore == null ||
-                                        phoneFromFirestore
-                                            .toString()
-                                            .trim()
-                                            .isEmpty) {
-                                      DialogHelper.hideLoadingDialog(context);
-                                      NotificationHelper.showWarning(
-                                        context,
-                                        'Thiếu số điện thoại',
-                                        LocalizationHelper.getLocalizedText(context, 'pleaseUpdatePhoneNumber'),
-                                      );
-                                      return;
-                                    }
-                                  }
-                                }
-                                final currentUserIdentifier = userIdentifier;
-                                if (currentUserIdentifier == null) {
-                                  DialogHelper.hideLoadingDialog(context);
-                                  return;
-                                }
-
-                                // Xử lý theo payment method
-                                if (paymentMethod == 'stripe') {
-                                  DialogHelper.hideLoadingDialog(context);
-                                  print("Starting Stripe payment...");
-                                  paymentInit(totalPrice, "vnd",
-                                      currentUserIdentifier, carts);
-                                } else if (paymentMethod == 'vnpay') {
-                                  DialogHelper.hideLoadingDialog(context);
-                                  print("Starting VNPay payment...");
-                                  vnpayPaymentInit(
-                                    totalPrice,
-                                    currentUserIdentifier,
-                                    carts,
-                                  );
-                                } else {
-                                  print(
-                                      "🛒 COD PAYMENT: Starting COD payment process...");
-
-                                  // Save order và lấy breeds từ Firestore
-                                  final breeds = await saveOrderToFirestore(
-                                      currentUserIdentifier, carts,
-                                      isPaid: false);
-
-                                  // Xóa giỏ hàng
-                                  context
-                                      .read<CartBloc>()
-                                      .add(ClearCart(currentUserIdentifier));
-                                  print("🛒 COD PAYMENT: Cart cleared");
-
-                                  // Hide loading và sử dụng multi-breed analysis
-                                  DialogHelper.hideLoadingDialog(context);
-                                  
-                                  // Show success notification
-                                  NotificationHelper.showSuccess(
-                                    context,
-                                    'Đặt hàng thành công!',
-                                    'Đơn hàng của bạn đã được tạo và sẽ được giao sớm nhất.',
-                                  );
-
-                                  if (!context.mounted) return;
-                                  print(
-                                      "🚀 COD PAYMENT: About to trigger Apriori with breeds: $breeds");
-
-                                  if (breeds.isNotEmpty) {
-                                    onOrderSuccessWithBreeds(breeds);
-                                  } else {
-                                    print(
-                                        "🚫 No breeds found, navigating with empty suggestions");
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const OrderSuccess(suggestions: []),
-                                      ),
-                                    );
-                                  }
-                                }
-                              } catch (e) {
-                                DialogHelper.hideLoadingDialog(context);
-                                print("Error in order process: $e");
-                                NotificationHelper.showError(
-                                  context,
-                                  'Lỗi đặt hàng',
-                                  'Có lỗi xảy ra: $e',
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.5,
+                            child: ElevatedButton(
+                              onPressed:
+                                  selectedCount == 0 || userIdentifier == null
+                                      ? null
+                                      : () async {
+                                          final selected = carts
+                                              .where((c) =>
+                                                  _selectedProductIds.contains(c
+                                                          .grocery['productId']
+                                                          ?.toString() ??
+                                                      ''))
+                                              .toList();
+                                          if (selected.isEmpty) {
+                                            return;
+                                          }
+                                          // Navigate to dedicated checkout screen
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => CheckoutScreen(
+                                                userIdentifier: userIdentifier!,
+                                                carts: selected,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.black,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                LocalizationHelper.getLocalizedText(
+                                    context, 'checkout'),
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600),
                               ),
                             ),
-                            child: const Text(
-                              "Đặt hàng",
-                              style:
-                                  TextStyle(color: Colors.black, fontSize: 18),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
+                          )
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              );
-            } else if (state is CartError) {
-              return const Center(child: Text("Error: DEL{state.message}"));
-            } else {
-              return const Center(child: Text("Unexpected error occurred"));
-            }
-          },
+                  ],
+                );
+              } else if (state is CartError) {
+                return const Center(child: Text("Error: DEL{state.message}"));
+              } else {
+                return const Center(child: Text("Unexpected error occurred"));
+              }
+            },
           ),
         ),
       ),
