@@ -1,15 +1,27 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:pet_shop/auth/login_or_register.dart';
+import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/core/constants/list_city.dart';
+// import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
-import 'package:intl/intl.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
+import 'package:pet_shop/presentation/bloc/profile/edit_profile_bloc.dart';
+import 'package:pet_shop/presentation/bloc/profile/edit_profile_event.dart';
+import 'package:pet_shop/presentation/bloc/profile/edit_profile_state.dart';
+import 'package:pet_shop/presentation/pages/mobile/profile/widgets/header_card.dart';
+// section_title & delivery_info_tile đã được dùng trong ShippingInfoSection
+import 'package:pet_shop/presentation/pages/mobile/profile/widgets/personal_info_card.dart';
+import 'package:pet_shop/presentation/pages/mobile/profile/widgets/shipping_info_section.dart';
+import 'package:pet_shop/presentation/pages/mobile/profile/widgets/save_button.dart';
+import 'package:pet_shop/presentation/pages/mobile/profile/widgets/logout_countdown_dialog.dart';
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -28,8 +40,17 @@ class _EditProfileState extends State<EditProfile> {
   List<Map<String, dynamic>> deliveryInfos = [];
   DateTime? selectedBirthDate;
   String? selectedGender;
+  bool emailVerified = false;
+  bool phoneVerified = false;
+  String? _pendingEmail;
+  bool _isLogoutPromptVisible = false;
+  String? _lastInfo;
+  String? _lastError;
 
-  bool _isSaving = false;
+  void _log(String message) {
+    // Centralized log for this screen
+    debugPrint('🔐 EditProfile: $message');
+  }
 
   @override
   void initState() {
@@ -37,169 +58,258 @@ class _EditProfileState extends State<EditProfile> {
     _initializeUser();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   void _initializeUser() async {
     UserManager userManager = UserManager();
     userIdentifier = await userManager.getUserIdentifier();
-    fetchUserData();
+    // Khởi động BLoC bằng cách gửi sự kiện bắt đầu
+    // Controllers sẽ được điền từ state khi dữ liệu về
   }
 
   // =========================
   // Data
   // =========================
   Future<void> fetchUserData() async {
-    User? authUser = FirebaseAuth.instance.currentUser;
-    if (authUser == null) return;
-
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection("users")
-        .doc(authUser.uid)
-        .get();
-
-    if (userDoc.exists) {
-      setState(() {
-        user = userDoc.data() as Map<String, dynamic>;
-        displayNameController.text = user?['displayName'] ?? "";
-        phoneController.text = user?['phone'] ?? "";
-        emailController.text = user?['email'] ?? authUser.email ?? "";
-
-        // Parse delivery infos
-        var deliveryData = user?['deliveryInfos'];
-        if (deliveryData is List) {
-          deliveryInfos = List<Map<String, dynamic>>.from(deliveryData);
-        } else {
-          // Migrate old address format to new delivery info format
-          var oldAddresses = user?['address'];
-          if (oldAddresses is List) {
-            deliveryInfos = oldAddresses
-                .map<Map<String, dynamic>>((addr) => {
-                      'name': user?['displayName'] ?? '',
-                      'phone': user?['phone'] ?? '',
-                      'address': addr.toString(),
-                      'isDefault': deliveryInfos.isEmpty,
-                    })
-                .toList();
-          }
-        }
-
-        // Parse birth date
-        if (user?['birthDate'] != null) {
-          if (user!['birthDate'] is Timestamp) {
-            selectedBirthDate = (user!['birthDate'] as Timestamp).toDate();
-          } else if (user!['birthDate'] is String) {
-            try {
-              selectedBirthDate = DateTime.parse(user!['birthDate']);
-            } catch (e) {
-              print('Error parsing birth date: $e');
-            }
-          }
-        }
-
-        selectedGender = user?['gender'];
-        imageUrl = user?['imageUrl'] ?? "";
-      });
-    }
+    // Dùng BLoC để tải lại dữ liệu
+    context.read<EditProfileBloc>().add(EditProfileStarted());
   }
 
-  Future<void> updateUserData() async {
-    User? authUser = FirebaseAuth.instance.currentUser;
-    if (authUser == null) return;
+  Future<bool> _reauthenticateSmart() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    final providers = user.providerData.map((p) => p.providerId).toList();
 
-    setState(() => _isSaving = true);
-    try {
-      Map<String, dynamic> updateData = {
-        'displayName': displayNameController.text.trim(),
-        'phone': phoneController.text.trim(),
-        'deliveryInfos': deliveryInfos,
-        'imageUrl': imageUrl,
-        'gender': selectedGender,
-      };
-
-      if (selectedBirthDate != null) {
-        updateData['birthDate'] = Timestamp.fromDate(selectedBirthDate!);
-      }
-
-      // Only update email if it's different and not empty
-      String newEmail = emailController.text.trim();
-      if (newEmail.isNotEmpty && newEmail != authUser.email) {
-        // Verify email before updating
-        await _verifyAndUpdateEmail(newEmail);
-      }
-
-      await FirebaseFirestore.instance
-          .collection("users")
-          .doc(authUser.uid)
-          .update(updateData);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
-        );
-        await fetchUserData(); // Reload dữ liệu sau khi cập nhật
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+    // Prefer password if available
+    if (providers.contains('password') && user.email != null) {
+      final ok = await _reauthenticateWithPassword(user.email!);
+      if (ok) return true;
     }
+    // Try Google
+    if (providers.contains('google.com')) {
+      final ok = await _reauthenticateWithGoogle();
+      if (ok) return true;
+    }
+    // Try Facebook
+    if (providers.contains('facebook.com')) {
+      final ok = await _reauthenticateWithFacebook();
+      if (ok) return true;
+    }
+    // Try Phone
+    if (providers.contains('phone')) {
+      final ok = await _reauthenticateWithPhone(
+          user.phoneNumber ?? phoneController.text.trim());
+      if (ok) return true;
+    }
+    return false;
   }
 
-  Future<void> _verifyAndUpdateEmail(String newEmail) async {
-    User? authUser = FirebaseAuth.instance.currentUser;
-    if (authUser == null) return;
-
-    try {
-      // Send verification email to new address
-      await authUser.verifyBeforeUpdateEmail(newEmail);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Verification email sent to $newEmail. Please verify before the email is updated.'),
-            duration: const Duration(seconds: 5),
+  Future<bool> _reauthenticateWithPassword(String email) async {
+    final pwdController = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác thực lại'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Nhập mật khẩu cho $email'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: pwdController,
+              obscureText: true,
+              decoration: const InputDecoration(hintText: 'Mật khẩu'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy')),
+          TextButton(
+            onPressed: () async {
+              try {
+                final cred = EmailAuthProvider.credential(
+                    email: email, password: pwdController.text.trim());
+                await FirebaseAuth.instance.currentUser
+                    ?.reauthenticateWithCredential(cred);
+                if (context.mounted) Navigator.pop(ctx, true);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Sai mật khẩu hoặc lỗi re-auth: $e')),
+                );
+              }
+            },
+            child: const Text('Xác thực'),
           ),
-        );
-      }
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<bool> _reauthenticateWithGoogle() async {
+    try {
+      final google = GoogleSignIn();
+      try {
+        await google.signOut();
+      } catch (_) {}
+      final account = await google.signIn();
+      if (account == null) return false;
+      final auth = await account.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: auth.accessToken,
+        idToken: auth.idToken,
+      );
+      await FirebaseAuth.instance.currentUser
+          ?.reauthenticateWithCredential(credential);
+      return true;
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating email: $e')),
-        );
-      }
+      NotificationHelper.showError(
+          context, 'Re-auth Google thất bại', e.toString());
+      return false;
     }
+  }
+
+  Future<bool> _reauthenticateWithFacebook() async {
+    try {
+      final result = await FacebookAuth.instance
+          .login(permissions: ['public_profile', 'email']);
+      if (result.status != LoginStatus.success || result.accessToken == null)
+        return false;
+      final credential =
+          FacebookAuthProvider.credential(result.accessToken!.token);
+      await FirebaseAuth.instance.currentUser
+          ?.reauthenticateWithCredential(credential);
+      return true;
+    } catch (e) {
+      NotificationHelper.showError(
+          context, 'Re-auth Facebook thất bại', e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> _reauthenticateWithPhone(String phone) async {
+    if (phone.isEmpty) {
+      NotificationHelper.showWarning(
+          context, 'Thiếu số điện thoại', 'Không có SĐT để xác thực lại');
+      return false;
+    }
+    String? verificationId;
+    final codeController = TextEditingController();
+    final completer = Completer<bool>();
+    try {
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phone,
+        verificationCompleted: (cred) async {
+          try {
+            await FirebaseAuth.instance.currentUser
+                ?.reauthenticateWithCredential(cred);
+            completer.complete(true);
+          } catch (e) {
+            completer.complete(false);
+          }
+        },
+        verificationFailed: (e) {
+          NotificationHelper.showError(context, 'OTP thất bại', e.message);
+          completer.complete(false);
+        },
+        codeSent: (id, _) async {
+          verificationId = id;
+          final ok = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Nhập mã OTP'),
+              content: TextField(
+                controller: codeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(hintText: '6 chữ số'),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Hủy')),
+                TextButton(
+                  onPressed: () async {
+                    if (verificationId != null &&
+                        codeController.text.trim().length == 6) {
+                      try {
+                        final cred = PhoneAuthProvider.credential(
+                          verificationId: verificationId!,
+                          smsCode: codeController.text.trim(),
+                        );
+                        await FirebaseAuth.instance.currentUser
+                            ?.reauthenticateWithCredential(cred);
+                        if (context.mounted) Navigator.pop(ctx, true);
+                      } catch (e) {
+                        NotificationHelper.showError(
+                            context, 'Xác minh OTP thất bại', e.toString());
+                      }
+                    }
+                  },
+                  child: const Text('Xác thực'),
+                ),
+              ],
+            ),
+          );
+          completer.complete(ok == true);
+        },
+        codeAutoRetrievalTimeout: (_) {},
+      );
+    } catch (e) {
+      NotificationHelper.showError(context, 'Lỗi OTP', e.toString());
+      return false;
+    }
+    return completer.future;
+  }
+
+  Future<void> _refreshVerificationStatus() async {
+    context.read<EditProfileBloc>().add(EditProfileRefreshVerification());
+  }
+
+  // Đồng bộ im lặng: đã chuyển sang BLoC quản lý
+
+  Future<void> _showLogoutCountdown({required int seconds, String? reason}) async {
+    if (_isLogoutPromptVisible) return;
+    _isLogoutPromptVisible = true;
+    await showLogoutCountdownDialog(
+      context,
+      seconds: seconds,
+      reason: reason,
+      onLogoutNow: () async {
+        try {
+          await FirebaseAuth.instance.signOut();
+        } catch (e) {
+          _log('logout error: $e');
+        }
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => LoginOrRegister()),
+          (route) => false,
+        );
+      },
+    );
+    _isLogoutPromptVisible = false;
+  }
+
+  Future<void> _startPhoneVerification() async {
+    final phone = phoneController.text.trim();
+    if (phone.isEmpty) {
+      NotificationHelper.showWarning(context, 'Thiếu số điện thoại', 'Vui lòng nhập số điện thoại để xác minh');
+      return;
+    }
+    context.read<EditProfileBloc>().add(EditProfileStartPhoneVerification(phone));
   }
 
   Future<void> pickImage() async {
     final pickedFile =
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile == null) return;
-
-    File imageFile = File(pickedFile.path);
-    User? authUser = FirebaseAuth.instance.currentUser;
-    if (authUser == null) return;
-
-    // Tải ảnh lên Firebase Storage
-    String fileName = "profile_${authUser.uid}.jpg";
-    Reference storageRef =
-        FirebaseStorage.instance.ref().child("profile_images/$fileName");
-    await storageRef.putFile(imageFile);
-
-    // Lấy URL ảnh sau khi tải lên
-    String newImageUrl = await storageRef.getDownloadURL();
-
-    // Cập nhật Firestore
-    await FirebaseFirestore.instance
-        .collection("users")
-        .doc(authUser.uid)
-        .update({
-      'imageUrl': newImageUrl,
-    });
-
-    setState(() {
-      imageUrl = newImageUrl;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile picture updated!')),
-    );
+    context.read<EditProfileBloc>().add(EditProfileUploadAvatar(pickedFile.path));
   }
 
   // =========================
@@ -222,133 +332,6 @@ class _EditProfileState extends State<EditProfile> {
       });
     }
   }
-
-  // =========================
-  // Delivery Info Management
-  // =========================
-  // Future<void> addDeliveryInfoDialog() async {
-  //   List<String> provinces = ListCity().city;
-  //   Map<String, List<String>> districts = ListCity().districts;
-  //   String? selectedProvince;
-  //   String? selectedDistrict;
-  //   String detail = '';
-  //   String name = displayNameController.text;
-  //   String phone = phoneController.text;
-
-  //   await showDialog(
-  //     context: context,
-  //     builder: (context) {
-  //       return StatefulBuilder(
-  //         builder: (context, setStateDialog) {
-  //           return AlertDialog(
-  //             title: const Text('Thêm thông tin giao hàng'),
-  //             content: SingleChildScrollView(
-  //               child: Column(
-  //                 mainAxisSize: MainAxisSize.min,
-  //                 children: [
-  //                   TextField(
-  //                     decoration: _inputDecoration("Tên người nhận"),
-  //                     onChanged: (value) => name = value,
-  //                     controller: TextEditingController(text: name),
-  //                   ),
-  //                   const SizedBox(height: 10),
-  //                   TextField(
-  //                     decoration: _inputDecoration("Số điện thoại"),
-  //                     onChanged: (value) => phone = value,
-  //                     controller: TextEditingController(text: phone),
-  //                     keyboardType: TextInputType.phone,
-  //                   ),
-  //                   const SizedBox(height: 10),
-  //                   DropdownButtonFormField<String>(
-  //                     isExpanded: true,
-  //                     decoration: _inputDecoration("Tỉnh/Thành phố"),
-  //                     value: selectedProvince,
-  //                     items: provinces
-  //                         .map(
-  //                             (e) => DropdownMenuItem(value: e, child: Text(e)))
-  //                         .toList(),
-  //                     onChanged: (value) {
-  //                       setStateDialog(() {
-  //                         selectedProvince = value;
-  //                         selectedDistrict = null;
-  //                       });
-  //                     },
-  //                   ),
-  //                   const SizedBox(height: 10),
-  //                   DropdownButtonFormField<String>(
-  //                     isExpanded: true,
-  //                     decoration: _inputDecoration("Quận/Huyện"),
-  //                     value: selectedDistrict,
-  //                     items: (selectedProvince != null &&
-  //                             districts[selectedProvince] != null)
-  //                         ? districts[selectedProvince]!
-  //                             .map((e) =>
-  //                                 DropdownMenuItem(value: e, child: Text(e)))
-  //                             .toList()
-  //                         : [],
-  //                     onChanged: (value) {
-  //                       setStateDialog(() {
-  //                         selectedDistrict = value;
-  //                       });
-  //                     },
-  //                   ),
-  //                   const SizedBox(height: 10),
-  //                   TextField(
-  //                     decoration: _inputDecoration(
-  //                       'Địa chỉ chi tiết (số nhà, tên đường...)',
-  //                     ),
-  //                     onChanged: (value) => detail = value,
-  //                     keyboardType: TextInputType.multiline,
-  //                     maxLines: null,
-  //                   )
-  //                 ],
-  //               ),
-  //             ),
-  //             actions: [
-  //               TextButton(
-  //                 onPressed: () => Navigator.pop(context),
-  //                 child: const Text("Hủy"),
-  //               ),
-  //               TextButton(
-  //                 onPressed: () async {
-  //                   if (selectedDistrict != null &&
-  //                       selectedProvince != null &&
-  //                       detail.trim().isNotEmpty &&
-  //                       name.trim().isNotEmpty &&
-  //                       phone.trim().isNotEmpty &&
-  //                       userIdentifier != null) {
-  //                     final newAddress =
-  //                         '$detail, $selectedDistrict, $selectedProvince';
-  //                     final newDeliveryInfo = {
-  //                       'name': name.trim(),
-  //                       'phone': phone.trim(),
-  //                       'address': newAddress,
-  //                       'isDefault':
-  //                           deliveryInfos.isEmpty, // First one is default
-  //                     };
-
-  //                     setState(() {
-  //                       deliveryInfos.add(newDeliveryInfo);
-  //                     });
-
-  //                     if (mounted) Navigator.pop(context);
-  //                   } else {
-  //                     ScaffoldMessenger.of(context).showSnackBar(
-  //                       const SnackBar(
-  //                         content: Text("Vui lòng nhập đầy đủ thông tin"),
-  //                       ),
-  //                     );
-  //                   }
-  //                 },
-  //                 child: const Text('Lưu'),
-  //               ),
-  //             ],
-  //           );
-  //         },
-  //       );
-  //     },
-  //   );
-  // }
 
   void removeDeliveryInfo(int index) {
     setState(() {
@@ -380,7 +363,108 @@ class _EditProfileState extends State<EditProfile> {
     final isWide = size.width >= 900;
     final horizontal = isWide ? size.width * 0.15 : 16.0;
 
-    return Scaffold(
+    return BlocProvider(
+      create: (_) => EditProfileBloc()..add(EditProfileStarted()),
+      child: BlocListener<EditProfileBloc, EditProfileState>(
+        listener: (context, state) async {
+          // Cập nhật controllers từ state.user (lần đầu hoặc khi thay đổi quan trọng)
+          final data = state.user;
+          if (data != null) {
+            if (displayNameController.text != (data['displayName'] ?? '')) {
+              displayNameController.text = data['displayName'] ?? '';
+            }
+            final phoneDoc = data['phone'] ?? data['phoneNumber'];
+            if (phoneDoc is String && phoneDoc != phoneController.text) {
+              phoneController.text = phoneDoc;
+            }
+            final emailDoc = data['email'] as String?;
+            if ((emailDoc ?? '') != emailController.text) {
+              emailController.text = emailDoc ?? '';
+            }
+            // deliveryInfos
+            final deliveryData = data['deliveryInfos'];
+            if (deliveryData is List) {
+              deliveryInfos = List<Map<String, dynamic>>.from(deliveryData);
+            }
+            // birth date
+            if (data['birthDate'] != null) {
+              if (data['birthDate'] is Timestamp) {
+                selectedBirthDate = (data['birthDate'] as Timestamp).toDate();
+              }
+            }
+            selectedGender = data['gender'];
+            imageUrl = state.imageUrl;
+            emailVerified = state.emailVerified;
+            phoneVerified = state.phoneVerified;
+            _pendingEmail = state.pendingEmail;
+          }
+
+          // Thông điệp
+          if (state.infoMessage != null && state.infoMessage!.isNotEmpty && state.infoMessage != _lastInfo) {
+            _lastInfo = state.infoMessage;
+            NotificationHelper.showSuccess(context, 'Thành công', state.infoMessage!);
+          }
+          if (state.errorMessage != null && state.errorMessage!.isNotEmpty && state.errorMessage != _lastError) {
+            _lastError = state.errorMessage;
+            NotificationHelper.showError(context, 'Lỗi', state.errorMessage!);
+            // Nếu lỗi yêu cầu xác thực lại → mở dialog re-auth, sau đó thử lại gửi xác minh (nếu có pendingEmail)
+            if (state.errorMessage!.contains('xác thực lại')) {
+              final ok = await _reauthenticateSmart();
+              if (ok) {
+                final retryEmail = emailController.text.trim();
+                if (retryEmail.isNotEmpty) {
+                  context.read<EditProfileBloc>().add(EditProfileRequestEmailVerification(retryEmail));
+                }
+              }
+            }
+          }
+
+          // OTP: nếu có verificationId, hiển thị dialog nhập OTP
+          if (state.otpVerificationId != null) {
+            final codeController = TextEditingController();
+            await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Nhập mã OTP'),
+                content: TextField(
+                  controller: codeController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(hintText: '6 chữ số'),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Hủy'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final smsCode = codeController.text.trim();
+                      if (smsCode.length == 6) {
+                        Navigator.pop(ctx);
+                        context.read<EditProfileBloc>().add(EditProfileSubmitOtp(
+                              verificationId: state.otpVerificationId!,
+                              code: smsCode,
+                            ));
+                      }
+                    },
+                    child: const Text('Xác minh'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Đếm ngược đăng xuất khi token hết hạn
+          if (state.showLogoutCountdown) {
+            _showLogoutCountdown(seconds: state.countdownSeconds, reason: state.logoutReason);
+          }
+        },
+        child: BlocBuilder<EditProfileBloc, EditProfileState>(
+          builder: (context, state) {
+            final data = state.user;
+            final emailVerifiedUi = state.emailVerified || (data?['emailVerified'] == true);
+
+            return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
         backgroundColor: secondaryColor,
@@ -388,14 +472,14 @@ class _EditProfileState extends State<EditProfile> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
         title: Text(
-          user?['email'] ?? "",
+          data?['email'] ?? "",
           style: theme.textTheme.titleMedium?.copyWith(
             color: Colors.black,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
-      body: user == null
+      body: data == null
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: fetchUserData,
@@ -403,469 +487,79 @@ class _EditProfileState extends State<EditProfile> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 24),
                 children: [
-                  _HeaderCard(
-                    imageUrl: imageUrl,
-                    displayName: (user?['displayName'] ?? '') as String,
-                    onEditAvatar: pickImage,
-                  ),
+                  HeaderCard(imageUrl: imageUrl, displayName: (data['displayName'] ?? '') as String, onEditAvatar: pickImage),
                   const SizedBox(height: 16),
 
-                  // Thông tin cơ bản
-                  Card(
-                    elevation: 2,
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(title: "Thông tin cá nhân"),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: displayNameController,
-                            decoration: _inputDecorationWithIcon(
-                              label: "Tên hiển thị",
-                              icon: Icons.person_outline,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: phoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: _inputDecorationWithIcon(
-                              label: "Số điện thoại",
-                              icon: Icons.phone_outlined,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            enabled:
-                                false, // Email không thể chỉnh sửa trực tiếp
-                            decoration: _inputDecorationWithIcon(
-                              label: "Email (liên hệ admin để thay đổi)",
-                              icon: Icons.email_outlined,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          // Birth Date
-                          InkWell(
-                            onTap: _selectBirthDate,
-                            child: InputDecorator(
-                              decoration: _inputDecorationWithIcon(
-                                label: "Ngày sinh",
-                                icon: Icons.cake_outlined,
-                              ),
-                              child: Text(
-                                selectedBirthDate != null
-                                    ? DateFormat('dd/MM/yyyy')
-                                        .format(selectedBirthDate!)
-                                    : 'Chưa chọn ngày sinh',
-                                style: TextStyle(
-                                  color: selectedBirthDate != null
-                                      ? Colors.black
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          // Gender
-                          DropdownButtonFormField<String>(
-                            value: selectedGender,
-                            decoration: _inputDecorationWithIcon(
-                              label: "Giới tính",
-                              icon: Icons.person_outline,
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                  value: 'male', child: Text('Nam')),
-                              DropdownMenuItem(
-                                  value: 'female', child: Text('Nữ')),
-                              DropdownMenuItem(
-                                  value: 'other', child: Text('Khác')),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                selectedGender = value;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                  // Thông tin cơ bản (đã tách component)
+                  PersonalInfoCard(
+                    displayNameController: displayNameController,
+                    phoneController: phoneController,
+                    emailController: emailController,
+                    selectedBirthDate: selectedBirthDate,
+                    onSelectBirthDate: _selectBirthDate,
+                    selectedGender: selectedGender,
+                    onGenderChanged: (val) => setState(() => selectedGender = val),
+                    phoneVerified: state.phoneVerified,
+                    emailVerified: emailVerifiedUi,
+                    onPhoneVerify: _startPhoneVerification,
+                    onEmailSendVerify: () {
+                      final newEmail = emailController.text.trim();
+                      if (newEmail.isEmpty) return;
+                      context.read<EditProfileBloc>().add(EditProfileRequestEmailVerification(newEmail));
+                    },
+                    onEmailRefresh: _refreshVerificationStatus,
                   ),
+                  if (_pendingEmail != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Email mới đang chờ xác minh: ${_pendingEmail}',
+                      style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+                    ),
+                  ],
 
                   const SizedBox(height: 20),
 
-                  // Thông tin giao hàng
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const _SectionTitle(title: "Thông tin giao hàng"),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AddressListPage(),
-                              ));
-                        },
-                        icon: const Icon(Icons.add_location_alt_outlined,
-                            size: 18),
-                        label: const Text("Chỉnh sửa"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          textStyle: const TextStyle(fontSize: 14),
-                          elevation: 0,
-                        ),
-                      ),
-                    ],
+                  // Thông tin giao hàng (đã tách component)
+                  ShippingInfoSection(
+                    deliveryInfos: deliveryInfos,
+                    onEditPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddressListPage()),
+                      );
+                    },
+                    onDeleteAt: (i) => removeDeliveryInfo(i),
+                    onSetDefaultAt: (i) => setDefaultDeliveryInfo(i),
                   ),
-                  const SizedBox(height: 8),
-
-                  if (deliveryInfos.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Colors.black54),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              "Chưa có thông tin giao hàng nào",
-                              style: TextStyle(color: Colors.black54),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: deliveryInfos.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) => _DeliveryInfoTile(
-                        deliveryInfo: deliveryInfos[index],
-                        onDelete: () => removeDeliveryInfo(index),
-                        onSetDefault: () => setDefaultDeliveryInfo(index),
-                      ),
-                    ),
 
                   const SizedBox(height: 24),
 
-                  // Lưu
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : updateUserData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2.4),
-                            )
-                          : const Text("Lưu thay đổi"),
-                    ),
+                  // Lưu (đã tách component)
+                  SaveButton(
+                    isSaving: state.isSaving,
+                    onPressed: () {
+                      context.read<EditProfileBloc>().add(
+                            EditProfileUpdateSubmitted(
+                              displayName: displayNameController.text.trim(),
+                              phone: phoneController.text.trim(),
+                              email: emailController.text.trim(),
+                              deliveryInfos: deliveryInfos,
+                              imageUrl: imageUrl,
+                              gender: selectedGender,
+                              birthDate: selectedBirthDate,
+                            ),
+                          );
+                    },
                   ),
                 ],
               ),
             ),
     );
-  }
-
-  // =========================
-  // Style helpers
-  // =========================
-  static InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    );
-  }
-
-  InputDecoration _inputDecorationWithIcon({
-    required String label,
-    required IconData icon,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon),
-      filled: true,
-      fillColor: Colors.white,
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-        borderSide: BorderSide(color: primaryColor, width: 1.6),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    );
-  }
-}
-
-// =========================
-// Sub-widgets
-// =========================
-
-class _HeaderCard extends StatelessWidget {
-  final String imageUrl;
-  final String displayName;
-  final VoidCallback onEditAvatar;
-
-  const _HeaderCard({
-    required this.imageUrl,
-    required this.displayName,
-    required this.onEditAvatar,
-  });
-
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return 'U';
-    if (parts.length == 1)
-      return parts.first.characters.take(1).toString().toUpperCase();
-    return (parts.first.characters.take(1).toString() +
-            parts.last.characters.take(1).toString())
-        .toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, secondaryColor.withOpacity(.6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.05),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: primaryColor, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(.10),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 44,
-                  backgroundColor: Colors.white,
-                  backgroundImage:
-                      imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
-                  child: imageUrl.isEmpty
-                      ? Text(
-                          _initials(displayName.isEmpty ? "User" : displayName),
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black54,
-                          ),
-                        )
-                      : null,
-                ),
-              ),
-              Positioned(
-                bottom: -2,
-                right: -2,
-                child: Material(
-                  color: primaryColor,
-                  shape: const CircleBorder(),
-                  elevation: 2,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onEditAvatar,
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(Icons.edit, size: 16, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              displayName.isEmpty ? "User" : displayName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      title,
-      style: theme.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w800,
-        color: Colors.black,
-      ),
-    );
-  }
-}
-
-class _DeliveryInfoTile extends StatelessWidget {
-  final Map<String, dynamic> deliveryInfo;
-  final VoidCallback onDelete;
-  final VoidCallback onSetDefault;
-
-  const _DeliveryInfoTile({
-    required this.deliveryInfo,
-    required this.onDelete,
-    required this.onSetDefault,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDefault = deliveryInfo['isDefault'] == true;
-
-    return Card(
-      elevation: isDefault ? 3 : 1.5,
-      color: isDefault ? primaryColor.withOpacity(0.1) : null,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (isDefault)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Mặc định',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                const Spacer(),
-                if (!isDefault)
-                  TextButton(
-                    onPressed: onSetDefault,
-                    child: const Text('Đặt làm mặc định'),
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: onDelete,
-                  tooltip: 'Xóa thông tin giao hàng',
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.person, color: primaryColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  deliveryInfo['name'] ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.phone, color: primaryColor, size: 20),
-                const SizedBox(width: 8),
-                Text(deliveryInfo['phone'] ?? ''),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.location_on, color: primaryColor, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    deliveryInfo['address'] ?? '',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          },
         ),
       ),
     );
   }
 }
+
+// Các widget con đã được tách ra thành file riêng trong thư mục widgets/

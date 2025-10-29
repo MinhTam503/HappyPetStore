@@ -11,6 +11,7 @@ import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admin.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/forgot_password_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
 
 class LoginPageNew extends StatefulWidget {
   final void Function()? onTap;
@@ -87,6 +88,7 @@ class _LoginPageNewState extends State<LoginPageNew>
   }
 
   void _login(BuildContext context) async {
+    bool phonePasswordAttempt = false;
     String account = _accountController.text.trim();
     String password = _passwordController.text.trim();
 
@@ -107,14 +109,21 @@ class _LoginPageNewState extends State<LoginPageNew>
           password: password,
         );
       } else if (_isPhoneNumber(account)) {
-        // For phone login, we need to find the user by phone first
-        String formattedPhone = _formatPhoneNumber(account);
+        // For phone login, find the user by phone and decide flow
+        final String formattedPhone = _formatPhoneNumber(account);
 
-        // Query Firestore to find user with this phone number
+        // Try matching both 'phone' and fallback to 'phoneNumber'
         QuerySnapshot phoneQuery = await FirebaseFirestore.instance
             .collection("users")
             .where("phone", isEqualTo: formattedPhone)
             .get();
+
+        if (phoneQuery.docs.isEmpty) {
+          phoneQuery = await FirebaseFirestore.instance
+              .collection("users")
+              .where("phoneNumber", isEqualTo: formattedPhone)
+              .get();
+        }
 
         if (phoneQuery.docs.isEmpty) {
           await DialogHelper.hideLoadingDialog(context);
@@ -122,9 +131,33 @@ class _LoginPageNewState extends State<LoginPageNew>
           return;
         }
 
-        // Get the email associated with this phone number
-        String userEmail = phoneQuery.docs.first['email'];
+        final doc = phoneQuery.docs.first;
+        final data = doc.data() as Map<String, dynamic>;
+        final String? userEmail = data['email'] as String?;
 
+        // If this is a phone-only account (no email/password), route to OTP login
+        if (userEmail == null || userEmail.isEmpty) {
+          await DialogHelper.hideLoadingDialog(context);
+          final success = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OtpVerificationPage(
+                phoneNumber: formattedPhone,
+                isRegistration: false,
+              ),
+            ),
+          );
+          if (success == true && mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const BottomNavigator()),
+            );
+          }
+          return;
+        }
+
+        // Otherwise fall back to email/password login
+        phonePasswordAttempt = true;
         userCredential = await authService.value.signIn(
           email: userEmail,
           password: password,
@@ -195,6 +228,12 @@ class _LoginPageNewState extends State<LoginPageNew>
           break;
         case 'invalid-email':
           errorMessage = LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone');
+          break;
+        case 'invalid-credential':
+        case 'invalid-login-credentials':
+          errorMessage = phonePasswordAttempt
+              ? LocalizationHelper.getLocalizedText(context, 'incorrectInformation')
+              : "Thông tin đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra và thử lại.";
           break;
         case 'user-disabled':
           errorMessage = "Tài khoản đã bị vô hiệu hóa!";

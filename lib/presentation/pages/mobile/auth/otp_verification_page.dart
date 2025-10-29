@@ -226,43 +226,41 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
         return;
       }
 
-      String phone = widget.registrationData!['phone'];
-      String password = widget.registrationData!['password'];
-      String name = widget.registrationData!['name'];
+      final String phone = widget.registrationData!['phone'];
+      final String name = widget.registrationData!['name'];
 
-      // Create a temporary email for phone registration
-      String tempEmail =
-          "${phone.replaceAll('+', '').replaceAll(' ', '')}@petshop.temp";
+      // Sign in (or create) using phone credential directly
+      UserCredential userCredential =
+          await authService.value.signInWithPhoneCredential(credential);
 
-      // Create account with temporary email
-      UserCredential userCredential = await authService.value
-          .createAccount(email: tempEmail, password: password);
-
-      User? user = userCredential.user;
+      final user = userCredential.user;
       if (user != null) {
-        // Link phone credential to the account
-        await user.linkWithCredential(credential);
-
-        // Create user document in Firestore
+        // Update Firestore user profile to align with phone-only account (no fake email)
         await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-          "email": tempEmail,
-          "role": "user",
+          "uid": user.uid,
+          "email": null,
           "displayName": name,
-          "imageUrl":
+          "imageUrl": user.photoURL ??
               "https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg",
-          "address": [],
           "phone": phone,
+          "phoneNumber": user.phoneNumber ?? phone,
+          "provider": "phone",
+          "role": "user",
+          "address": [],
+          "dateOfBirth": null,
+          "gender": null,
+          "bio": null,
           "createdAt": FieldValue.serverTimestamp(),
-          "authProvider": "phone",
-          "emailVerified": false,
-        });
+          "updatedAt": FieldValue.serverTimestamp(),
+          "phoneVerified": true,
+        }, SetOptions(merge: true));
 
-        // Sign out to prevent auto-login
+        // Sign out to prevent auto-login after registration
         await authService.value.signOut();
 
         if (mounted) {
           DialogHelper.hideLoadingDialog(context);
-          Navigator.pop(context, true); // Return success
+          Navigator.pop(context, true);
         }
       }
     } catch (e) {
