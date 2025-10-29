@@ -310,14 +310,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       await Stripe.instance.presentPaymentSheet();
 
       // Save order
-  await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
+      await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
+
+      // Remove purchased items from cart (directly update Firestore)
+      try {
+        final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
+        final doc = await cartDoc.get();
+        if (doc.exists) {
+          final data = doc.data();
+          final items = (data != null && data['items'] is List)
+              ? List<Map<String, dynamic>>.from(data['items'] as List)
+              : <Map<String, dynamic>>[];
+          final purchasedIds = widget.carts
+              .map((c) => c.grocery['productId']?.toString() ?? '')
+              .where((id) => id.isNotEmpty)
+              .toSet();
+          items.removeWhere((it) => purchasedIds.contains(it['productId']?.toString() ?? ''));
+          final selected = (data != null && data['selectedProductIds'] is List)
+              ? List<String>.from(data['selectedProductIds'] as List)
+              : <String>[];
+          selected.removeWhere((id) => purchasedIds.contains(id));
+          await cartDoc.set({'items': items, 'selectedProductIds': selected}, SetOptions(merge: true));
+        }
+      } catch (e) {
+        print('⚠️ Failed to remove purchased items from cart (Stripe): $e');
+      }
 
       // Clear all items (optional): here we keep cart intact; if desired, dispatch removal per item
       if (!mounted) return;
-      NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
+    NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
 
-      // After success, we could navigate to success page or pop
-      Navigator.pop(context); // back to Cart
+  // Navigate back to Cart and hint refresh
+  Navigator.pop(context, true);
     } on StripeException catch (e) {
       NotificationHelper.showError(
         context,
@@ -386,6 +410,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       onPaymentResult: (isSuccess, orderId) async {
                         if (isSuccess) {
                           await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
+                          // Remove purchased items from cart store
+                          try {
+                            final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
+                            final doc = await cartDoc.get();
+                            if (doc.exists) {
+                              final data = doc.data();
+                              final items = (data != null && data['items'] is List)
+                                  ? List<Map<String, dynamic>>.from(data['items'] as List)
+                                  : <Map<String, dynamic>>[];
+                              final purchasedIds = widget.carts
+                                  .map((c) => c.grocery['productId']?.toString() ?? '')
+                                  .where((id) => id.isNotEmpty)
+                                  .toSet();
+                              items.removeWhere((it) => purchasedIds.contains(it['productId']?.toString() ?? ''));
+                              final selected = (data != null && data['selectedProductIds'] is List)
+                                  ? List<String>.from(data['selectedProductIds'] as List)
+                                  : <String>[];
+                              selected.removeWhere((id) => purchasedIds.contains(id));
+                              await cartDoc.set({'items': items, 'selectedProductIds': selected}, SetOptions(merge: true));
+                            }
+                          } catch (e) {
+                            // best-effort cleanup; ignore failures
+                            print('⚠️ Failed to remove purchased items from cart: $e');
+                          }
                           if (!mounted) return;
                           NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
                           Navigator.popUntil(context, (route) => route.isFirst);
@@ -570,10 +618,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 await _payWithStripe(subtotal);
                               } else {
                                 // COD
-                                await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: false);
+                                    await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: false);
+                                    // Remove purchased items from cart
+                                    try {
+                                      final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
+                                      final doc = await cartDoc.get();
+                                      if (doc.exists) {
+                                        final data = doc.data();
+                                        final items = (data != null && data['items'] is List)
+                                            ? List<Map<String, dynamic>>.from(data['items'] as List)
+                                            : <Map<String, dynamic>>[];
+                                        final purchasedIds = widget.carts
+                                            .map((c) => c.grocery['productId']?.toString() ?? '')
+                                            .where((id) => id.isNotEmpty)
+                                            .toSet();
+                                        items.removeWhere((it) => purchasedIds.contains(it['productId']?.toString() ?? ''));
+                                        final selected = (data != null && data['selectedProductIds'] is List)
+                                            ? List<String>.from(data['selectedProductIds'] as List)
+                                            : <String>[];
+                                        selected.removeWhere((id) => purchasedIds.contains(id));
+                                        await cartDoc.set({'items': items, 'selectedProductIds': selected}, SetOptions(merge: true));
+                                      }
+                                    } catch (e) {
+                                      print('⚠️ Failed to remove purchased items from cart (COD): $e');
+                                    }
                                 if (!mounted) return;
                                 NotificationHelper.showSuccess(context, 'Đặt hàng thành công!', 'Đơn hàng sẽ được thanh toán khi nhận hàng.');
-                                Navigator.pop(context);
+                                // Navigate back to Cart and hint refresh
+                                Navigator.pop(context, true);
                               }
                             },
                       style: ElevatedButton.styleFrom(

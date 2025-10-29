@@ -64,9 +64,6 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
     // Lưu ý: hàm _parseLatLngFromGoogleMapsUrl có thể bị xóa nếu bạn chắc chắn
     // luôn có latitude/longitude trực tiếp. Tôi vẫn giữ nó làm fallback nếu
     // bạn muốn giữ chức năng phân tích URL cũ.
-    final String? googleMapsUrlRaw =
-        (shopInfo?['googleMapsUrl'] as String?)?.trim();
-
     debugPrint("Không thể lấy tọa độ, trả về mặc định: $defaultLatLng");
     return defaultLatLng;
   }

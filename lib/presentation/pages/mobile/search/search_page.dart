@@ -244,8 +244,8 @@ class _NewSearchPageState extends State<SearchPage> {
               elevation: 0,
               title: Row(
                 children: [
-                  Container(
-                    width: 300,
+                  Expanded(
+                    child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(25),
@@ -299,10 +299,10 @@ class _NewSearchPageState extends State<SearchPage> {
                       onSubmitted: (query) =>
                           _searchBloc.add(SearchSubmitted(query)),
                     ),
-                  ),
+                  )),
                   const SizedBox(width: 8),
                   Container(
-                    width: 50,
+                    width: 44,
                     decoration: BoxDecoration(
                       color: primaryColor,
                       borderRadius: BorderRadius.circular(8),

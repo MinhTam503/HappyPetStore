@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class MapPicker extends StatefulWidget {
   final LatLng selected;
@@ -12,7 +13,8 @@ class MapPicker extends StatefulWidget {
 
 class _MapPickerState extends State<MapPicker> {
   late LatLng _selected;
-  GoogleMapController? _controller;
+  final MapController _mapController = MapController();
+  double _zoom = 15;
 
   @override
   void initState() {
@@ -22,7 +24,6 @@ class _MapPickerState extends State<MapPicker> {
 
   @override
   void dispose() {
-    _controller?.dispose();
     super.dispose();
   }
 
@@ -44,18 +45,36 @@ class _MapPickerState extends State<MapPicker> {
       ),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(target: _selected, zoom: 15),
-            onMapCreated: (c) => _controller = c,
-            onTap: (LatLng p) {
-              setState(() => _selected = p);
-              _controller?.animateCamera(CameraUpdate.newLatLng(p));
-            },
-            markers: {
-              Marker(markerId: const MarkerId('selected'), position: _selected),
-            },
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: true,
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _selected,
+              initialZoom: _zoom,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+              ),
+              onTap: (tapPosition, point) {
+                setState(() => _selected = point);
+                _mapController.move(point, _zoom);
+              },
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c'],
+                userAgentPackageName: 'com.happypet.store',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _selected,
+                    width: 40,
+                    height: 40,
+                    child: const Icon(Icons.location_on, color: Colors.red, size: 36),
+                  ),
+                ],
+              ),
+            ],
           ),
           // Hints
           Positioned(
@@ -72,6 +91,30 @@ class _MapPickerState extends State<MapPicker> {
               child: Text(l10n.tapMapToSelectLocation, style: const TextStyle(fontSize: 12, color: Colors.black87)),
             ),
           ),
+          // Simple zoom controls
+          Positioned(
+            right: 12,
+            bottom: 90,
+            child: Column(
+              children: [
+                _ZoomButton(
+                  icon: Icons.add,
+                  onPressed: () {
+                    setState(() => _zoom = (_zoom + 1).clamp(1, 19).toDouble());
+                    _mapController.move(_selected, _zoom);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _ZoomButton(
+                  icon: Icons.remove,
+                  onPressed: () {
+                    setState(() => _zoom = (_zoom - 1).clamp(1, 19).toDouble());
+                    _mapController.move(_selected, _zoom);
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -85,6 +128,30 @@ class _MapPickerState extends State<MapPicker> {
           onPressed: () => Navigator.pop(context, _selected),
           icon: const Icon(Icons.check, color: Colors.white),
           label: Text(l10n.confirmLocation, style: const TextStyle(color: Colors.white)),
+        ),
+      ),
+    );
+  }
+}
+
+class _ZoomButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  const _ZoomButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 2,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: Colors.black87),
         ),
       ),
     );

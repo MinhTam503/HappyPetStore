@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:pet_shop/data/models/chatbot_model.dart';
 
@@ -12,10 +14,25 @@ class ChatBotRemoteDataSourceImpl implements ChatBotRemoteDataSource {
   final http.Client client;
   final String baseUrl;
 
+  static const Duration _requestTimeout = Duration(seconds: 10);
+
+  static String _autoBaseUrl() {
+    // Pick the correct host to reach local n8n depending on platform
+    if (kIsWeb) return 'http://localhost:5678';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:5678';
+      // iOS simulator and desktop
+      return 'http://localhost:5678';
+    } catch (_) {
+      // Fallback for platforms where dart:io Platform isn't available
+      return 'http://localhost:5678';
+    }
+  }
+
   ChatBotRemoteDataSourceImpl({
     required this.client,
-    this.baseUrl = 'http://10.0.2.2:5678',
-  });
+    String? baseUrl,
+  }) : baseUrl = baseUrl ?? _autoBaseUrl();
 
   @override
   Future<ChatBotResponseModel> sendMessage(String userId, String message) async {
@@ -25,43 +42,50 @@ class ChatBotRemoteDataSourceImpl implements ChatBotRemoteDataSource {
     );
 
     try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/webhook/chat'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode(requestModel.toJson()),
-      ).timeout(const Duration(seconds: 30));
+      // Try primary and fallback endpoints to support both webhook and webhook-test
+      final endpoints = <String>[
+        '$baseUrl/webhook/chat',
+        '$baseUrl/webhook-test/chat',
+      ];
 
-      print('ChatBot API Response Status: ${response.statusCode}');
-      print('ChatBot API Response Body: ${response.body}');
+      dynamic lastError;
+      for (final url in endpoints) {
+        try {
+          final response = await client
+              .post(
+                Uri.parse(url),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+                body: json.encode(requestModel.toJson()),
+              )
+              .timeout(_requestTimeout);
 
-      if (response.statusCode == 200) {
-        final responseBody = json.decode(response.body);
-        
-        // Handle null response
-        if (responseBody == null) {
-          throw Exception('Đã có lỗi xảy ra, vui lòng thử lại sau');
+          print('ChatBot API POST $url -> ${response.statusCode}');
+          if (response.statusCode == 200) {
+            final responseBody = json.decode(response.body);
+
+            if (responseBody == null) {
+              throw Exception('Đã có lỗi xảy ra, vui lòng thử lại sau');
+            }
+
+            return ChatBotResponseModel.fromJson(responseBody);
+          } else {
+            lastError = 'HTTP ${response.statusCode}: ${response.reasonPhrase}';
+          }
+        } on TimeoutException catch (e) {
+          lastError = 'Timeout: ${e.message ?? e.toString()}';
+          // Try next endpoint
+          continue;
+        } catch (e) {
+          lastError = e;
+          // Try next endpoint
+          continue;
         }
-        
-        // Handle new API format (direct reply, pets, actions)
-        if (responseBody['reply'] != null) {
-          return ChatBotResponseModel.fromJson(responseBody);
-        }
-        
-        // Handle old format - Check if response indicates success
-        final success = responseBody['success'] as bool? ?? false;
-        if (!success) {
-          final errorMessage = responseBody['data']?['message'] ?? 'Unknown error from ChatBot API';
-          print('ChatBot API returned error: $errorMessage');
-          throw Exception('ChatBot API Error: $errorMessage');
-        }
-        
-        return ChatBotResponseModel.fromJson(responseBody);
-      } else {
-        throw Exception('Failed to send message to chatbot: ${response.statusCode}');
       }
+
+      throw Exception('Failed to send message to chatbot: $lastError');
     } catch (e) {
       print('ChatBot API Error: $e');
       throw Exception('Network error: $e');
@@ -71,14 +95,27 @@ class ChatBotRemoteDataSourceImpl implements ChatBotRemoteDataSource {
   @override
   Future<bool> checkServiceAvailability() async {
     try {
-      final response = await client.get(
-        Uri.parse('$baseUrl/webhook/health'),
-        headers: {
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 5));
+      final healthEndpoints = <String>[
+        '$baseUrl/webhook/health',
+        '$baseUrl/webhook-test/health',
+      ];
 
-      return response.statusCode == 200;
+      for (final url in healthEndpoints) {
+        try {
+          final response = await client
+              .get(
+                Uri.parse(url),
+                headers: {'Accept': 'application/json'},
+              )
+              .timeout(const Duration(seconds: 5));
+          if (response.statusCode == 200) return true;
+        } catch (_) {
+          // Try next health endpoint
+          continue;
+        }
+      }
+
+      return false;
     } catch (e) {
       print('ChatBot Service Health Check Failed: $e');
       return false;

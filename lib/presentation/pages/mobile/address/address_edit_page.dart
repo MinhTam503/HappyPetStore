@@ -172,6 +172,9 @@ class _AddressEditPageState extends State<AddressEditPage> {
                     options: MapOptions(
                       initialCenter: tempLocation,
                       initialZoom: 15.0,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      ),
                       onTap: (tapPosition, point) {
                         setDialogState(() {
                           tempLocation = point;

@@ -272,7 +272,7 @@ class ChatBotActionModel extends ChatBotAction {
   factory ChatBotActionModel.fromJson(Map<String, dynamic> json) {
     return ChatBotActionModel(
       type: json['type']?.toString() ?? '',
-      text: json['text']?.toString() ?? '',
+      text: (json['text'] ?? json['title'])?.toString() ?? '',
       url: json['url']?.toString(),
       phone: json['phone']?.toString(),
     );
@@ -356,38 +356,32 @@ class ChatBotResponseModel extends ChatBotResponse {
   factory ChatBotResponseModel.fromJson(Map<String, dynamic> json) {
     // Handle the new API format from your test examples
     if (json['reply'] != null) {
-      // New format with reply, pets, actions
-      final reply = json['reply'] as String;
-      final actions = json['actions'] as List<dynamic>? ?? [];
-      
-      // Extract pets from actions if type is LIST
-      List<ChatBotPet> extractedPets = [];
-      for (final action in actions) {
-        if (action['type'] == 'LIST' && action['items'] != null) {
-          final items = action['items'] as List<dynamic>;
-          extractedPets.addAll(
-            items.map((item) => ChatBotPetModel.fromJson(item as Map<String, dynamic>))
-          );
-        }
-      }
-      
-      // Parse pets embedded in reply text if format contains IDs
-      final (cleanReply, embeddedPets) = _extractPetsFromReply(reply);
-      extractedPets.addAll(embeddedPets);
-      
+      // New format with reply, pets, actions at top-level (n8n webhook)
+      final reply = (json['reply'] as String?) ?? '';
+
+      final petsJson = json['pets'] as List<dynamic>? ?? const [];
+      final pets = petsJson
+          .map((e) => ChatBotPetModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      final actionsJson = json['actions'] as List<dynamic>? ?? const [];
+      final actions = actionsJson
+          .map((e) => ChatBotActionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
       return ChatBotResponseModel(
         success: true,
         status: 'success',
         timestamp: json['metadata']?['timestamp'] as String?,
         requestId: null,
-        message: cleanReply,
+        message: reply,
         messageType: 'text',
-        pets: extractedPets,
-        totalFound: extractedPets.length,
+        pets: pets,
+        totalFound: pets.length,
         filtersApplied: null,
         pagination: null,
-        quickReplies: [],
-        actions: [], // Don't parse actions as they have different format
+        quickReplies: const [],
+        actions: actions,
       );
     }
     
@@ -423,136 +417,8 @@ class ChatBotResponseModel extends ChatBotResponse {
           : [],
     );
   }
-
-  // Extract pets from reply text with format "Name - Price - Status - Info - (id: ID)"
-  static (String, List<ChatBotPet>) _extractPetsFromReply(String reply) {
-    // Updated pattern to match both formats:
-    // Format 1: "Name - Price ₫ - Status - Info - (id: ID)"
-    // Format 2: "Name - Price - Status - Breed, Sex, Age, Weight - (id: ID)"
-    final petPattern = RegExp(
-      r'([^-\n]+) - ([\d.]+(?:\.\d+)?)[\s₫]+(?:₫\s*)?- ([^-]+) - ([^-]+) - \(id: ([^)]+)\)',
-      multiLine: true
-    );
-    final matches = petPattern.allMatches(reply);
-    
-    if (matches.isEmpty) {
-      return (reply, []);
-    }
-    
-    final pets = <ChatBotPet>[];
-    final List<String> petLines = [];
-    
-    for (final match in matches) {
-      final name = match.group(1)?.trim() ?? '';
-      final priceStr = match.group(2)?.trim().replaceAll('.', '').replaceAll('₫', '').trim() ?? '0';
-      // final status = match.group(3)?.trim() ?? ''; // Not used - usually "Còn hàng"
-      final info = match.group(4)?.trim() ?? '';
-      final id = match.group(5)?.trim() ?? '';
-      
-      final price = int.tryParse(priceStr) ?? 0;
-      
-      // Parse info for breed, sex, age, weight
-      final infoParts = info.split(', ');
-      String breed = 'Không rõ';
-      String sex = 'Không rõ';
-      String age = 'Không rõ';
-      String weight = 'Không rõ';
-      String category = 'Dogs';
-      
-      if (infoParts.isNotEmpty) {
-        breed = infoParts[0];
-        category = _getCategoryFromBreed(breed);
-      }
-      if (infoParts.length > 1) sex = infoParts[1];
-      if (infoParts.length > 2) age = infoParts[2].replaceAll(' tuổi', '');
-      if (infoParts.length > 3) weight = infoParts[3].replaceAll(' nặng ', '').replaceAll('kg', '');
-      
-      pets.add(ChatBotPetModel(
-        id: id,
-        name: name,
-        breed: breed,
-        category: category,
-        age: age,
-        sex: sex,
-        weight: weight,
-        price: price,
-        imageUrl: '', // Will be fetched from Firestore
-        about: info,
-      ));
-      
-      // Track which lines contain pet info
-      petLines.add(match.group(0)!);
-    }
-    
-    // Remove pet info lines from reply
-    String cleanReply = reply;
-    for (final line in petLines) {
-      cleanReply = cleanReply.replaceAll(line, '');
-    }
-    
-    // Clean up empty lines and keep only meaningful text
-    cleanReply = cleanReply.split('\n')
-        .map((line) => line.trim())
-        .where((line) => 
-          line.isNotEmpty && 
-          !line.startsWith('(id:') &&
-          !petPattern.hasMatch(line))
-        .join('\n')
-        .trim();
-    
-    // If no meaningful text remains, use a default message
-    if (cleanReply.isEmpty && pets.isNotEmpty) {
-      cleanReply = 'Tôi tìm thấy ${pets.length} thú cưng phù hợp với yêu cầu của bạn:';
-    }
-    
-    return (cleanReply, pets);
-  }
   
-  static String _getCategoryFromBreed(String breed) {
-    final lowerBreed = breed.toLowerCase();
-    
-    // Dog breeds
-    if (lowerBreed.contains('husky') || 
-        lowerBreed.contains('golden') || 
-        lowerBreed.contains('chihuahua') || 
-        lowerBreed.contains('phốc') ||
-        lowerBreed.contains('bacgie') ||
-        lowerBreed.contains('retriever')) {
-      return 'Dogs';
-    }
-    
-    // Cat breeds
-    if (lowerBreed.contains('mèo') || 
-        lowerBreed.contains('ba tư') || 
-        lowerBreed.contains('xiêm') ||
-        lowerBreed.contains('scottish') ||
-        lowerBreed.contains('munchkin') ||
-        lowerBreed.contains('anh lông ngắn')) {
-      return 'Cats';
-    }
-    
-    // Fish species
-    if (lowerBreed.contains('cá') || 
-        lowerBreed.contains('koi') || 
-        lowerBreed.contains('betta') ||
-        lowerBreed.contains('vàng') ||
-        lowerBreed.contains('neon') ||
-        lowerBreed.contains('bảy màu')) {
-      return 'Fish';
-    }
-    
-    // Birds
-    if (lowerBreed.contains('chim') || 
-        lowerBreed.contains('yến phụng') || 
-        lowerBreed.contains('hoạ mi') ||
-        lowerBreed.contains('chào mào') ||
-        lowerBreed.contains('sáo') ||
-        lowerBreed.contains('cu gáy')) {
-      return 'Birds';
-    }
-    
-    return 'Dogs'; // Default
-  }
+  // Note: Category inference helper removed since pets now come structured in n8n payload.
 
   Map<String, dynamic> toJson() {
     return {

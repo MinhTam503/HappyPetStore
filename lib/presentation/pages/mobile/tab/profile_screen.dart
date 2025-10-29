@@ -16,7 +16,7 @@ import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dar
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 
 import '../profile/edit_profile.dart';
-import 'favorite_screen.dart';
+// Removed unused import for favorite_screen.dart
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -124,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        const _DividerInset(),
+                        const SizedBox(height: 6),
                         _MenuItem(
                           icon: Icons.production_quantity_limits,
                           iconBg: const Color(0xffe6f5ea),
@@ -139,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        const _DividerInset(),
+                        const SizedBox(height: 6),
                         _MenuItem(
                           icon: Icons.location_on,
                           iconBg: const Color(0xffe8f5e8),
@@ -154,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        const _DividerInset(),
+                        const SizedBox(height: 6),
                         _MenuItem(
                           icon: Icons.pets,
                           iconBg: const Color(0xfffde2e2),
@@ -186,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        const _DividerInset(),
+                        const SizedBox(height: 6),
                         _MenuItem(
                           icon: Icons.message_outlined,
                           iconBg: const Color(0xfff0ecff),
@@ -201,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        const _DividerInset(),
+                        const SizedBox(height: 6),
                         _MenuItem(
                           icon: Icons.password_rounded,
                           iconBg: const Color(0xfffff2e5),
@@ -588,15 +588,4 @@ class _MenuItem extends StatelessWidget {
 }
 
 // Divider có inset để đẹp mắt
-class _DividerInset extends StatelessWidget {
-  const _DividerInset();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Divider(
-      height: 0,
-      indent: 16 + 44 + 12, // leading padding + icon size + gap
-      endIndent: 12,
-    );
-  }
-}
+// Removed custom divider widget in favor of subtle spacing for a cleaner look.

@@ -29,6 +29,18 @@ import 'package:pet_shop/presentation/bloc/vnpay/vnpay_bloc.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/shipping_management_page.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/order/orders_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/dashboard/dashboard_page.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/pet/pets_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/category/category_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/account/account_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/notification/notification_management_panel.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_analytics_page.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/chat/ChatDetailPage.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/home_page_web_user.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/payment_success_screen.dart';
@@ -162,6 +174,59 @@ class MyApp extends StatelessWidget {
                       PaymentSuccessScreen(sessionId: sessionId),
                   settings: settings,
                 );
+              }
+
+              // Web Admin deep links: /admin/*
+              if (kIsWeb && settings.name != null) {
+                final uri = Uri.parse(settings.name!);
+                final segs = uri.pathSegments;
+                if (segs.isNotEmpty && segs.first == 'admin') {
+                  // /admin
+                  if (segs.length == 1) {
+                    return MaterialPageRoute(builder: (_) => const HomePageAdmin(), settings: settings);
+                  }
+                  final section = segs[1];
+                  switch (section) {
+                    case 'home':
+                      return MaterialPageRoute(builder: (_) => const HomePageAdmin(), settings: settings);
+                    case 'dashboard':
+                      return MaterialPageRoute(builder: (_) => const DashboardPage(), settings: settings);
+                    case 'order':
+                    case 'orders':
+                      return MaterialPageRoute(builder: (_) => const OrdersAdmin(), settings: settings);
+                    case 'shipping':
+                      return MaterialPageRoute(builder: (_) => const ShippingManagementPage(), settings: settings);
+                    case 'pet':
+                    case 'pets':
+                      return MaterialPageRoute(builder: (_) => const PetsAdmin(), settings: settings);
+                    case 'category':
+                      return MaterialPageRoute(builder: (_) => const CategoryAdmin(), settings: settings);
+                    case 'account':
+                    case 'accounts':
+                      return MaterialPageRoute(builder: (_) => const AccountAdmin(), settings: settings);
+                    case 'notification':
+                    case 'notifications':
+                      return MaterialPageRoute(builder: (_) => const NotificationManagementPanel(), settings: settings);
+                    case 'revenue':
+                      return MaterialPageRoute(builder: (_) => const RevenuePage(), settings: settings);
+                    case 'analytics':
+                    case 'pet-analytics':
+                      return MaterialPageRoute(builder: (_) => const PetAnalyticsPage(), settings: settings);
+                    case 'shop-info':
+                      return MaterialPageRoute(builder: (_) => const ShopInfo(), settings: settings);
+                    case 'chat':
+                    case 'inbox':
+                      // /admin/chat/:email -> Chat detail; otherwise inbox
+                      if (section == 'chat' && segs.length >= 3) {
+                        final email = Uri.decodeComponent(segs.sublist(2).join('/'));
+                        return MaterialPageRoute(builder: (_) => ChatDetailPage(customerEmail: email), settings: settings);
+                      }
+                      return MaterialPageRoute(builder: (_) => const InboxPageAdmin(), settings: settings);
+                    default:
+                      // Fallback to admin home
+                      return MaterialPageRoute(builder: (_) => const HomePageAdmin(), settings: settings);
+                  }
+                }
               }
 
               // Default routes

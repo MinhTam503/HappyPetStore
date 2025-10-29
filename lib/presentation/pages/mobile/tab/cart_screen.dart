@@ -1218,8 +1218,8 @@ class _CartScreenState extends State<CartScreen> {
                                           if (selected.isEmpty) {
                                             return;
                                           }
-                                          // Navigate to dedicated checkout screen
-                                          Navigator.push(
+                                          // Navigate to dedicated checkout screen and refresh cart when returning
+                                          await Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (_) => CheckoutScreen(
@@ -1228,6 +1228,9 @@ class _CartScreenState extends State<CartScreen> {
                                               ),
                                             ),
                                           );
+                                          if (!mounted) return;
+                                          // Reload cart from Firestore to reflect purchased items removal
+                                          context.read<CartBloc>().add(LoadCart(userIdentifier!));
                                         },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,

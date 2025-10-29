@@ -304,6 +304,13 @@ class _ChatBotPageState extends State<ChatBotPage> {
             const SizedBox(height: 8),
             _buildQuickReplies(message.quickReplies!),
           ],
+          // Display actions if available (e.g., paginateNext)
+          if (!message.isUser &&
+              message.actions != null &&
+              message.actions!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildActions(message.actions!),
+          ],
         ],
       ),
     );
@@ -753,6 +760,66 @@ class _ChatBotPageState extends State<ChatBotPage> {
                 color: Theme.of(context).primaryColor,
                 fontWeight: FontWeight.w500,
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActions(List<ChatBotAction> actions) {
+    return Container(
+      margin: const EdgeInsets.only(left: 40), // Align with bot message
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: actions.map((action) => _buildActionChip(action)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildActionChip(ChatBotAction action) {
+    return BlocBuilder<ChatBotBloc, ChatBotState>(
+      builder: (blocContext, state) {
+        final label = action.text.isNotEmpty ? action.text : action.type;
+        return GestureDetector(
+          onTap: () {
+            // Send the action label as a follow-up message
+            blocContext.read<ChatBotBloc>().add(
+                  SendChatBotMessage(
+                    userId: widget.userId,
+                    message: label,
+                  ),
+                );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).primaryColor.withOpacity(0.25),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         );

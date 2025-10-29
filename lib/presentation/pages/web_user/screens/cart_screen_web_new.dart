@@ -34,9 +34,7 @@ class _CartScreenWebState extends State<CartScreenWeb> {
     return items.fold(0.0, (sum, it) => sum + _priceOf(it));
   }
   
-  double _grandTotal(List<Map<String, dynamic>> items) {
-    return _total(items) + shippingFee;
-  }
+  // Removed unused _grandTotal helper; use _total(items) + shippingFee directly where needed
   
   Future<void> calculateShippingFee(List<Map<String, dynamic>> items, String address) async {
     if (items.isEmpty || address.isEmpty) {

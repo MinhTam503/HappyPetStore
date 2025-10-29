@@ -76,6 +76,7 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Row(
           children: [
             Icon(Icons.local_shipping),
@@ -372,10 +373,13 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        child: SingleChildScrollView(
-          child: Container(
-            width: 600,
-            height: 750,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 720,
+            // Sử dụng 90% chiều cao màn hình để tránh tràn và vẫn thoải mái
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,10 +388,10 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
                   children: [
                     const Icon(Icons.local_shipping),
                     const SizedBox(width: 8),
-                    Expanded(
+                    const Expanded(
                       child: Text(
                         'Chi tiết giao hàng',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -400,6 +404,7 @@ class _ShippingManagementPageState extends State<ShippingManagementPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                // Dùng Expanded để widget bên trong chiếm diện tích còn lại của Dialog
                 Expanded(
                   child: ShippingTrackingWidget(
                     trackingNumber: shipment['trackingNumber'],

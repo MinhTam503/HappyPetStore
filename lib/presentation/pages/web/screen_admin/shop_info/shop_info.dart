@@ -1,10 +1,10 @@
 import 'dart:typed_data';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:pet_shop/auth/firestore_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart'; // dùng primaryColor, secondaryColor nếu có
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/MapPicker.dart';
@@ -22,9 +22,10 @@ class _ShopInfoState extends State<ShopInfo> {
   final _fService = Firestore_Service();
 
   // Map
-  Set<Marker> _markers = {};
-  GoogleMapController? _mapController;
+  List<Marker> _markers = [];
+  final MapController _mapController = MapController();
   LatLng? _center;
+  double _zoom = 15;
 
   // Form
   final nameController = TextEditingController();
@@ -48,7 +49,6 @@ class _ShopInfoState extends State<ShopInfo> {
     nameController.dispose();
     aboutController.dispose();
     addressController.dispose();
-    _mapController?.dispose();
     super.dispose();
   }
 
@@ -78,17 +78,17 @@ class _ShopInfoState extends State<ShopInfo> {
       aboutController.text = data['about'] ?? '';
       addressController.text = data['address'] ?? '';
       _center = pos;
-      _markers = {
+      _markers = [
         Marker(
-          markerId: const MarkerId('selectedLocation'),
-          position: pos,
-          infoWindow: const InfoWindow(title: 'Vị trí cửa hàng'),
+          point: pos,
+          width: 40,
+          height: 40,
+          child: const Icon(Icons.location_on, color: Colors.red, size: 36),
         )
-      };
+      ];
     });
   }
-
-  void _onMapCreated(GoogleMapController c) => _mapController = c;
+  
 
   Future<String> _uploadImage(
       Uint8List imageBytes,
@@ -158,15 +158,16 @@ class _ShopInfoState extends State<ShopInfo> {
 
     setState(() {
       _center = location;
-      _markers = {
+      _markers = [
         Marker(
-          markerId: const MarkerId('selectedLocation'),
-          position: location,
-          infoWindow: const InfoWindow(title: 'Vị trí cửa hàng'),
+          point: location,
+          width: 40,
+          height: 40,
+          child: const Icon(Icons.location_on, color: Colors.red, size: 36),
         )
-      };
+      ];
     });
-    _mapController?.animateCamera(CameraUpdate.newLatLng(location));
+    _mapController.move(location, _zoom);
   }
 
   InputDecoration _dec(String label, {String? hint, Widget? prefix}) {
@@ -336,16 +337,50 @@ class _ShopInfoState extends State<ShopInfo> {
                           child: SizedBox(
                             height: 320,
                             width: double.infinity,
-                            child: GoogleMap(
-                              onMapCreated: _onMapCreated,
-                              initialCameraPosition: CameraPosition(
-                                target: _center ??
-                                    const LatLng(10.980712020778228, 106.6743278503418),
-                                zoom: 15,
-                              ),
-                              markers: _markers,
-                              myLocationButtonEnabled: false,
-                              zoomControlsEnabled: true,
+                            child: Stack(
+                              children: [
+                                FlutterMap(
+                                  mapController: _mapController,
+                                  options: MapOptions(
+                                    initialCenter: _center ?? const LatLng(10.980712020778228, 106.6743278503418),
+                                    initialZoom: _zoom,
+                                    interactionOptions: const InteractionOptions(
+                                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                                    ),
+                                  ),
+                                  children: [
+                                    TileLayer(
+                                      urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                      subdomains: const ['a', 'b', 'c'],
+                                      userAgentPackageName: 'com.happypet.store',
+                                    ),
+                                    MarkerLayer(markers: _markers),
+                                  ],
+                                ),
+                                Positioned(
+                                  right: 12,
+                                  bottom: 12,
+                                  child: Column(
+                                    children: [
+                                      _ZoomButton(
+                                        icon: Icons.add,
+                                        onPressed: () {
+                                          setState(() => _zoom = (_zoom + 1).clamp(1, 19).toDouble());
+                                          if (_center != null) _mapController.move(_center!, _zoom);
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _ZoomButton(
+                                        icon: Icons.remove,
+                                        onPressed: () {
+                                          setState(() => _zoom = (_zoom - 1).clamp(1, 19).toDouble());
+                                          if (_center != null) _mapController.move(_center!, _zoom);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -415,6 +450,31 @@ class _ShopInfoState extends State<ShopInfo> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+}
+
+class _ZoomButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  const _ZoomButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 2,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Center(child: Icon(icon, size: 20)),
         ),
       ),
     );

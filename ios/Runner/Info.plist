@@ -47,5 +47,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	
+	<!-- Location permission usage descriptions for iOS -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ứng dụng cần truy cập vị trí của bạn để chọn địa chỉ giao hàng trên bản đồ và gợi ý vị trí gần bạn.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Ứng dụng có thể sử dụng vị trí của bạn khi đang dùng để hiển thị bản đồ và địa chỉ chính xác.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập vị trí để cung cấp trải nghiệm giao hàng tốt hơn.</string>
 </dict>
 </plist>

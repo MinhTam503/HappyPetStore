@@ -938,7 +938,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                       const SizedBox(height: 8),
                       ShippingTrackingWidget(
                         trackingNumber: order['trackingNumber'].toString(),
-                        isAdminView: true,
+                        // Chỉ trang quản lý vận chuyển mới được chỉnh trạng thái
+                        isAdminView: false,
                       ),
                     ] else if (status == 'Processing') ...[
                       // Nếu đơn đang xử lý nhưng chưa có tracking number
@@ -1140,6 +1141,21 @@ class _OrdersAdminState extends State<OrdersAdmin> {
       final orderItems = (order['items'] as List?) ?? [];
       final totalWeight = orderItems.isNotEmpty ? orderItems.length * 1.5 : 2.0;
       
+      // Prefer precise coordinates from deliveryInfo if available
+      double? destLat;
+      double? destLng;
+      try {
+        final di = order['deliveryInfo'];
+        if (di is Map<String, dynamic>) {
+          final nlat = (di['lat'] ?? di['latitude']);
+          final nlng = (di['lng'] ?? di['longitude']);
+          if (nlat is num && nlng is num) {
+            destLat = nlat.toDouble();
+            destLng = nlng.toDouble();
+          }
+        }
+      } catch (_) {}
+
       final result = await ShippingService.createShipment(
         orderId: orderId,
         shippingAddress: address,
@@ -1165,14 +1181,26 @@ class _OrdersAdminState extends State<OrdersAdmin> {
             'weight': 2000,
           }
         ],
+        destinationLat: destLat,
+        destinationLng: destLng,
       );
       
       if (result['success']) {
-        final trackingNumber = result['data']['trackingNumber'];
+        final shipmentData = Map<String, dynamic>.from(result['data']);
+        final trackingNumber = shipmentData['trackingNumber'];
+
+        // Force destination to use precise coords if present
+        if (destLat != null && destLng != null) {
+          shipmentData['destination'] = {
+            'name': address,
+            'lat': destLat,
+            'lng': destLng,
+          };
+        }
         
         await updateOrder(orderId, collection, {
           'trackingNumber': trackingNumber,
-          'shippingInfo': result['data'],
+          'shippingInfo': shipmentData,
         });
         
         if (mounted) {

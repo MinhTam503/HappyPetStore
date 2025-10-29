@@ -23,6 +23,8 @@ class ShippingService {
     double? totalWeight,
     double? totalValue,
     List<Map<String, dynamic>>? items,
+    double? destinationLat,
+    double? destinationLng,
   }) async {
     print('🚚 Creating MOCK shipment for order: $orderId');
     print('📦 Using provider: MOCK ONLY');
@@ -33,6 +35,8 @@ class ShippingService {
       customerInfo: customerInfo,
       totalWeight: totalWeight,
       totalValue: totalValue,
+      destinationLat: destinationLat,
+      destinationLng: destinationLng,
     );
   }
 
@@ -69,6 +73,8 @@ class ShippingService {
     required Map<String, dynamic> customerInfo,
     double? totalWeight,
     double? totalValue,
+    double? destinationLat,
+    double? destinationLng,
   }) async {
     try {
       print('🚚 Creating mock shipment for order: $orderId');
@@ -86,6 +92,33 @@ class ShippingService {
       // Calculate shipping fee based on address
       final shippingFee = _calculateShippingFee(shippingAddress, totalValue ?? 0);
       
+      // Mock geo coordinates: store in HCM and destination by rough city match
+      final storeLat = 10.776889; // HCM center-ish
+      final storeLng = 106.700806;
+      double destLat = destinationLat ?? storeLat;
+      double destLng = destinationLng ?? storeLng;
+      if (destinationLat == null || destinationLng == null) {
+        final addrLower = shippingAddress.toLowerCase();
+        if (addrLower.contains('hà nội') || addrLower.contains('ha noi')) {
+          destLat = 21.028511;
+          destLng = 105.804817;
+        } else if (addrLower.contains('đà nẵng') || addrLower.contains('da nang')) {
+          destLat = 16.047079;
+          destLng = 108.206230;
+        } else if (addrLower.contains('cần thơ') || addrLower.contains('can tho')) {
+          destLat = 10.045162;
+          destLng = 105.746857;
+        } else if (addrLower.contains('hcm') || addrLower.contains('hồ chí minh') || addrLower.contains('ho chi minh')) {
+          // within HCM: random small offset
+          destLat = storeLat + (Random().nextDouble() - 0.5) * 0.1;
+          destLng = storeLng + (Random().nextDouble() - 0.5) * 0.1;
+        } else {
+          // generic VN-ish offset
+          destLat = storeLat + (Random().nextDouble() * 8 - 4) * 0.1;
+          destLng = storeLng + (Random().nextDouble() * 8 - 4) * 0.1;
+        }
+      }
+
       final shipmentData = {
         'trackingNumber': trackingNumber,
         'orderId': orderId,
@@ -98,6 +131,17 @@ class ShippingService {
         'customerInfo': customerInfo,
         'customerPhone': customerInfo['phone'] ?? '', // Số điện thoại customer để hiển thị
         'createdAt': DateTime.now().toIso8601String(),
+        // Map routing data
+        'origin': {
+          'name': 'Happy Pets Store - TP.HCM',
+          'lat': storeLat,
+          'lng': storeLng,
+        },
+        'destination': {
+          'name': shippingAddress,
+          'lat': destLat,
+          'lng': destLng,
+        },
         'trackingHistory': [
           {
             'status': 'pickup_pending',
@@ -139,6 +183,174 @@ class ShippingService {
   static Future<Map<String, dynamic>> trackShipment(String trackingNumber) async {
     print('📱 Tracking MOCK shipment: $trackingNumber');
     return await _trackMockShipment(trackingNumber);
+  }
+
+  /// Theo dõi realtime thay đổi shipment từ Firestore
+  /// Ưu tiên tìm 1 lần để xác định collection (orders hoặc ordersWeb),
+  /// sau đó lắng nghe snapshots() của document đó và map ra shippingInfo.
+  static Stream<Map<String, dynamic>?> watchShipment(String trackingNumber) async* {
+    try {
+      // Tìm trong mobile orders trước
+      final mobileQuery = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('trackingNumber', isEqualTo: trackingNumber)
+          .limit(1)
+          .get();
+      if (mobileQuery.docs.isNotEmpty) {
+        final docRef = mobileQuery.docs.first.reference;
+        yield* docRef.snapshots().asyncMap((snap) async {
+          if (!snap.exists) return null;
+          final data = snap.data() as Map<String, dynamic>;
+          if (data['shippingInfo'] == null) return null;
+          var shippingInfo = Map<String, dynamic>.from(data['shippingInfo']);
+          // Đảm bảo có trackingHistory
+          if (shippingInfo['trackingHistory'] == null || (shippingInfo['trackingHistory'] as List).isEmpty) {
+            shippingInfo['trackingHistory'] = [
+              {
+                'status': shippingInfo['status'] ?? 'pickup_pending',
+                'description': 'Đơn hàng đã được tạo',
+                'timestamp': shippingInfo['createdAt'] ?? DateTime.now().toIso8601String(),
+                'location': 'Happy Pets Store'
+              }
+            ];
+          }
+          shippingInfo = await _enrichShippingInfoWithCoords(shippingInfo, data);
+          return shippingInfo;
+        });
+        return;
+      }
+
+      // Nếu không có trong mobile, tìm trong web orders
+      final webQuery = await FirebaseFirestore.instance
+          .collection('ordersWeb')
+          .where('trackingNumber', isEqualTo: trackingNumber)
+          .limit(1)
+          .get();
+      if (webQuery.docs.isNotEmpty) {
+        final docRef = webQuery.docs.first.reference;
+        yield* docRef.snapshots().asyncMap((snap) async {
+          if (!snap.exists) return null;
+          final data = snap.data() as Map<String, dynamic>;
+          if (data['shippingInfo'] == null) return null;
+          var shippingInfo = Map<String, dynamic>.from(data['shippingInfo']);
+          if (shippingInfo['trackingHistory'] == null || (shippingInfo['trackingHistory'] as List).isEmpty) {
+            shippingInfo['trackingHistory'] = [
+              {
+                'status': shippingInfo['status'] ?? 'pickup_pending',
+                'description': 'Đơn hàng đã được tạo',
+                'timestamp': shippingInfo['createdAt'] ?? DateTime.now().toIso8601String(),
+                'location': 'Happy Pets Store'
+              }
+            ];
+          }
+          shippingInfo = await _enrichShippingInfoWithCoords(shippingInfo, data);
+          return shippingInfo;
+        });
+        return;
+      }
+
+      // Fallback: không có trên Firebase, không có stream phù hợp
+      yield null;
+    } catch (e) {
+      print('⚠️ watchShipment error: $e');
+      yield null;
+    }
+  }
+
+  // ===== Helpers to enrich coordinates from Firestore =====
+  static Future<Map<String, dynamic>> _enrichShippingInfoWithCoords(
+      Map<String, dynamic> shippingInfo, Map<String, dynamic> orderData) async {
+    try {
+      // Origin (Shop) from ShopInfo collection
+      final shop = await _fetchShopLocation();
+      if (shop != null) {
+        shippingInfo['origin'] ??= {};
+        shippingInfo['origin'] = {
+          'name': shop['name'] ?? 'Happy Pets Store',
+          'lat': shop['lat'],
+          'lng': shop['lng'],
+        };
+      }
+
+      // Destination from order's deliveryInfo (preferred)
+      Map<String, dynamic>? destCandidate;
+      if (orderData['deliveryInfo'] is Map<String, dynamic>) {
+        final di = Map<String, dynamic>.from(orderData['deliveryInfo']);
+        if ((di['lat'] != null && di['lng'] != null) ||
+            (di['latitude'] != null && di['longitude'] != null)) {
+          final lat = (di['lat'] ?? di['latitude']) as num?;
+          final lng = (di['lng'] ?? di['longitude']) as num?;
+          if (lat != null && lng != null) {
+            destCandidate = {
+              'name': di['address'] ?? 'Địa chỉ giao hàng',
+              'lat': lat.toDouble(),
+              'lng': lng.toDouble(),
+            };
+          }
+        }
+      }
+
+      // Always prefer precise deliveryInfo coordinates if available
+      if (destCandidate != null) {
+        shippingInfo['destination'] = destCandidate;
+      } else if (orderData['shippingAddress'] != null) {
+        // Fallback: just set name (no coords)
+        shippingInfo['destination'] = {
+          'name': orderData['shippingAddress'],
+        };
+      }
+    } catch (e) {
+      print('⚠️ enrichShippingInfoWithCoords failed: $e');
+    }
+    return shippingInfo;
+  }
+
+  static Future<Map<String, dynamic>?> _fetchShopLocation() async {
+    try {
+      // Try a specific doc first if conventionally named
+      final mainDoc = await FirebaseFirestore.instance
+          .collection('ShopInfo')
+          .doc('main')
+          .get();
+      if (mainDoc.exists) {
+        final d = mainDoc.data() as Map<String, dynamic>;
+        final loc = d['location'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(d['location'])
+            : d;
+        final lat = (loc['lat'] ?? loc['latitude']) as num?;
+        final lng = (loc['lng'] ?? loc['longitude']) as num?;
+        if (lat != null && lng != null) {
+          return {
+            'name': d['name'] ?? 'Happy Pets Store',
+            'lat': lat.toDouble(),
+            'lng': lng.toDouble(),
+          };
+        }
+      }
+      // Else take the first doc
+      final snap = await FirebaseFirestore.instance
+          .collection('ShopInfo')
+          .limit(1)
+          .get();
+      if (snap.docs.isNotEmpty) {
+        final d = snap.docs.first.data();
+        final loc = d['location'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(d['location'])
+            : d;
+        final lat = (loc['lat'] ?? loc['latitude']) as num?;
+        final lng = (loc['lng'] ?? loc['longitude']) as num?;
+        if (lat != null && lng != null) {
+          return {
+            'name': d['name'] ?? 'Happy Pets Store',
+            'lat': lat.toDouble(),
+            'lng': lng.toDouble(),
+          };
+        }
+      }
+    } catch (e) {
+      print('⚠️ fetchShopLocation failed: $e');
+    }
+    return null;
   }
 
   /// Track shipment với Mock API và Firebase fallback
@@ -188,10 +400,12 @@ class ShippingService {
                 ];
               }
               
+              // Enrich with coordinates before returning
+              final enriched = await _enrichShippingInfoWithCoords(shippingInfo, data);
               print('✅ Returning shippingInfo from mobile orders');
               return {
                 'success': true,
-                'data': shippingInfo,
+                'data': enriched,
                 'message': 'Thông tin vận chuyển từ Firebase (Mobile)'
               };
             } else {
@@ -248,10 +462,11 @@ class ShippingService {
                 ];
               }
               
+              final enriched = await _enrichShippingInfoWithCoords(shippingInfo, data);
               print('✅ Returning shippingInfo from web orders');
               return {
                 'success': true,
-                'data': shippingInfo,
+                'data': enriched,
                 'message': 'Thông tin vận chuyển từ Firebase (Web)'
               };
             } else {

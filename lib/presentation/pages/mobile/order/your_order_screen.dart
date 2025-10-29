@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
 import 'package:pet_shop/presentation/components/shipping_tracking_widget.dart';
+import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class YourOrderScreen extends StatefulWidget {
@@ -48,6 +49,56 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
 
   void cancelOrder(String orderId) async {
     await ordersCollection.doc(orderId).update({'statusOrder': 'Cancelled'});
+  }
+
+  // Removed free-text address dialog; we now use AddressListPage to select addresses.
+
+  Future<void> _pickAddressAndUpdateOrder(String orderId) async {
+    try {
+      final result = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AddressListPage(
+            selectedAddress: null,
+            onAddressSelected: (addr) {
+              Navigator.pop(context, addr);
+            },
+          ),
+        ),
+      );
+
+      if (result == null) return;
+
+      // Normalize latitude/longitude keys
+      final lat = result['latitude'] ?? result['lat'];
+      final lng = result['longitude'] ?? result['lng'];
+
+      final deliveryInfo = <String, dynamic>{
+        'name': result['name']?.toString() ?? '',
+        'phone': result['phone']?.toString() ?? '',
+        'address': result['address']?.toString() ?? '',
+        'isDefault': result['isDefault'] ?? false,
+      };
+      if (lat != null && lng != null) {
+        deliveryInfo['latitude'] = lat;
+        deliveryInfo['longitude'] = lng;
+      }
+
+      await ordersCollection.doc(orderId).update({
+        'shippingAddress': deliveryInfo['address'] ?? '',
+        'deliveryInfo': deliveryInfo,
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã cập nhật địa chỉ giao hàng')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi cập nhật địa chỉ: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   IconData getStatusIcon(String status) {
@@ -635,6 +686,29 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         ),
                       ],
                     ),
+                  if (status == 'Pending') ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () => _pickAddressAndUpdateOrder(order.id),
+                            icon: const Icon(Icons.edit_location_alt),
+                            label: const Text('Đổi địa chỉ giao hàng'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => cancelOrder(order.id),
+                            icon: const Icon(Icons.cancel_outlined,
+                                color: Colors.red),
+                            label: const Text('Hủy đơn',
+                                style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   const Divider(height: 1),
 
