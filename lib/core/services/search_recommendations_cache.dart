@@ -6,7 +6,7 @@ class SearchRecommendationsCache {
   static const String _cacheKey = 'search_recommendations_cache';
   static const String _timestampKey = 'search_recommendations_timestamp';
   static const String _userIdKey = 'search_recommendations_user_id';
-  static const Duration _cacheExpiry = Duration(hours: 1); // Cache 1 giờ
+  static const Duration _cacheExpiry = Duration(minutes: 30); // Cache 30 phút
 
   /// Lưu gợi ý vào cache
   static Future<void> saveRecommendations({

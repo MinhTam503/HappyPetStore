@@ -69,22 +69,36 @@ class _RegisterPageNewState extends State<RegisterPageNew>
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(input);
   }
 
+  // Validate and normalize VN phone number to E.164 (+84XXXXXXXXX)
   bool _isPhoneNumber(String input) {
-    String cleaned = input.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
-    return RegExp(r'^(\+84|84|0)[0-9]{8,9}$').hasMatch(cleaned);
+    final digits = input.replaceAll(RegExp(r'\D'), '');
+    String national;
+    if (digits.startsWith('84')) {
+      national = digits.substring(2);
+    } else if (digits.startsWith('0')) {
+      national = digits.substring(1);
+    } else {
+      national = digits;
+    }
+    // Vietnam mobile numbers are 9 digits in national format
+    return RegExp(r'^[0-9]{9}$').hasMatch(national);
   }
 
   String _formatPhoneNumber(String phone) {
-    String cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    if (cleaned.startsWith('+84')) {
-      return cleaned;
-    } else if (cleaned.startsWith('84')) {
-      return '+$cleaned';
-    } else if (cleaned.startsWith('0')) {
-      return '+84${cleaned.substring(1)}';
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    String national;
+    if (digits.startsWith('84')) {
+      national = digits.substring(2);
+    } else if (digits.startsWith('0')) {
+      national = digits.substring(1);
     } else {
-      return '+84$cleaned';
+      national = digits;
     }
+    // Fallback: return as-is if not 9 digits; caller should validate with _isPhoneNumber first
+    if (national.length != 9 || !RegExp(r'^\d{9}$').hasMatch(national)) {
+      return '+84$national';
+    }
+    return '+84$national';
   }
 
   void _register(BuildContext context) async {
@@ -110,7 +124,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
     }
 
     if (!_isEmail(account) && !_isPhoneNumber(account)) {
-      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone'));
+      _showSnackbar('Số điện thoại không hợp lệ. Định dạng đúng: +84XXXXXXXXX (9 chữ số).');
       return;
     }
 

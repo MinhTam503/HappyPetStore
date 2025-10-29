@@ -48,6 +48,24 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	
+	<!-- URL schemes required for Firebase Auth (Phone/Google) reCAPTCHA redirect on iOS -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- REVERSED_CLIENT_ID derived from iosClientId in lib/firebase_options.dart -->
+				<string>com.googleusercontent.apps.1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Ensure Firebase can automatically intercept application:openURL for auth flows -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
+	
 	<!-- Location permission usage descriptions for iOS -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ứng dụng cần truy cập vị trí của bạn để chọn địa chỉ giao hàng trên bản đồ và gợi ý vị trí gần bạn.</string>

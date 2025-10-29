@@ -137,7 +137,7 @@ class _RecommendationDemoPageState extends State<RecommendationDemoPage>
             title: "Phù hợp với sở thích",
             type: RecommendationType.contentBased,
             showViewAll: false,
-            limit: 15,
+            limit: 24,
           ),
           
           const SizedBox(height: 30),
@@ -186,7 +186,7 @@ class _RecommendationDemoPageState extends State<RecommendationDemoPage>
             title: "Người dùng tương tự thích",
             type: RecommendationType.collaborative,
             showViewAll: false,
-            limit: 15,
+            limit: 24,
           ),
         ],
       ),

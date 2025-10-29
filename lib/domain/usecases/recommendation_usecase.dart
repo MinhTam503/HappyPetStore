@@ -1,5 +1,6 @@
 import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/domain/repositories/recommendation_repository.dart';
+import 'package:pet_shop/services/recommendation_logger.dart';
 
 /// Use case for handling all recommendation operations
 class RecommendationUseCase {
@@ -112,6 +113,14 @@ class RecommendationUseCase {
 
       await _repository.trackInteraction(interaction);
       await _repository.updateUserProfile(interaction);
+
+      // Log interaction for observability
+      await RecommendationLogger.logUserInteraction(
+        userId: userId,
+        petId: petId,
+        interactionType: type,
+        metadata: metadata,
+      );
     } catch (e) {
       throw Exception('Failed to track user interaction: $e');
     }
@@ -133,21 +142,8 @@ class RecommendationUseCase {
     int limit = 10,
   }) async {
     try {
-      switch (type) {
-        case RecommendationType.contentBased:
-          return await _repository.getContentBasedRecommendations(userId, limit: limit);
-        case RecommendationType.collaborative:
-          return await _repository.getCollaborativeRecommendations(userId, limit: limit);
-        case RecommendationType.trending:
-          return await _repository.getTrendingPets(limit: limit);
-        case RecommendationType.association:
-          return await _repository.getAssociationRecommendations(userId, limit: limit);
-        case RecommendationType.hybrid:
-          return await getHybridRecommendations(userId: userId, limit: limit);
-        case RecommendationType.personalized:
-          final response = await getPersonalizedRecommendations(userId: userId, limit: limit);
-          return response.items;
-      }
+      // Simplified: always return content-based results regardless of type
+      return await _repository.getContentBasedRecommendations(userId, limit: limit);
     } catch (e) {
       throw Exception('Failed to get recommendations by type: $e');
     }

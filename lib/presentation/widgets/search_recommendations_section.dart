@@ -3,12 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/core/services/search_recommendations_cache.dart';
-import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
-import 'package:pet_shop/presentation/bloc/recommendation/recommendation_event.dart';
-import 'package:pet_shop/presentation/bloc/recommendation/recommendation_state.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
 import 'package:pet_shop/presentation/bloc/search/search_event.dart';
-import 'dart:math' as math;
+// Removed RecommendationConfig here because search is cache-only and doesn't trigger loads
 
 class SearchRecommendationsSection extends StatefulWidget {
   final String userId;
@@ -33,48 +30,27 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
   }
 
   Future<void> _loadRecommendations() async {
-    // 🎯 FORCE REFRESH: Skip cache để test user preferences mới
-    print('🔄 FORCE REFRESH: Skipping cache to load fresh recommendations...');
-    
-    // 🔧 CLEAR cached data để force UI sử dụng fresh data
+    // Cache-only: Try cache-first (reuse home recommendations); do NOT trigger refresh or fallback
     setState(() {
-      _cachedRecommendations = null; // Clear cache variable
-      _isLoadingFromCache = false;
+      _isLoadingFromCache = true;
     });
-    
-    // Load trực tiếp từ server với PERSONALIZED algorithm (same as home page)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        print('🎯 Loading PERSONALIZED recommendations (same as home page)...');
-        context.read<RecommendationBloc>().add(
-          LoadPersonalizedRecommendations(userId: widget.userId, limit: 15),
-        );
-      }
-    });
-    
-    /* OLD CACHE LOGIC - Disabled for testing
-    // Bước 1: Kiểm tra cache trước
     final cachedRecommendations = await SearchRecommendationsCache.getRecommendations(widget.userId);
-    
+
     if (cachedRecommendations != null && mounted) {
       setState(() {
         _cachedRecommendations = cachedRecommendations;
         _isLoadingFromCache = false;
       });
-      print('📦 Using cached recommendations (${cachedRecommendations.length} items)');
+      print('📦 Using cached home recommendations (${cachedRecommendations.length} items) for search');
       return;
     }
-
-    // Bước 2: Nếu không có cache, load từ server
-    setState(() => _isLoadingFromCache = false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<RecommendationBloc>().add(
-          LoadSearchRecommendations(userId: widget.userId, limit: 15),
-        );
-      }
-    });
-    */
+    // No cache available → show nothing (respect strict cache-only behavior)
+    if (mounted) {
+      setState(() {
+        _isLoadingFromCache = false;
+      });
+      print('ℹ️ No cached recommendations available for search; not triggering refresh or fallback');
+    }
   }
 
   @override
@@ -115,62 +91,8 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
       return _buildRecommendationsList(_cachedRecommendations!);
     }
 
-    // Nếu không có cache, sử dụng BlocBuilder để load từ server
-    return BlocConsumer<RecommendationBloc, RecommendationState>(
-      listener: (context, state) {
-        // Lưu vào cache khi load thành công từ server
-        if (state is RecommendationLoaded) {
-          print('🎯 FRESH RECOMMENDATIONS LOADED: ${state.recommendations.length} items');
-          print('🎯 Top 3 fresh recommendations:');
-          for (int i = 0; i < math.min(3, state.recommendations.length); i++) {
-            final rec = state.recommendations[i];
-            print('  ${i + 1}. ${rec.name} (${rec.breed}) - Score: ${rec.score}');
-          }
-          
-          SearchRecommendationsCache.saveRecommendations(
-            userId: widget.userId,
-            recommendations: state.recommendations,
-          );
-        }
-      },
-      builder: (context, state) {
-        if (state is RecommendationLoading) {
-          return Container(
-            margin: const EdgeInsets.all(8.0),
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Row(
-              children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 12),
-                Text('Đang tải gợi ý...'),
-              ],
-            ),
-          );
-        }
-
-        if (state is RecommendationLoaded && state.recommendations.isNotEmpty) {
-          return _buildRecommendationsList(state.recommendations);
-        }
-
-        return const SizedBox.shrink();
-      },
-    );
+    // Nếu không có cache, ẩn section (không trigger load mới)
+    return const SizedBox.shrink();
   }
 
   /// Build recommendations list từ cache hoặc server
@@ -217,35 +139,23 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
             ),
           ),
           const Divider(height: 1),
-          // Hiển thị recommendations được group theo type
+          // Hiển thị recommendations được group theo type với nhiều item hơn
           ..._buildRecommendationGroupsFromList(recommendations),
         ],
       ),
     );
   }
 
-  /// Build groups từ list recommendations đơn giản
+  /// Build groups từ list recommendations giữ nguyên UI cũ nhưng hiển thị nhiều item hơn
   List<Widget> _buildRecommendationGroupsFromList(List<RecommendationItem> recommendations) {
     final widgets = <Widget>[];
-    
+
     // Group theo type
     final Map<RecommendationType, List<RecommendationItem>> groupedRecommendations = {};
     for (final item in recommendations) {
-      if (!groupedRecommendations.containsKey(item.type)) {
-        groupedRecommendations[item.type] = [];
-      }
+      groupedRecommendations.putIfAbsent(item.type, () => []);
       groupedRecommendations[item.type]!.add(item);
     }
-    
-    // // Nhóm theo type và hiển thị
-    // final typeLabels = {
-    //   RecommendationType.contentBased: 'Phù hợp với sở thích',
-    //   RecommendationType.trending: 'Đang thịnh hành',
-    //   RecommendationType.collaborative: 'Người khác cũng thích',
-    //   RecommendationType.association: 'Thường mua cùng nhau',
-    //   RecommendationType.personalized: 'Dành riêng cho bạn',
-    //   RecommendationType.hybrid: 'Đề xuất thông minh',
-    // };
 
     final typeColors = {
       RecommendationType.contentBased: Colors.blue,
@@ -259,11 +169,10 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
     for (final entry in groupedRecommendations.entries) {
       if (entry.value.isNotEmpty) {
         final type = entry.key;
-        final items = entry.value.take(3).toList(); // Limit to 3 items per type
-        
+        final items = entry.value; // Không giới hạn 3 nữa, hiển thị hết để "nhiều gợi ý"
+
         widgets.add(_buildRecommendationGroup(
           context,
-          // typeLabels[type] ?? 'Gợi ý',
           typeColors[type] ?? Colors.grey,
           items,
         ));
@@ -275,37 +184,12 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
 
   Widget _buildRecommendationGroup(
     BuildContext context,
-    // String title,
     Color color,
     List<RecommendationItem> items,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        //   child: Row(
-        //     children: [
-        //       Container(
-        //         width: 3,
-        //         height: 16,
-        //         decoration: BoxDecoration(
-        //           color: color,
-        //           borderRadius: BorderRadius.circular(2),
-        //         ),
-        //       ),
-        //       const SizedBox(width: 8),
-        //       Text(
-        //         title,
-        //         style: TextStyle(
-        //           fontWeight: FontWeight.w600,
-        //           fontSize: 14,
-        //           color: color,
-        //         ),
-        //       ),
-        //     ],
-        //   ),
-        // ),
         ...items.asMap().entries.map((entry) {
           final index = entry.key;
           final item = entry.value;
@@ -357,21 +241,6 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // Container(
-                  //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  //   decoration: BoxDecoration(
-                  //     color: color.withOpacity(0.1),
-                  //     borderRadius: BorderRadius.circular(8),
-                  //   ),
-                  //   child: Text(
-                  //     '${(item.score * 100).round()}%',
-                  //     style: TextStyle(
-                  //       fontSize: 10,
-                  //       fontWeight: FontWeight.bold,
-                  //       color: color,
-                  //     ),
-                  //   ),
-                  // ),
                 ],
               ),
               trailing: Icon(
@@ -380,7 +249,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
                 size: 16,
               ),
               onTap: () {
-                // Trigger search for this pet's breed
+                // Giữ behavior cũ: tap sẽ search theo breed
                 context.read<SearchBloc>().add(SearchSubmitted(
                   item.breed,
                   isSuggestionTap: true,

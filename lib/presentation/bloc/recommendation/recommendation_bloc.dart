@@ -155,75 +155,17 @@ class RecommendationBloc extends Bloc<RecommendationEvent, RecommendationState> 
     emit(RecommendationLoading());
     
     try {
-      // Combine different recommendation types for search suggestions
+      // Simplified: Only content-based suggestions
       final contentBased = await _recommendationUseCase.getRecommendationsByType(
         userId: event.userId,
         type: RecommendationType.contentBased,
-        limit: 3,
+        limit: event.limit,
       );
-      
-      final trending = await _recommendationUseCase.getRecommendationsByType(
-        userId: event.userId,
-        type: RecommendationType.trending,
-        limit: 3,
-      );
-      
-      final collaborative = await _recommendationUseCase.getRecommendationsByType(
-        userId: event.userId,
-        type: RecommendationType.collaborative,
-        limit: 2,
-      );
-      
-      final association = await _recommendationUseCase.getRecommendationsByType(
-        userId: event.userId,
-        type: RecommendationType.association,
-        limit: 2,
-      );
-
-      // Combine and deduplicate recommendations
-      final allRecommendations = <RecommendationItem>[];
-      final seenPetIds = <String>{};
-
-      // Add recommendations with priority
-      for (final item in contentBased) {
-        if (!seenPetIds.contains(item.petId)) {
-          allRecommendations.add(item);
-          seenPetIds.add(item.petId);
-        }
-      }
-
-      for (final item in trending) {
-        if (!seenPetIds.contains(item.petId) && allRecommendations.length < event.limit) {
-          allRecommendations.add(item);
-          seenPetIds.add(item.petId);
-        }
-      }
-
-      for (final item in collaborative) {
-        if (!seenPetIds.contains(item.petId) && allRecommendations.length < event.limit) {
-          allRecommendations.add(item);
-          seenPetIds.add(item.petId);
-        }
-      }
-
-      for (final item in association) {
-        if (!seenPetIds.contains(item.petId) && allRecommendations.length < event.limit) {
-          allRecommendations.add(item);
-          seenPetIds.add(item.petId);
-        }
-      }
-
-      final recommendationsByType = <RecommendationType, List<RecommendationItem>>{
-        RecommendationType.contentBased: contentBased,
-        RecommendationType.trending: trending,
-        RecommendationType.collaborative: collaborative,
-        RecommendationType.association: association,
-      };
 
       emit(RecommendationLoaded(
-        recommendations: allRecommendations,
-        recommendationsByType: recommendationsByType,
-        message: 'Gợi ý tìm kiếm đã được tải thành công',
+        recommendations: contentBased,
+        recommendationsByType: { RecommendationType.contentBased: contentBased },
+        message: 'Gợi ý tìm kiếm (content-based)',
       ));
     } catch (e) {
       emit(RecommendationError('Lỗi khi tải gợi ý tìm kiếm: ${e.toString()}'));

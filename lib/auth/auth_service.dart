@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -112,6 +113,17 @@ class AuthService {
     required Function(String, int?) codeSent,
     required Function(String) codeAutoRetrievalTimeout,
   }) async {
+    // In debug builds, disable app verification to use Firebase Auth test phone numbers
+    // This prevents real SMS from being sent and accepts the test code configured in Firebase Console.
+    // IMPORTANT: Do NOT enable this for production!
+    if (kDebugMode && !kIsWeb) {
+      try {
+        await _auth.setSettings(appVerificationDisabledForTesting: true);
+      } catch (e) {
+        debugPrint('Could not set appVerificationDisabledForTesting: $e');
+      }
+    }
+
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       verificationCompleted: verificationCompleted,

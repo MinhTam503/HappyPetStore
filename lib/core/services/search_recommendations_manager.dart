@@ -4,6 +4,7 @@ import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/domain/usecases/recommendation_usecase.dart';
 import 'package:pet_shop/data/repositories/recommendation_repository_impl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pet_shop/core/config/recommendation_config.dart';
 
 /// Service để quản lý cache gợi ý tìm kiếm với auto-refresh
 class SearchRecommendationsManager {
@@ -41,10 +42,10 @@ class SearchRecommendationsManager {
   /// Bắt đầu timer auto-refresh
   void _startAutoRefresh() {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(hours: 1), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
       _refreshRecommendations();
     });
-    print('⏰ Auto-refresh timer started (every 1 hour)');
+    print('⏰ Auto-refresh timer started (every 10 minutes)');
   }
 
   /// Load gợi ý ban đầu
@@ -90,7 +91,7 @@ class SearchRecommendationsManager {
     try {
       final response = await _recommendationUseCase.getPersonalizedRecommendations(
         userId: userId,
-        limit: 15,
+        limit: RecommendationConfig.defaultLimit,
       );
 
       if (response.items.isNotEmpty) {

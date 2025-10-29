@@ -8,20 +8,84 @@ class RecommendationLogger {
   static const String _logFileName = 'recommendation_logs.json';
   static late File _logFile;
   static bool _initialized = false;
+  static bool prettyPrint = true; // Toggle pretty formatting
+  static bool _perUserMode = false;
+  static String? _currentLogUserId;
 
-  static Future<void> initialize() async {
-    if (_initialized) return;
-    
+  static Future<void> initialize({String? userId, bool perUserFile = false, bool clearExisting = false}) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      _logFile = File('${directory.path}/$_logFileName');
-      
-      // Create file if it doesn't exist
-      if (!await _logFile.exists()) {
-        await _logFile.create(recursive: true);
-        await _logFile.writeAsString('[]'); // Initialize with empty JSON array
+
+      final wantsPerUser = perUserFile && (userId != null && userId.isNotEmpty);
+    final targetFileName = wantsPerUser
+      ? 'recommendation_logs_${_sanitizeFileSegment(userId)}.json'
+          : _logFileName;
+      final targetPath = '${directory.path}/$targetFileName';
+
+      // Already initialized: decide whether to switch, clear, or no-op
+      if (_initialized) {
+        // If current mode is per-user and a call tries to downgrade to default, ignore
+        if (_perUserMode && !wantsPerUser) {
+          if (clearExisting) await _writeRawLogs([]);
+          return;
+        }
+
+        // If same file target
+        if (_logFile.path == targetPath) {
+          if (clearExisting) await _writeRawLogs([]);
+          return;
+        }
+
+        // If switching to another per-user context
+        if (wantsPerUser && userId != _currentLogUserId) {
+          _perUserMode = true;
+          _currentLogUserId = userId;
+          _logFile = File(targetPath);
+          if (clearExisting) {
+            await _ensureFileExists();
+            await _writeRawLogs([]);
+          } else if (!await _logFile.exists()) {
+            await _logFile.create(recursive: true);
+            await _writeRawLogs([]);
+          }
+          print('📊 RecommendationLogger switched to user file: ${_logFile.path}');
+          return;
+        }
+
+        // If initialized to default and asked again for default with optional clear
+        if (!wantsPerUser && _logFile.path != targetPath) {
+          // Switching to default file explicitly
+          _perUserMode = false;
+          _currentLogUserId = null;
+          _logFile = File(targetPath);
+          if (clearExisting) {
+            await _ensureFileExists();
+            await _writeRawLogs([]);
+          } else if (!await _logFile.exists()) {
+            await _logFile.create(recursive: true);
+            await _writeRawLogs([]);
+          }
+          print('📊 RecommendationLogger switched to default file: ${_logFile.path}');
+          return;
+        }
+
+        // Otherwise, no-op
+        return;
       }
-      
+
+      // Not initialized yet: set up as requested
+      _perUserMode = wantsPerUser;
+      _currentLogUserId = wantsPerUser ? userId : null;
+      _logFile = File(targetPath);
+      if (clearExisting) {
+        await _ensureFileExists();
+        await _writeRawLogs([]);
+      } else {
+        if (!await _logFile.exists()) {
+          await _logFile.create(recursive: true);
+          await _writeRawLogs([]);
+        }
+      }
       _initialized = true;
       print('📊 RecommendationLogger initialized at: ${_logFile.path}');
     } catch (e) {
@@ -203,6 +267,8 @@ class RecommendationLogger {
         'petId': item.petId,
         'score': item.score,
         'reason': item.reason,
+        'name': item.name,
+        'breed': item.breed,
         'algorithmType': item.type.toString(),
       }).toList(),
       'error': error,
@@ -301,6 +367,20 @@ class RecommendationLogger {
     }
   }
 
+  /// Reformat existing log file to pretty or compact JSON
+  static Future<void> reformatLogFile({bool pretty = true}) async {
+    try {
+      if (!await _logFile.exists()) return;
+      final content = await _logFile.readAsString();
+      if (content.trim().isEmpty) return;
+      final List<dynamic> logs = jsonDecode(content);
+      await _writeRawLogs(logs, forcePretty: pretty);
+      print('📝 Log file reformatted to ${pretty ? 'pretty' : 'compact'} JSON');
+    } catch (e) {
+      print('❌ Error reformatting log file: $e');
+    }
+  }
+
   /// Generate analytics report
   static Future<Map<String, dynamic>> generateAnalyticsReport({
     DateTime? startDate,
@@ -377,7 +457,7 @@ class RecommendationLogger {
 
   static Future<void> _writeLog(Map<String, dynamic> logEntry) async {
     try {
-      if (!_initialized) await initialize();
+      if (!_initialized) await initialize(userId: _currentLogUserId, perUserFile: _perUserMode);
       
       // Read existing logs
       final content = await _logFile.readAsString();
@@ -387,9 +467,36 @@ class RecommendationLogger {
       logs.add(logEntry);
       
       // Write back to file
-      await _logFile.writeAsString(jsonEncode(logs));
+      await _writeRawLogs(logs);
     } catch (e) {
       print('❌ Error writing log: $e');
     }
+  }
+
+  static Future<void> clearLogs() async {
+    try {
+      if (!_initialized) await initialize(userId: _currentLogUserId, perUserFile: _perUserMode);
+      await _writeRawLogs([]);
+      print('🧹 Recommendation logs cleared at: ${_logFile.path}');
+    } catch (e) {
+      print('❌ Error clearing logs: $e');
+    }
+  }
+
+  static Future<void> _ensureFileExists() async {
+    if (!await _logFile.exists()) {
+      await _logFile.create(recursive: true);
+    }
+  }
+
+  static Future<void> _writeRawLogs(List<dynamic> logs, {bool? forcePretty}) async {
+    final encoder = (forcePretty ?? prettyPrint)
+        ? const JsonEncoder.withIndent('  ')
+        : const JsonEncoder();
+    await _logFile.writeAsString(encoder.convert(logs));
+  }
+
+  static String _sanitizeFileSegment(String value) {
+    return value.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
   }
 }

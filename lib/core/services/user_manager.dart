@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pet_shop/core/services/search_recommendations_cache.dart';
+import 'package:pet_shop/services/recommendation_logger.dart';
 
 /// Centralized user management service supporting multiple authentication methods
 /// (email/password, phone, Facebook, Google) with local storage for offline access
@@ -53,7 +55,25 @@ class UserManager {
   /// Handle Firebase auth state changes
   void _onAuthStateChanged(User? user) async {
     if (user != null) {
-      // User signed in - fetch and cache user info
+      // User signed in - if account changed, clear per-user caches, then fetch and cache user info
+      final previousUserId = _currentUserId;
+      if (previousUserId != null && previousUserId != user.uid) {
+        try {
+          await SearchRecommendationsCache.clearCache();
+          if (kDebugMode) {
+            print('🧹 Cleared search recommendations cache due to account switch: $previousUserId → ${user.uid}');
+          }
+        } catch (_) {}
+      }
+
+      // Initialize/rotate logger per user and clear on first login (fresh start for logs)
+      try {
+        await RecommendationLogger.initialize(
+          userId: user.uid,
+          perUserFile: true,
+          clearExisting: previousUserId != user.uid, // clear if switching or first time
+        );
+      } catch (_) {}
       await refreshUserInfo();
     } else {
       // User signed out - clear cache
