@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/core/utils/dialog_helper.dart';
+import 'package:lottie/lottie.dart';
 import 'package:pet_shop/core/utils/search_navigation_helper.dart';
 import 'package:pet_shop/data/repositories/search_history_repository.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
@@ -33,7 +33,7 @@ class _NewSearchPageState extends State<SearchPage> {
   late final SearchBloc _searchBloc;
   File? selectedImage;
   String? searchImagePath;
-  bool isLoading = false;
+  // inline loader replaces overlay; no isLoading flag needed
   String? userId;
   bool _searchHistoryEnabled = true;
 
@@ -188,43 +188,31 @@ class _NewSearchPageState extends State<SearchPage> {
       ],
       child: BlocConsumer<SearchBloc, SearchState>(
         listener: (context, state) {
-          if (state is SearchLoading) {
-            if (!isLoading) {
-              setState(() => isLoading = true);
-              DialogHelper.showLoadingDialog(context, message: 'Đang tìm kiếm...');
-            }
-          } else {
-            if (isLoading) {
-              setState(() => isLoading = false);
-              DialogHelper.hideLoadingDialog(context);
+          if (state is SearchError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          } else if (state is SearchSuccess && state.searchResults.isNotEmpty) {
+            // Điều hướng đến SearchResultsPage khi có kết quả
+            String searchQuery = '';
+            File? searchImage;
+            
+            if (selectedImage != null) {
+              searchQuery = 'Tìm kiếm bằng hình ảnh';
+              searchImage = selectedImage;
+            } else {
+              searchQuery = _searchController.text.trim();
             }
             
-            if (state is SearchError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
-            } else if (state is SearchSuccess && state.searchResults.isNotEmpty) {
-              // Điều hướng đến SearchResultsPage khi có kết quả
-              String searchQuery = '';
-              File? searchImage;
-              
-              if (selectedImage != null) {
-                searchQuery = 'Tìm kiếm bằng hình ảnh';
-                searchImage = selectedImage;
-              } else {
-                searchQuery = _searchController.text.trim();
-              }
-              
-              // Use SearchNavigationHelper to avoid stack buildup
-              SearchNavigationHelper.navigateToResults(
-                context: context,
-                searchQuery: searchQuery,
-                results: state.searchResults,
-                searchBloc: _searchBloc,
-                originalSearchText: _searchController.text.trim(),
-                searchImage: searchImage,
-              );
-            }
+            // Use SearchNavigationHelper to avoid stack buildup
+            SearchNavigationHelper.navigateToResults(
+              context: context,
+              searchQuery: searchQuery,
+              results: state.searchResults,
+              searchBloc: _searchBloc,
+              originalSearchText: _searchController.text.trim(),
+              searchImage: searchImage,
+            );
           }
         },
         builder: (context, state) {
@@ -322,7 +310,24 @@ class _NewSearchPageState extends State<SearchPage> {
                 ],
               ),
             ),
-            body: state is SearchSuccess
+            body: state is SearchLoading
+                    ? Center(
+                        child: Container(
+                          width: 220,
+                          height: 220,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                           
+                          ),
+                          child: Lottie.asset(
+                            'assets/loading.json',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      )
+                    : state is SearchSuccess
                     ? CustomScrollView(
                         slivers: [
                           // Hiển thị hình ảnh đã chọn cho tìm kiếm (chỉ khi chưa có kết quả)
@@ -468,129 +473,91 @@ class _NewSearchPageState extends State<SearchPage> {
                                       ),
                                     ),
                                     const Divider(height: 1),
-                                    ...state.suggestions
-                                        .asMap()
-                                        .entries
-                                        .map((entry) {
+                                    ...state.suggestions.asMap().entries.map((entry) {
                                       final index = entry.key;
-                                      final suggestion = entry.value;
-                                      final type =
-                                          suggestion['type'] as String? ?? '';
-                                      final displayName =
-                                          suggestion['displayName']
-                                                  as String? ??
-                                              suggestion['name'] as String? ??
-                                              '';
+                                      final s = entry.value;
+                                      final type = s['type'] as String? ?? '';
+                                      final display = s['displayName'] as String? ?? s['name'] as String? ?? '';
 
-                                      // Xác định icon và màu sắc dựa trên loại
-                                      IconData icon;
-                                      Color iconColor;
-                                      String subtitle;
+                                      Widget leading;
+                                      Widget? subtitleWidget;
+                                      VoidCallback? onTap;
 
-                                      switch (type) {
-                                        case 'pet':
-                                          icon = Icons.pets;
-                                          iconColor = Colors.blue;
-                                          subtitle = 'Thú cưng';
-                                          break;
-                                        case 'category':
-                                          icon = Icons.category;
-                                          iconColor = Colors.orange;
-                                          subtitle = 'Danh mục';
-                                          break;
-                                        case 'breed':
-                                          icon = Icons.auto_awesome;
-                                          iconColor = Colors.green;
-                                          subtitle = 'Giống';
-                                          break;
-                                        case 'pet_category':
-                                          icon = Icons.pets;
-                                          iconColor = Colors.purple;
-                                          subtitle = 'Thú cưng';
-                                          break;
-                                        default:
-                                          icon = Icons.search;
-                                          iconColor = Colors.grey;
-                                          subtitle = 'Khác';
+                                      if (type == 'pet') {
+                                        final imageUrl = s['imageUrl'] as String? ?? '';
+                                        final breed = s['breed'] as String? ?? '';
+                                        leading = ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.network(
+                                            imageUrl,
+                                            width: 40,
+                                            height: 40,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: 40,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: const Icon(Icons.pets, color: Colors.grey, size: 20),
+                                            ),
+                                          ),
+                                        );
+                                        subtitleWidget = Text(
+                                          breed,
+                                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        );
+                                        onTap = () {
+                                          final searchQuery = s['name'] as String? ?? '';
+                                          _searchController.text = searchQuery;
+                                          _searchBloc.add(SearchSubmitted(searchQuery, isSuggestionTap: true));
+                                        };
+                                      } else if (type == 'breed') {
+                                        leading = const SizedBox(width: 40, height: 40);
+                                        subtitleWidget = null;
+                                        onTap = () {
+                                          final breed = s['name'] as String? ?? '';
+                                          _searchController.text = breed;
+                                          _searchBloc.add(FilterByBreed(breed));
+                                        };
+                                      } else if (type == 'category') {
+                                        leading = const SizedBox(width: 40, height: 40);
+                                        subtitleWidget = null;
+                                        onTap = () {
+                                          final categoryEn = s['name'] as String? ?? '';
+                                          final categoryVi = s['displayName'] as String? ?? categoryEn;
+                                          _searchController.text = categoryVi; // show VN label in input
+                                          _searchBloc.add(ToggleCategory(categoryEn)); // use EN for query
+                                        };
+                                      } else {
+                                        leading = const SizedBox(width: 40, height: 40);
+                                        subtitleWidget = null;
+                                        onTap = () {
+                                          final searchQuery = s['name'] as String? ?? '';
+                                          _searchController.text = searchQuery;
+                                          _searchBloc.add(SearchSubmitted(searchQuery, isSuggestionTap: true));
+                                        };
                                       }
 
                                       return Container(
                                         decoration: BoxDecoration(
-                                          border: index <
-                                                  state.suggestions.length - 1
-                                              ? Border(
-                                                  bottom: BorderSide(
-                                                      color: Colors.grey
-                                                          .withOpacity(0.2)))
+                                          border: index < state.suggestions.length - 1
+                                              ? Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2)))
                                               : null,
                                         ),
                                         child: ListTile(
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 16, vertical: 4),
-                                          leading: Container(
-                                            width: 40,
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              color: iconColor.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(icon,
-                                                color: iconColor, size: 20),
-                                          ),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                          leading: leading,
                                           title: Text(
-                                            displayName,
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                            display,
+                                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                                           ),
-                                          subtitle: Text(
-                                            subtitle,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                          trailing: Icon(
-                                            Icons.north_west,
-                                            color: Colors.grey[400],
-                                            size: 16,
-                                          ),
-                                          onTap: () {
-                                            if (type == 'category') {
-                                              _searchBloc.add(ToggleCategory(
-                                                  suggestion['name']
-                                                          as String? ??
-                                                      ''));
-                                              _searchController.clear();
-                                            } else if (type == 'breed') {
-                                              // Tìm kiếm theo breed
-                                              final searchQuery =
-                                                  suggestion['name']
-                                                          as String? ??
-                                                      '';
-                                              _searchController.text =
-                                                  searchQuery;
-                                              _searchBloc.add(SearchSubmitted(
-                                                searchQuery,
-                                                isSuggestionTap: true,
-                                              ));
-                                            } else {
-                                              // Tìm kiếm theo tên thú cưng
-                                              final searchQuery =
-                                                  suggestion['name']
-                                                          as String? ??
-                                                      '';
-                                              _searchController.text =
-                                                  searchQuery;
-                                              _searchBloc.add(SearchSubmitted(
-                                                searchQuery,
-                                                isSuggestionTap: true,
-                                              ));
-                                            }
-                                          },
+                                          subtitle: subtitleWidget,
+                                          trailing: Icon(Icons.north_west, color: Colors.grey[400], size: 16),
+                                          onTap: onTap,
                                         ),
                                       );
                                     }).toList(),

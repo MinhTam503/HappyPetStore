@@ -36,6 +36,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     on<ClearSearchHistory>(_onClearSearchHistory);
     on<ToggleCategory>(_onToggleCategory);
     on<ImageSearchSubmitted>(_onImageSearchSubmitted);
+    on<FilterByBreed>(_onFilterByBreed);
   }
 
   // ---- helper emit kèm history ----
@@ -142,6 +143,44 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     return breedScores[breed] ?? 0.0;
   }
 
+  // ---- text normalization & helpers ----
+  String _normalizeText(String input) {
+    const withDiacritics = 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ'
+        'ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ';
+    const withoutDiacritics = 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuyyyyyd'
+        'AAAAAAAAAAAAAAAAAEEEEEEEEEEEIIIIIoooooooooooooooooUUUUUUUUUUYYYYYĐ';
+
+    return input
+        .split('')
+        .map((ch) {
+          final index = withDiacritics.indexOf(ch);
+          return index >= 0 ? withoutDiacritics[index] : ch;
+        })
+        .join()
+        .toLowerCase();
+  }
+
+  bool _matchesQuery(String text, List<String> queries, List<String> queriesNorm) {
+    final t = text.toLowerCase();
+    final tn = _normalizeText(text);
+    return queries.any((q) => t.contains(q)) || queriesNorm.any((q) => tn.contains(q));
+  }
+
+  String _categoryDisplayVi(String en) {
+    // Only 4 categories exist in the system: Dogs, Birds, Fish, Cats
+    final key = en.toLowerCase();
+    const map = {
+      'dogs': 'Chó',
+      'dog': 'Chó',
+      'cats': 'Mèo',
+      'cat': 'Mèo',
+      'fish': 'Cá',
+      'birds': 'Chim',
+      'bird': 'Chim',
+    };
+    return map[key] ?? en;
+  }
+
   // ---- handlers ----
   Future<void> _onSearchQueryChanged(
     SearchQueryChanged event,
@@ -164,56 +203,71 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
 
     try {
-      final queryLower = raw.toLowerCase();
-      print('Searching for query: $queryLower');
+      // Show inline loading in body while typing; UI stops loading when suggestions are emitted
+      if (!emit.isDone) emit(SearchLoading());
+  final queryLower = raw.toLowerCase();
+  final queryNorm = _normalizeText(raw);
+  print('Searching for query: $queryLower | normalized: $queryNorm');
 
       // Mapping từ đồng nghĩa tiếng Việt sang tiếng Anh
       final synonymMapping = {
+        // Vietnamese (with accents)
         'chó': ['dogs', 'dog'],
         'cún': ['dogs', 'dog'],
         'mèo': ['cats', 'cat'],
         'cá': ['fish'],
         'chim': ['birds', 'bird'],
+        'thỏ': ['rabbit', 'bunny'],
+        // Vietnamese (no accents common)
+        'cho': ['dogs', 'dog'],
+        'cun': ['dogs', 'dog'],
+        'meo': ['cats', 'cat'],
+        'ca': ['fish'],
+  // note: 'chim' already added above with accents; keep only non-duplicate keys here
+  'tho': ['rabbit', 'bunny'],
       };
 
       // Tạo danh sách các query để tìm kiếm (bao gồm cả từ đồng nghĩa)
-      final searchQueries = <String>[queryLower];
+      final searchQueries = <String>{queryLower, queryNorm};
       for (var entry in synonymMapping.entries) {
-        if (queryLower.contains(entry.key)) {
-          searchQueries.addAll(entry.value);
+        if (queryLower.contains(entry.key) || queryNorm.contains(entry.key)) {
+          searchQueries.addAll(entry.value.map((e) => e.toLowerCase()));
           print('Added synonyms for "${entry.key}": ${entry.value}');
         }
       }
       // Ngược lại, nếu query tiếng Anh thì thêm từ tiếng Việt
       for (var entry in synonymMapping.entries) {
         for (var synonym in entry.value) {
-          if (queryLower.contains(synonym)) {
-            searchQueries.add(entry.key);
+          final synLower = synonym.toLowerCase();
+          if (queryLower.contains(synLower) || queryNorm.contains(synLower)) {
+            searchQueries.add(entry.key.toLowerCase());
             print('Added Vietnamese synonym for "$synonym": ${entry.key}');
           }
         }
       }
 
-      print('Final search queries: $searchQueries');
+      final queriesList = searchQueries.toList();
+      final queriesNorm = queriesList.map(_normalizeText).toList();
+
+      print('Final search queries: $queriesList');
       print('🔍 STARTING SEARCH SUGGESTIONS GENERATION...');
 
       final suggestions = <Map<String, dynamic>>[];
 
-      // 1. Tìm kiếm pets theo tên
+      // 1. Tìm kiếm pets theo tên (accent-insensitive)
       final petsQuery = await _firestore.collection('Pets').get();
 
       for (var doc in petsQuery.docs) {
         final data = doc.data();
-        final petName = (data['name'] as String? ?? '').toLowerCase();
-        final petBreed = (data['breed'] as String? ?? '').toLowerCase();
-        final petCategory = (data['category'] as String? ?? '').toLowerCase();
+        final petName = (data['name'] as String? ?? '');
+  // final petBreed = (data['breed'] as String? ?? '').toLowerCase();
+  // final petCategory = (data['category'] as String? ?? '').toLowerCase();
 
         // Kiểm tra với tất cả các query
-        bool nameMatch = searchQueries.any((q) => petName.contains(q));
-        bool breedMatch = searchQueries.any((q) => petBreed.contains(q));
-        bool categoryMatch = searchQueries.any((q) => petCategory.contains(q));
+  bool nameMatch = _matchesQuery(petName, queriesList, queriesNorm);
+  // Note: breed/category matches handled via Category collection for de-duplication
 
-        // Kiểm tra tên pet có chứa từ khóa tìm kiếm không
+        // Chỉ thêm gợi ý theo tên (pet); breed & category sẽ xử lý từ collection Category để tránh trùng lặp
         if (nameMatch && !suggestions.any((s) => s['id'] == doc.id)) {
           suggestions.add({
             ...data,
@@ -223,57 +277,37 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             'matchType': 'name',
           });
         }
-        // Kiểm tra breed có chứa từ khóa tìm kiếm không
-        else if (breedMatch && !suggestions.any((s) => s['id'] == doc.id)) {
-          suggestions.add({
-            ...data,
-            'type': 'breed',
-            'id': doc.id,
-            'displayName': '${data['name']} (${data['breed']})',
-            'matchType': 'breed',
-          });
-        }
-        // Kiểm tra category có chứa từ khóa tìm kiếm không
-        else if (categoryMatch && !suggestions.any((s) => s['id'] == doc.id)) {
-          suggestions.add({
-            ...data,
-            'type': 'pet_category',
-            'id': doc.id,
-            'displayName': '${data['name']} (${data['category']})',
-            'matchType': 'category',
-          });
-        }
       }
 
-      // 2. Tìm kiếm categories
+  // 2. Tìm kiếm categories (accent-insensitive)
       final categoriesQuery = await _firestore.collection('Category').get();
 
       print('Found ${categoriesQuery.docs.length} categories in database');
 
       for (var doc in categoriesQuery.docs) {
-        final data = doc.data();
-        final categoryName = (data['name'] as String? ?? '').toLowerCase();
+  final data = doc.data();
+  final categoryNameRaw = (data['name'] as String? ?? '');
+  final categoryName = categoryNameRaw.toLowerCase();
 
-        print(
-            'Checking category: "$categoryName" against queries: $searchQueries');
+    print('Checking category: "$categoryName" against queries: $queriesList');
 
         // Kiểm tra với tất cả các query
-        bool categoryMatches =
-            searchQueries.any((q) => categoryName.contains(q));
+    bool categoryMatches = _matchesQuery(categoryNameRaw, queriesList, queriesNorm);
 
         if (categoryMatches) {
           print('✅ Category "$categoryName" matches one of the queries');
 
-          bool alreadyExists = suggestions.any((s) =>
-              s['type'] == 'category' &&
-              s['name']?.toString().toLowerCase() == categoryName);
+      bool alreadyExists = suggestions.any((s) =>
+        s['type'] == 'category' &&
+        (s['name']?.toString().toLowerCase() == categoryName));
 
           if (!alreadyExists) {
             suggestions.add({
               ...data,
               'type': 'category',
               'id': doc.id,
-              'displayName': data['name'],
+              'displayName': _categoryDisplayVi(categoryNameRaw),
+              'name': categoryNameRaw,
               'matchType': 'category',
             });
             print('Added category suggestion: ${data['name']}');
@@ -288,26 +322,24 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
         for (var breed in breeds) {
           final breedName = (breed as String? ?? '').toLowerCase();
-          bool breedMatches = searchQueries.any((q) => breedName.contains(q));
+          final breedRaw = (breed ?? '') as String; // ignore: unnecessary_cast
+          bool breedMatches = _matchesQuery(breedRaw, queriesList, queriesNorm);
 
           if (breedMatches) {
             print('✅ Breed "$breedName" matches one of the queries');
 
-            bool alreadyExists = suggestions.any((s) =>
-                s['type'] == 'breed' &&
-                (s['displayName']
-                        ?.toString()
-                        .toLowerCase()
-                        .contains(breedName) ??
-                    false));
+      bool alreadyExists = suggestions.any((s) =>
+        s['type'] == 'breed' &&
+        (s['name']?.toString().toLowerCase() == breedName) &&
+        (s['category']?.toString().toLowerCase() == categoryName));
 
             if (!alreadyExists) {
               suggestions.add({
-                'name': breed,
-                'category': data['name'],
+                'name': breedRaw,
+                'category': categoryNameRaw,
                 'type': 'breed',
-                'id': '${doc.id}_$breed',
-                'displayName': '$breed (${data['name']})',
+                'id': '${doc.id}_$breedRaw',
+                'displayName': '$breedRaw (${_categoryDisplayVi(categoryNameRaw)})',
                 'matchType': 'breed',
               });
               print('Added breed suggestion: $breed (${data['name']})');
@@ -321,11 +353,11 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final userBreedScores = await _getQuickBreedScores();
       print('🔍 Got ${userBreedScores.length} breed scores: $userBreedScores');
 
-      // Sắp xếp suggestions theo độ ưu tiên: tên trước, category sau, breed cuối
-      // 🎯 ENHANCED: Với breed suggestions, ưu tiên theo user preferences
+      // Sắp xếp suggestions theo độ ưu tiên: tên trước, breed sau, category cuối
+      // 🎯 Với breed suggestions, ưu tiên theo user preferences
       print('🔍 Starting to sort ${suggestions.length} suggestions...');
       suggestions.sort((a, b) {
-        const priority = {'name': 0, 'category': 1, 'breed': 2};
+        const priority = {'name': 0, 'breed': 1, 'category': 2};
         final aPriority = priority[a['matchType']] ?? 3;
         final bPriority = priority[b['matchType']] ?? 3;
         
@@ -351,8 +383,26 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         return 0;
       });
 
-      // Giới hạn số lượng gợi ý
-      final limitedSuggestions = suggestions.take(10).toList();
+      // Giới hạn số lượng gợi ý, nhưng đảm bảo có category nếu có match
+      final maxSuggestions = 10;
+      final limitedSuggestions = suggestions.take(maxSuggestions).toList();
+      final hasCategoryInAll = suggestions.any((s) => s['matchType'] == 'category');
+      final hasCategoryInLimited = limitedSuggestions.any((s) => s['matchType'] == 'category');
+      if (hasCategoryInAll && !hasCategoryInLimited) {
+        final firstCategory = suggestions.firstWhere((s) => s['matchType'] == 'category');
+        // Chèn category vào cuối danh sách giới hạn
+        limitedSuggestions.add(firstCategory);
+        // Nếu vượt quá giới hạn, loại bỏ phần tử cuối cùng không phải category để giữ chỗ cho category
+        if (limitedSuggestions.length > maxSuggestions) {
+          final removeIndex = limitedSuggestions.lastIndexWhere((s) => s['matchType'] != 'category');
+          if (removeIndex != -1) {
+            limitedSuggestions.removeAt(removeIndex);
+          } else {
+            // fallback: nếu tất cả đều là category, cắt bớt cuối
+            limitedSuggestions.removeLast();
+          }
+        }
+      }
 
       print('🎯 SMART SEARCH SUGGESTIONS RESULT:');
       print('Found ${limitedSuggestions.length} total suggestions');
@@ -378,6 +428,53 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
     } catch (e) {
       print('Lỗi tìm kiếm: $e');
+      if (!emit.isDone) emit(SearchError(e.toString()));
+    }
+  }
+
+  Future<void> _onFilterByBreed(
+    FilterByBreed event,
+    Emitter<SearchState> emit,
+  ) async {
+    emit(SearchLoading());
+
+    try {
+      print('\n=== FILTER BY BREED ===');
+      print('Looking for breed: "${event.breed}"');
+
+      // Exact match first
+      final snapshot = await _firestore
+          .collection('Pets')
+          .where('breed', isEqualTo: event.breed)
+          .get();
+
+      List<Map<String, dynamic>> results;
+
+      if (snapshot.docs.isEmpty) {
+        print('No exact match, trying case-insensitive contains...');
+        final allPetsSnapshot = await _firestore.collection('Pets').get();
+        results = allPetsSnapshot.docs
+            .map((d) => d.data())
+            .where((data) => (data['breed'] as String? ?? '')
+                .toLowerCase()
+                .contains(event.breed.toLowerCase()))
+            .toList();
+      } else {
+        results = snapshot.docs.map((d) => d.data()).toList();
+      }
+
+      await _emitWithHistory(
+        emit: emit,
+        searchResults: results,
+        suggestions: const [],
+        selectedCategory: state is SearchSuccess
+            ? (state as SearchSuccess).selectedCategory
+            : null,
+      );
+
+      print('=== FILTER BY BREED COMPLETED (${results.length}) ===\n');
+    } catch (e) {
+      print('Lỗi lọc theo giống: $e');
       if (!emit.isDone) emit(SearchError(e.toString()));
     }
   }

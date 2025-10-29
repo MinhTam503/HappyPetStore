@@ -24,3 +24,8 @@ class ImageSearchSubmitted extends SearchEvent {
   final String imagePath;
   ImageSearchSubmitted(this.imagePath);
 }
+
+class FilterByBreed extends SearchEvent {
+  final String breed;
+  FilterByBreed(this.breed);
+}
