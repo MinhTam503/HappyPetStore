@@ -44,7 +44,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
         _cachedRecommendations = cachedRecommendations;
         _isLoadingFromCache = false;
       });
-      print('📦 Using cached home recommendations (${cachedRecommendations.length} items) for search');
+  debugPrint('📦 Using cached home recommendations (${cachedRecommendations.length} items) for search');
       return;
     }
 
@@ -57,7 +57,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
       });
 
       try {
-        print('🌐 No cache for search; triggering manual refresh...');
+  debugPrint('🌐 No cache for search; triggering manual refresh...');
         await SearchRecommendationsManager().refreshNow();
         final fetched = await SearchRecommendationsCache.getRecommendations(widget.userId);
         if (mounted) {
@@ -66,9 +66,9 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
             _isRefreshing = false;
           });
           if (fetched != null) {
-            print('✅ Search recommendations fetched (${fetched.length}) after refresh');
+            debugPrint('✅ Search recommendations fetched (${fetched.length}) after refresh');
           } else {
-            print('ℹ️ Still no recommendations after refresh (possibly no data or user not logged in)');
+            debugPrint('ℹ️ Still no recommendations after refresh (possibly no data or user not logged in)');
           }
         }
       } catch (e) {
@@ -77,7 +77,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
             _isRefreshing = false;
           });
         }
-        print('❌ Error refreshing search recommendations: $e');
+        debugPrint('❌ Error refreshing search recommendations: $e');
       }
       return;
     }
@@ -102,7 +102,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -138,7 +138,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -172,7 +172,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -264,7 +264,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
           return Container(
             decoration: BoxDecoration(
               border: index < items.length - 1
-                  ? Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2)))
+                  ? Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2)))
                   : null,
             ),
             child: ListTile(
@@ -273,7 +273,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ClipRRect(
@@ -325,7 +325,7 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
               },
             ),
           );
-        }).toList(),
+        }),
         const SizedBox(height: 8),
       ],
     );

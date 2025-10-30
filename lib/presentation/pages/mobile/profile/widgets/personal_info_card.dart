@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/presentation/pages/mobile/profile/widgets/phone_verify_row.dart';
-import 'package:pet_shop/presentation/pages/mobile/profile/widgets/email_verify_row.dart';
+// Phone/Email verify rows moved to ContactInfoCard
 
 class PersonalInfoCard extends StatelessWidget {
   final TextEditingController displayNameController;
@@ -12,11 +11,7 @@ class PersonalInfoCard extends StatelessWidget {
   final VoidCallback onSelectBirthDate;
   final String? selectedGender;
   final ValueChanged<String?> onGenderChanged;
-  final bool phoneVerified;
-  final bool emailVerified;
-  final VoidCallback onPhoneVerify;
-  final VoidCallback onEmailSendVerify;
-  final VoidCallback onEmailRefresh;
+  // Contact details and verification UI have been moved out to ContactInfoCard
 
   const PersonalInfoCard({
     super.key,
@@ -27,11 +22,6 @@ class PersonalInfoCard extends StatelessWidget {
     required this.onSelectBirthDate,
     required this.selectedGender,
     required this.onGenderChanged,
-    required this.phoneVerified,
-    required this.emailVerified,
-    required this.onPhoneVerify,
-    required this.onEmailSendVerify,
-    required this.onEmailRefresh,
   });
 
   InputDecoration _inputDecorationWithIcon({required String label, required IconData icon}) {
@@ -81,33 +71,8 @@ class PersonalInfoCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: _inputDecorationWithIcon(
-                label: 'Số điện thoại',
-                icon: Icons.phone_outlined,
-              ),
-            ),
+            // Phone/Email inputs moved to ContactInfoCard
             const SizedBox(height: 8),
-            PhoneVerifyRow(phoneVerified: phoneVerified, onVerify: onPhoneVerify),
-            const SizedBox(height: 12),
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              enabled: true,
-              decoration: _inputDecorationWithIcon(
-                label: 'Email',
-                icon: Icons.email_outlined,
-              ),
-            ),
-            const SizedBox(height: 8),
-            EmailVerifyRow(
-              emailVerified: emailVerified,
-              onSendVerify: onEmailSendVerify,
-              onRefresh: onEmailRefresh,
-            ),
-            const SizedBox(height: 12),
             InkWell(
               onTap: onSelectBirthDate,
               child: InputDecorator(

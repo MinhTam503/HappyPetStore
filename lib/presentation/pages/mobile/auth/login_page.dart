@@ -12,6 +12,7 @@ import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admi
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/forgot_password_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
+import 'package:pet_shop/helpers/phone_utils.dart';
 
 class LoginPageNew extends StatefulWidget {
   final void Function()? onTap;
@@ -67,25 +68,8 @@ class _LoginPageNewState extends State<LoginPageNew>
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(input);
   }
 
-  bool _isPhoneNumber(String input) {
-    // Remove spaces and special characters
-    String cleaned = input.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
-    // Check Vietnamese phone patterns
-    return RegExp(r'^(\+84|84|0)[0-9]{8,9}$').hasMatch(cleaned);
-  }
-
-  String _formatPhoneNumber(String phone) {
-    String cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    if (cleaned.startsWith('+84')) {
-      return cleaned;
-    } else if (cleaned.startsWith('84')) {
-      return '+$cleaned';
-    } else if (cleaned.startsWith('0')) {
-      return '+84${cleaned.substring(1)}';
-    } else {
-      return '+84$cleaned';
-    }
-  }
+  bool _isPhoneNumber(String input) => PhoneUtils.isValidVN(input);
+  String _formatPhoneNumber(String phone) => PhoneUtils.normalizeVN(phone) ?? phone;
 
   void _login(BuildContext context) async {
     bool phonePasswordAttempt = false;
@@ -110,7 +94,7 @@ class _LoginPageNewState extends State<LoginPageNew>
         );
       } else if (_isPhoneNumber(account)) {
         // For phone login, find the user by phone and decide flow
-        final String formattedPhone = _formatPhoneNumber(account);
+  final String formattedPhone = _formatPhoneNumber(account);
 
         // Try matching both 'phone' and fallback to 'phoneNumber'
         QuerySnapshot phoneQuery = await FirebaseFirestore.instance
@@ -123,6 +107,21 @@ class _LoginPageNewState extends State<LoginPageNew>
               .collection("users")
               .where("phoneNumber", isEqualTo: formattedPhone)
               .get();
+        }
+
+        // Legacy format support: also try local 09 variant if still not found
+        if (phoneQuery.docs.isEmpty) {
+          final local09 = PhoneUtils.toDisplay09(formattedPhone);
+          phoneQuery = await FirebaseFirestore.instance
+              .collection("users")
+              .where("phone", isEqualTo: local09)
+              .get();
+          if (phoneQuery.docs.isEmpty) {
+            phoneQuery = await FirebaseFirestore.instance
+                .collection("users")
+                .where("phoneNumber", isEqualTo: local09)
+                .get();
+          }
         }
 
         if (phoneQuery.docs.isEmpty) {

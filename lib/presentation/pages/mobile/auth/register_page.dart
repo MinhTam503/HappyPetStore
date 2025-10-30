@@ -10,6 +10,7 @@ import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.da
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:flutter/foundation.dart';
+import 'package:pet_shop/helpers/phone_utils.dart';
 
 class RegisterPageNew extends StatefulWidget {
   final void Function()? onTap;
@@ -70,36 +71,8 @@ class _RegisterPageNewState extends State<RegisterPageNew>
   }
 
   // Validate and normalize VN phone number to E.164 (+84XXXXXXXXX)
-  bool _isPhoneNumber(String input) {
-    final digits = input.replaceAll(RegExp(r'\D'), '');
-    String national;
-    if (digits.startsWith('84')) {
-      national = digits.substring(2);
-    } else if (digits.startsWith('0')) {
-      national = digits.substring(1);
-    } else {
-      national = digits;
-    }
-    // Vietnam mobile numbers are 9 digits in national format
-    return RegExp(r'^[0-9]{9}$').hasMatch(national);
-  }
-
-  String _formatPhoneNumber(String phone) {
-    final digits = phone.replaceAll(RegExp(r'\D'), '');
-    String national;
-    if (digits.startsWith('84')) {
-      national = digits.substring(2);
-    } else if (digits.startsWith('0')) {
-      national = digits.substring(1);
-    } else {
-      national = digits;
-    }
-    // Fallback: return as-is if not 9 digits; caller should validate with _isPhoneNumber first
-    if (national.length != 9 || !RegExp(r'^\d{9}$').hasMatch(national)) {
-      return '+84$national';
-    }
-    return '+84$national';
-  }
+  bool _isPhoneNumber(String input) => PhoneUtils.isValidVN(input);
+  String _formatPhoneNumber(String phone) => PhoneUtils.normalizeVN(phone) ?? phone;
 
   void _register(BuildContext context) async {
     String account = _accountController.text.trim();
@@ -124,7 +97,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
     }
 
     if (!_isEmail(account) && !_isPhoneNumber(account)) {
-      _showSnackbar('Số điện thoại không hợp lệ. Định dạng đúng: +84XXXXXXXXX (9 chữ số).');
+      _showSnackbar('Số điện thoại không hợp lệ. Cho phép nhập 09xxxxxxxx; hệ thống sẽ lưu +84xxxxxxxxx.');
       return;
     }
 
@@ -245,13 +218,15 @@ class _RegisterPageNewState extends State<RegisterPageNew>
       String formattedPhone = _formatPhoneNumber(phone);
       debugPrint('🔄 Creating account for phone: $formattedPhone');
 
-      // Check if phone already exists
-      QuerySnapshot phoneQuery = await FirebaseFirestore.instance
-          .collection("users")
-          .where("phone", isEqualTo: formattedPhone)
-          .get();
+      // Check if phone already exists (check both fields and both formats)
+      final users = FirebaseFirestore.instance.collection("users");
+      final local09 = PhoneUtils.toDisplay09(formattedPhone);
+      QuerySnapshot q1 = await users.where("phone", isEqualTo: formattedPhone).limit(1).get();
+      QuerySnapshot q2 = await users.where("phoneNumber", isEqualTo: formattedPhone).limit(1).get();
+      QuerySnapshot q3 = await users.where("phone", isEqualTo: local09).limit(1).get();
+      QuerySnapshot q4 = await users.where("phoneNumber", isEqualTo: local09).limit(1).get();
 
-      if (phoneQuery.docs.isNotEmpty) {
+      if (q1.docs.isNotEmpty || q2.docs.isNotEmpty || q3.docs.isNotEmpty || q4.docs.isNotEmpty) {
         await DialogHelper.hideLoadingDialog(context);
         if (mounted) {
           _showSnackbar("Số điện thoại đã được sử dụng!");

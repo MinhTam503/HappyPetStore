@@ -19,9 +19,12 @@ import 'package:pet_shop/presentation/bloc/profile/edit_profile_state.dart';
 import 'package:pet_shop/presentation/pages/mobile/profile/widgets/header_card.dart';
 // section_title & delivery_info_tile đã được dùng trong ShippingInfoSection
 import 'package:pet_shop/presentation/pages/mobile/profile/widgets/personal_info_card.dart';
+import 'package:pet_shop/presentation/pages/mobile/profile/widgets/contact_info_card.dart';
 import 'package:pet_shop/presentation/pages/mobile/profile/widgets/shipping_info_section.dart';
 import 'package:pet_shop/presentation/pages/mobile/profile/widgets/save_button.dart';
 import 'package:pet_shop/presentation/pages/mobile/profile/widgets/logout_countdown_dialog.dart';
+import 'package:pet_shop/presentation/pages/mobile/profile/change_email_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/profile/change_phone_page.dart';
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -267,12 +270,6 @@ class _EditProfileState extends State<EditProfile> {
     return completer.future;
   }
 
-  Future<void> _refreshVerificationStatus() async {
-    context.read<EditProfileBloc>().add(EditProfileRefreshVerification());
-  }
-
-  // Đồng bộ im lặng: đã chuyển sang BLoC quản lý
-
   Future<void> _showLogoutCountdown({required int seconds, String? reason}) async {
     if (_isLogoutPromptVisible) return;
     _isLogoutPromptVisible = true;
@@ -296,14 +293,7 @@ class _EditProfileState extends State<EditProfile> {
     _isLogoutPromptVisible = false;
   }
 
-  Future<void> _startPhoneVerification() async {
-    final phone = phoneController.text.trim();
-    if (phone.isEmpty) {
-      NotificationHelper.showWarning(context, 'Thiếu số điện thoại', 'Vui lòng nhập số điện thoại để xác minh');
-      return;
-    }
-    context.read<EditProfileBloc>().add(EditProfileStartPhoneVerification(phone));
-  }
+  
 
   Future<void> pickImage() async {
     final pickedFile =
@@ -424,32 +414,35 @@ class _EditProfileState extends State<EditProfile> {
             final codeController = TextEditingController();
             await showDialog(
               context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Nhập mã OTP'),
-                content: TextField(
-                  controller: codeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(hintText: '6 chữ số'),
+              builder: (dialogCtx) => BlocProvider.value(
+                value: context.read<EditProfileBloc>(),
+                child: AlertDialog(
+                  title: const Text('Nhập mã OTP'),
+                  content: TextField(
+                    controller: codeController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(hintText: '6 chữ số'),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      child: const Text('Hủy'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        final smsCode = codeController.text.trim();
+                        if (smsCode.length == 6) {
+                          Navigator.pop(dialogCtx);
+                          dialogCtx.read<EditProfileBloc>().add(EditProfileSubmitOtp(
+                                verificationId: state.otpVerificationId!,
+                                code: smsCode,
+                              ));
+                        }
+                      },
+                      child: const Text('Xác minh'),
+                    ),
+                  ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Hủy'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      final smsCode = codeController.text.trim();
-                      if (smsCode.length == 6) {
-                        Navigator.pop(ctx);
-                        context.read<EditProfileBloc>().add(EditProfileSubmitOtp(
-                              verificationId: state.otpVerificationId!,
-                              code: smsCode,
-                            ));
-                      }
-                    },
-                    child: const Text('Xác minh'),
-                  ),
-                ],
               ),
             );
           }
@@ -462,7 +455,7 @@ class _EditProfileState extends State<EditProfile> {
         child: BlocBuilder<EditProfileBloc, EditProfileState>(
           builder: (context, state) {
             final data = state.user;
-            final emailVerifiedUi = state.emailVerified || (data?['emailVerified'] == true);
+            // Email verification UI moved to ContactInfoCard; state.emailVerified retained for compatibility
 
             return Scaffold(
       backgroundColor: secondaryColor,
@@ -490,7 +483,7 @@ class _EditProfileState extends State<EditProfile> {
                   HeaderCard(imageUrl: imageUrl, displayName: (data['displayName'] ?? '') as String, onEditAvatar: pickImage),
                   const SizedBox(height: 16),
 
-                  // Thông tin cơ bản (đã tách component)
+                  // Thông tin cơ bản 
                   PersonalInfoCard(
                     displayNameController: displayNameController,
                     phoneController: phoneController,
@@ -499,15 +492,33 @@ class _EditProfileState extends State<EditProfile> {
                     onSelectBirthDate: _selectBirthDate,
                     selectedGender: selectedGender,
                     onGenderChanged: (val) => setState(() => selectedGender = val),
-                    phoneVerified: state.phoneVerified,
-                    emailVerified: emailVerifiedUi,
-                    onPhoneVerify: _startPhoneVerification,
-                    onEmailSendVerify: () {
-                      final newEmail = emailController.text.trim();
-                      if (newEmail.isEmpty) return;
-                      context.read<EditProfileBloc>().add(EditProfileRequestEmailVerification(newEmail));
+                  ),
+                  const SizedBox(height: 12),
+                  ContactInfoCard(
+                    currentEmail: data['email'] as String?,
+                    currentPhone: (data['phone'] ?? data['phoneNumber']) as String?,
+                    onChangeEmail: () async {
+                      final changed = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChangeEmailPage(currentEmail: data['email'] as String?),
+                        ),
+                      );
+                      if (changed == true) {
+                        fetchUserData();
+                      }
                     },
-                    onEmailRefresh: _refreshVerificationStatus,
+                    onChangePhone: () async {
+                      final changed = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChangePhonePage(currentPhone: (data['phone'] ?? data['phoneNumber']) as String?),
+                        ),
+                      );
+                      if (changed == true) {
+                        fetchUserData();
+                      }
+                    },
                   ),
                   if (_pendingEmail != null) ...[
                     const SizedBox(height: 6),
@@ -519,7 +530,7 @@ class _EditProfileState extends State<EditProfile> {
 
                   const SizedBox(height: 20),
 
-                  // Thông tin giao hàng (đã tách component)
+                  // Thông tin giao hàng 
                   ShippingInfoSection(
                     deliveryInfos: deliveryInfos,
                     onEditPressed: () {
@@ -534,15 +545,16 @@ class _EditProfileState extends State<EditProfile> {
 
                   const SizedBox(height: 24),
 
-                  // Lưu (đã tách component)
+                  // Lưu 
                   SaveButton(
                     isSaving: state.isSaving,
                     onPressed: () {
                       context.read<EditProfileBloc>().add(
                             EditProfileUpdateSubmitted(
                               displayName: displayNameController.text.trim(),
-                              phone: phoneController.text.trim(),
-                              email: emailController.text.trim(),
+                              // Email/SĐT được đổi qua trang riêng; giữ nguyên giá trị hiện tại
+                              phone: ((data['phone'] ?? data['phoneNumber']) as String? ?? '').trim(),
+                              email: (data['email'] as String? ?? '').trim(),
                               deliveryInfos: deliveryInfos,
                               imageUrl: imageUrl,
                               gender: selectedGender,
@@ -561,5 +573,3 @@ class _EditProfileState extends State<EditProfile> {
     );
   }
 }
-
-// Các widget con đã được tách ra thành file riêng trong thư mục widgets/

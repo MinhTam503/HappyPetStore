@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pet_shop/helpers/phone_utils.dart';
 
 import 'edit_profile_event.dart';
 import 'edit_profile_state.dart';
@@ -45,12 +46,15 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
       final doc = await _db.collection('users').doc(user.uid).get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        final emailVerifiedDoc = data['emailVerified'] == true;
+        final hasEmailVerifiedField = data.containsKey('emailVerified');
+        final hasPhoneVerifiedField = data.containsKey('phoneVerified');
+        final emailVerifiedDoc = hasEmailVerifiedField ? data['emailVerified'] == true : (user.emailVerified);
+        final phoneVerifiedDoc = hasPhoneVerifiedField ? data['phoneVerified'] == true : (user.phoneNumber?.isNotEmpty == true);
         emit(state.copyWith(
           isLoading: false,
           user: data,
-          emailVerified: emailVerifiedDoc || user.emailVerified,
-          phoneVerified: (user.phoneNumber?.isNotEmpty == true) || (data['phoneVerified'] == true),
+          emailVerified: emailVerifiedDoc,
+          phoneVerified: phoneVerifiedDoc,
           imageUrl: (data['imageUrl'] as String?) ?? '',
         ));
       } else {
@@ -80,8 +84,8 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
     _log('rt: users change -> email=${data['email']}, emailVerified=${data['emailVerified']}');
     emit(state.copyWith(
       user: data,
-      emailVerified: (data['emailVerified'] == true) || state.emailVerified,
-      phoneVerified: (data['phoneVerified'] == true) || state.phoneVerified,
+      emailVerified: data['emailVerified'] == true,
+      phoneVerified: data['phoneVerified'] == true,
       imageUrl: (data['imageUrl'] as String?) ?? state.imageUrl,
     ));
   }
@@ -115,9 +119,19 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
           _lastPendingEmail = newEmail;
           updateData['email'] = newEmail;
           updateData['emailVerified'] = false;
+          // cũng cập nhật state để UI phản ánh ngay
+          emit(state.copyWith(emailVerified: false, pendingEmail: _lastPendingEmail));
         } else {
           emit(state.copyWith(errorMessage: 'Cần xác thực lại trước khi gửi email xác minh.'));
         }
+      }
+
+      // Phone mới: nếu khác doc hiện tại -> đánh dấu chưa xác minh
+      final currentPhone = state.user?['phone'] ?? state.user?['phoneNumber'];
+      if ((event.phone.trim().isNotEmpty) && (event.phone.trim() != (currentPhone ?? ''))) {
+        updateData['phoneVerified'] = false;
+        // không cập nhật phoneNumber ở đây; chỉ cập nhật khi xác minh thành công
+        emit(state.copyWith(phoneVerified: false));
       }
 
       await _db.collection('users').doc(user.uid).update(updateData);
@@ -226,18 +240,30 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
     EditProfileStartPhoneVerification event,
     Emitter<EditProfileState> emit,
   ) async {
-    final phone = event.phone.trim();
-    if (phone.isEmpty) {
+    final rawPhone = event.phone.trim();
+    final phone = PhoneUtils.normalizeVN(rawPhone);
+    if ((rawPhone).isEmpty) {
       emit(state.copyWith(errorMessage: 'Vui lòng nhập số điện thoại để xác minh'));
+      return;
+    }
+    if (phone == null) {
+      emit(state.copyWith(errorMessage: 'Số điện thoại không hợp lệ. Vui lòng nhập 09xxxxxxxx'));
       return;
     }
 
     try {
       await _auth.verifyPhoneNumber(
-        phoneNumber: phone,
+  phoneNumber: phone,
         verificationCompleted: (cred) async {
           try {
-            await _auth.currentUser?.linkWithCredential(cred);
+            final current = _auth.currentUser;
+            if (current == null) return;
+            // Nếu đã có phone provider, dùng updatePhoneNumber; nếu chưa, link.
+            if (current.phoneNumber?.isNotEmpty == true) {
+              await current.updatePhoneNumber(cred);
+            } else {
+              await current.linkWithCredential(cred);
+            }
             final uid = _auth.currentUser!.uid;
             await _db.collection('users').doc(uid).update({
               'phone': phone,
@@ -270,11 +296,19 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
     final code = event.code;
     try {
       final cred = PhoneAuthProvider.credential(verificationId: id, smsCode: code);
-      await _auth.currentUser?.linkWithCredential(cred);
+      final current = _auth.currentUser;
+      if (current == null) return;
+      if (current.phoneNumber?.isNotEmpty == true) {
+        await current.updatePhoneNumber(cred);
+      } else {
+        await current.linkWithCredential(cred);
+      }
       final uid = _auth.currentUser!.uid;
       // Lưu phone vào Firestore nếu có trong state
       await _db.collection('users').doc(uid).update({
         'phoneVerified': true,
+        // đồng bộ phoneNumber để dùng trong các nơi khác nếu cần
+        if ((state.user?['phone'] as String?) != null) 'phoneNumber': state.user!['phone'],
       });
       emit(state.copyWith(phoneVerified: true, infoMessage: 'Xác minh SĐT thành công', otpVerificationId: null));
     } catch (e) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/constants/app_constants.dart';
 
 class SaveButton extends StatelessWidget {
   final bool isSaving;
@@ -13,7 +14,7 @@ class SaveButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isSaving ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFD166), // primaryColor
+          backgroundColor: primaryColor, 
           foregroundColor: Colors.black,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),

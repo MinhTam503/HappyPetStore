@@ -8,6 +8,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
+import 'package:pet_shop/helpers/phone_utils.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -59,23 +60,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(input);
   }
 
-  bool _isPhoneNumber(String input) {
-    String cleaned = input.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
-    return RegExp(r'^(\+84|84|0)[0-9]{8,9}$').hasMatch(cleaned);
-  }
-
-  String _formatPhoneNumber(String phone) {
-    String cleaned = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    if (cleaned.startsWith('+84')) {
-      return cleaned;
-    } else if (cleaned.startsWith('84')) {
-      return '+$cleaned';
-    } else if (cleaned.startsWith('0')) {
-      return '+84${cleaned.substring(1)}';
-    } else {
-      return '+84$cleaned';
-    }
-  }
+  bool _isPhoneNumber(String input) => PhoneUtils.isValidVN(input);
+  String _formatPhoneNumber(String phone) => PhoneUtils.normalizeVN(phone) ?? phone;
 
   void _resetPassword() async {
     String account = _accountController.text.trim();
@@ -158,13 +144,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     DialogHelper.showLoadingDialog(context, message: "Đang kiểm tra số điện thoại...");
 
     try {
-      // Check if phone exists in Firestore
-      QuerySnapshot phoneQuery = await FirebaseFirestore.instance
-          .collection("users")
-          .where("phone", isEqualTo: formattedPhone)
-          .get();
+      // Check if phone exists in Firestore (check both fields and legacy 09 format)
+      final users = FirebaseFirestore.instance.collection("users");
+      final local09 = PhoneUtils.toDisplay09(formattedPhone);
+      QuerySnapshot q1 = await users.where("phone", isEqualTo: formattedPhone).limit(1).get();
+      QuerySnapshot q2 = await users.where("phoneNumber", isEqualTo: formattedPhone).limit(1).get();
+      QuerySnapshot q3 = await users.where("phone", isEqualTo: local09).limit(1).get();
+      QuerySnapshot q4 = await users.where("phoneNumber", isEqualTo: local09).limit(1).get();
 
-      if (phoneQuery.docs.isEmpty) {
+      if (q1.docs.isEmpty && q2.docs.isEmpty && q3.docs.isEmpty && q4.docs.isEmpty) {
         await DialogHelper.hideLoadingDialog(context);
         if (mounted) {
           _showSnackbar("Số điện thoại chưa được đăng ký!");
