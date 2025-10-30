@@ -30,24 +30,6 @@ class BreedAssociation {
   String toString() => 'BreedAssociation($breedA → $breedB: $count times, confidence: ${confidence.toStringAsFixed(2)})';
 }
 
-/// FP-Growth Association Rule (supports multiple items in antecedent/consequent)
-class FPGrowthAssociation {
-  final List<String> antecedent;
-  final List<String> consequent;
-  final double confidence;
-  final double support;
-
-  const FPGrowthAssociation({
-    required this.antecedent,
-    required this.consequent,
-    required this.confidence,
-    required this.support,
-  });
-
-  @override
-  String toString() => 'FPGrowthAssociation(${antecedent.join(",")} → ${consequent.join(",")}: confidence=${confidence.toStringAsFixed(2)})';
-}
-
 class SuggestedPet {
   final String id;
   final String name;

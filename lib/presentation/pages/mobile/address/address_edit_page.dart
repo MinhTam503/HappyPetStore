@@ -3,7 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/core/constants/list_city.dart';
+import 'package:pet_shop/core/constants/vn_admin_units.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 
 class AddressEditPage extends StatefulWidget {
@@ -27,19 +27,22 @@ class _AddressEditPageState extends State<AddressEditPage> {
   final _detailController = TextEditingController();
 
   String? selectedProvince;
-  String? selectedDistrict;
+  String? selectedWard;
   bool isDefault = false;
   LatLng? selectedLocation;
   MapController mapController = MapController();
   Location location = Location();
   bool _locationPermissionGranted = false;
 
-  List<String> provinces = ListCity().city;
-  Map<String, List<String>> districts = ListCity().districts;
+  // Provinces and wards loaded from assets/vn_admin_units.json
+  List<String> provinces = const [];
+  Map<String, List<String>> wardsByProvince = const {};
+  // Loading state is lightweight; we rely on setState to refresh dropdowns once loaded.
 
   @override
   void initState() {
     super.initState();
+    _loadAdminUnits();
     _initializeLocation();
     if (widget.address != null) {
       _nameController.text = widget.address!['name'] ?? '';
@@ -59,6 +62,16 @@ class _AddressEditPageState extends State<AddressEditPage> {
       final fullAddress = widget.address!['address'] ?? '';
       _parseAddress(fullAddress);
     }
+  }
+
+  Future<void> _loadAdminUnits() async {
+    await VNAdminUnits.instance.load();
+    setState(() {
+      if (VNAdminUnits.instance.provinces.isNotEmpty) {
+        provinces = VNAdminUnits.instance.provinces;
+        wardsByProvince = VNAdminUnits.instance.wardsByProvince;
+      }
+    });
   }
 
   Future<void> _initializeLocation() async {
@@ -91,7 +104,7 @@ class _AddressEditPageState extends State<AddressEditPage> {
               LatLng(locationData.latitude!, locationData.longitude!);
         });
       } catch (e) {
-        print('Error getting current location: $e');
+        debugPrint('Error getting current location: $e');
         // Default to Ho Chi Minh City center if location fails
         setState(() {
           selectedLocation = const LatLng(10.762622, 106.660172);
@@ -101,27 +114,48 @@ class _AddressEditPageState extends State<AddressEditPage> {
   }
 
   void _parseAddress(String fullAddress) {
-    // Try to parse the address format: "detail, district, province"
+    // Try to parse the address format: "detail, ward, province"
     final parts = fullAddress.split(', ');
     if (parts.length >= 3) {
       selectedProvince = parts.last.trim();
-      selectedDistrict = parts[parts.length - 2].trim();
+      // Back-compat: map legacy province labels (e.g., "Hồ Chí Minh")
+      // to official labels in the dataset (e.g., "Thành phố Hồ Chí Minh").
+      if (!provinces.contains(selectedProvince)) {
+        final canonical = _canonicalProvinceName(selectedProvince!);
+        if (provinces.contains(canonical)) {
+          selectedProvince = canonical;
+        }
+      }
+      selectedWard = parts[parts.length - 2].trim();
       _detailController.text =
           parts.sublist(0, parts.length - 2).join(', ').trim();
 
-      // Validate if province and district exist in our data
+      // Validate if province and ward exist in our data
       if (!provinces.contains(selectedProvince)) {
         selectedProvince = null;
       }
-      if (selectedProvince != null &&
-          (districts[selectedProvince!] == null ||
-              !districts[selectedProvince!]!.contains(selectedDistrict))) {
-        selectedDistrict = null;
+      if (selectedProvince != null) {
+        final wards = wardsByProvince[selectedProvince!] ?? const <String>[];
+        if (!wards.contains(selectedWard)) {
+          selectedWard = null;
+        }
       }
     } else {
       // If parsing fails, put everything in detail
       _detailController.text = fullAddress;
     }
+  }
+
+  String _canonicalProvinceName(String input) {
+    final simple = input.replaceFirst(RegExp(r'^(Tỉnh|Thành phố)\s+'), '').trim();
+    for (final p in provinces) {
+      if (p == input) return p; // exact match
+      final alias = p.replaceFirst(RegExp(r'^(Tỉnh|Thành phố)\s+'), '').trim();
+      if (alias == input || alias == simple) {
+        return p;
+      }
+    }
+    return input;
   }
 
   Future<void> _showMapDialog() async {
@@ -239,11 +273,11 @@ class _AddressEditPageState extends State<AddressEditPage> {
 
   String _buildFullAddress() {
     if (selectedProvince == null ||
-        selectedDistrict == null ||
+        selectedWard == null ||
         _detailController.text.trim().isEmpty) {
       return '';
     }
-    return '${_detailController.text.trim()}, $selectedDistrict, $selectedProvince';
+    return '${_detailController.text.trim()}, $selectedWard, $selectedProvince';
   }
 
   void _saveAddress() {
@@ -251,11 +285,11 @@ class _AddressEditPageState extends State<AddressEditPage> {
       return;
     }
 
-    if (selectedProvince == null || selectedDistrict == null) {
+    if (selectedProvince == null || selectedWard == null) {
       NotificationHelper.showWarning(
         context,
         'Thông tin chưa đầy đủ',
-        'Vui lòng chọn tỉnh/thành phố và quận/huyện',
+        'Vui lòng chọn tỉnh/thành phố và phường/xã',
       );
       return;
     }
@@ -410,8 +444,7 @@ class _AddressEditPageState extends State<AddressEditPage> {
                       onChanged: (value) {
                         setState(() {
                           selectedProvince = value;
-                          selectedDistrict =
-                              null; // Reset district when province changes
+                          selectedWard = null; // Reset ward when province changes
                         });
                       },
                       validator: (value) {
@@ -424,28 +457,29 @@ class _AddressEditPageState extends State<AddressEditPage> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
-                        labelText: 'Quận/Huyện *',
+                        labelText: 'Phường/Xã *',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.location_on),
                       ),
-                      value: selectedDistrict,
-                      items: (selectedProvince != null &&
-                              districts[selectedProvince!] != null)
-                          ? districts[selectedProvince!]!
-                              .map((district) => DropdownMenuItem(
-                                    value: district,
-                                    child: Text(district),
-                                  ))
-                              .toList()
-                          : [],
+                      value: selectedWard,
+                      items: () {
+                        if (selectedProvince == null) return const <DropdownMenuItem<String>>[];
+                        final wards = wardsByProvince[selectedProvince!] ?? const <String>[];
+                        return wards
+                            .map((w) => DropdownMenuItem(
+                                  value: w,
+                                  child: Text(w),
+                                ))
+                            .toList();
+                      }(),
                       onChanged: (value) {
                         setState(() {
-                          selectedDistrict = value;
+                          selectedWard = value;
                         });
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Vui lòng chọn quận/huyện';
+                          return 'Vui lòng chọn phường/xã';
                         }
                         return null;
                       },

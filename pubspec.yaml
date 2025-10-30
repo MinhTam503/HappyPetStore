@@ -116,6 +116,7 @@ flutter:
     - assets/orders_100.json
     - assets/loading.json
     - .env
+    - assets/vn_admin_units.json
   # - .env   # placeholder added above so runtime can fetch a safe .env
      #- images/a_dot_ham.jpeg
 

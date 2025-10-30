@@ -8,7 +8,6 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/utils/localization_helper.dart';
-import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/orderSuccess.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/checkout_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
@@ -286,150 +285,6 @@ class _CartScreenState extends State<CartScreen> {
         );
       }
     });
-  }
-
-  Future<void> addNewAddress() async {
-    String? selectedProvince;
-    String? selectedDistrict;
-    String detail = '';
-    String name = userInfo?['displayName'] ?? '';
-    String phone = userInfo?['phone'] ?? '';
-    List<String> provinces = ListCity().city;
-    Map<String, List<String>> districts = ListCity().districts;
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Thêm thông tin giao hàng'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      decoration:
-                          const InputDecoration(labelText: 'Tên người nhận'),
-                      onChanged: (value) => name = value,
-                      controller: TextEditingController(text: name),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      decoration:
-                          const InputDecoration(labelText: 'Số điện thoại'),
-                      onChanged: (value) => phone = value,
-                      controller: TextEditingController(text: phone),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      decoration:
-                          const InputDecoration(labelText: 'Tỉnh/Thành phố'),
-                      value: selectedProvince,
-                      items: provinces
-                          .map(
-                              (e) => DropdownMenuItem(value: e, child: Text(e)))
-                          .toList(),
-                      onChanged: (value) {
-                        setStateDialog(() {
-                          selectedProvince = value;
-                          selectedDistrict = null;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      decoration:
-                          const InputDecoration(labelText: 'Quận/Huyện'),
-                      value: selectedDistrict,
-                      items: (selectedProvince != null &&
-                              districts[selectedProvince!] != null)
-                          ? districts[selectedProvince!]!
-                              .map((e) =>
-                                  DropdownMenuItem(value: e, child: Text(e)))
-                              .toList()
-                          : [],
-                      onChanged: (value) {
-                        setStateDialog(() {
-                          selectedDistrict = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      decoration: const InputDecoration(
-                          labelText: 'Địa chỉ chi tiết (số nhà, tên đường...)'),
-                      onChanged: (value) => detail = value,
-                      keyboardType: TextInputType.multiline,
-                      maxLines: null,
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Hủy'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    if (selectedProvince != null &&
-                        selectedDistrict != null &&
-                        detail.trim().isNotEmpty &&
-                        name.trim().isNotEmpty &&
-                        phone.trim().isNotEmpty &&
-                        userIdentifier != null) {
-                      final newAddress =
-                          '$detail, $selectedDistrict, $selectedProvince';
-                      final newDeliveryInfo = {
-                        'name': name.trim(),
-                        'phone': phone.trim(),
-                        'address': newAddress,
-                        'isDefault': deliveryInfos.isEmpty,
-                        'latitude':
-                            null, // Will be set when user chooses location on map
-                        'longitude': null,
-                      };
-
-                      final currentUser = FirebaseAuth.instance.currentUser;
-                      if (currentUser == null) return;
-
-                      final userRef = FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(currentUser.uid);
-
-                      // Update deliveryInfos in Firestore
-                      await userRef.update({
-                        'deliveryInfos':
-                            FieldValue.arrayUnion([newDeliveryInfo])
-                      });
-
-                      setState(() {
-                        deliveryInfos.add(newDeliveryInfo);
-                        selectedDeliveryInfo = newDeliveryInfo;
-                      });
-
-                      Navigator.pop(context);
-                    } else {
-                      NotificationHelper.showWarning(
-                        context,
-                        'Thông tin chưa đầy đủ',
-                        LocalizationHelper.getLocalizedText(
-                            context, 'pleaseEnterShippingInfo'),
-                      );
-                    }
-                  },
-                  child: const Text('Lưu'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
   }
 
   double _calculateTotal(List<CartModel> carts) {
@@ -1138,7 +993,8 @@ class _CartScreenState extends State<CartScreen> {
                                                     id.isNotEmpty) {
                                                   _selectedProductIds.add(id);
                                                 } else {
-                                                  _selectedProductIds.remove(id);
+                                                  _selectedProductIds
+                                                      .remove(id);
                                                   _selectAll = false;
                                                 }
                                               });
@@ -1230,7 +1086,9 @@ class _CartScreenState extends State<CartScreen> {
                                           );
                                           if (!mounted) return;
                                           // Reload cart from Firestore to reflect purchased items removal
-                                          context.read<CartBloc>().add(LoadCart(userIdentifier!));
+                                          context
+                                              .read<CartBloc>()
+                                              .add(LoadCart(userIdentifier!));
                                         },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
