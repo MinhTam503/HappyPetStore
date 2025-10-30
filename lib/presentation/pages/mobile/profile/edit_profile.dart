@@ -270,7 +270,8 @@ class _EditProfileState extends State<EditProfile> {
     return completer.future;
   }
 
-  Future<void> _showLogoutCountdown({required int seconds, String? reason}) async {
+  Future<void> _showLogoutCountdown(
+      {required int seconds, String? reason}) async {
     if (_isLogoutPromptVisible) return;
     _isLogoutPromptVisible = true;
     await showLogoutCountdownDialog(
@@ -293,13 +294,13 @@ class _EditProfileState extends State<EditProfile> {
     _isLogoutPromptVisible = false;
   }
 
-  
-
   Future<void> pickImage() async {
     final pickedFile =
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile == null) return;
-    context.read<EditProfileBloc>().add(EditProfileUploadAvatar(pickedFile.path));
+    context
+        .read<EditProfileBloc>()
+        .add(EditProfileUploadAvatar(pickedFile.path));
   }
 
   // =========================
@@ -390,11 +391,16 @@ class _EditProfileState extends State<EditProfile> {
           }
 
           // Thông điệp
-          if (state.infoMessage != null && state.infoMessage!.isNotEmpty && state.infoMessage != _lastInfo) {
+          if (state.infoMessage != null &&
+              state.infoMessage!.isNotEmpty &&
+              state.infoMessage != _lastInfo) {
             _lastInfo = state.infoMessage;
-            NotificationHelper.showSuccess(context, 'Thành công', state.infoMessage!);
+            NotificationHelper.showSuccess(
+                context, 'Thành công', state.infoMessage!);
           }
-          if (state.errorMessage != null && state.errorMessage!.isNotEmpty && state.errorMessage != _lastError) {
+          if (state.errorMessage != null &&
+              state.errorMessage!.isNotEmpty &&
+              state.errorMessage != _lastError) {
             _lastError = state.errorMessage;
             NotificationHelper.showError(context, 'Lỗi', state.errorMessage!);
             // Nếu lỗi yêu cầu xác thực lại → mở dialog re-auth, sau đó thử lại gửi xác minh (nếu có pendingEmail)
@@ -403,7 +409,9 @@ class _EditProfileState extends State<EditProfile> {
               if (ok) {
                 final retryEmail = emailController.text.trim();
                 if (retryEmail.isNotEmpty) {
-                  context.read<EditProfileBloc>().add(EditProfileRequestEmailVerification(retryEmail));
+                  context
+                      .read<EditProfileBloc>()
+                      .add(EditProfileRequestEmailVerification(retryEmail));
                 }
               }
             }
@@ -433,7 +441,9 @@ class _EditProfileState extends State<EditProfile> {
                         final smsCode = codeController.text.trim();
                         if (smsCode.length == 6) {
                           Navigator.pop(dialogCtx);
-                          dialogCtx.read<EditProfileBloc>().add(EditProfileSubmitOtp(
+                          dialogCtx
+                              .read<EditProfileBloc>()
+                              .add(EditProfileSubmitOtp(
                                 verificationId: state.otpVerificationId!,
                                 code: smsCode,
                               ));
@@ -449,7 +459,8 @@ class _EditProfileState extends State<EditProfile> {
 
           // Đếm ngược đăng xuất khi token hết hạn
           if (state.showLogoutCountdown) {
-            _showLogoutCountdown(seconds: state.countdownSeconds, reason: state.logoutReason);
+            _showLogoutCountdown(
+                seconds: state.countdownSeconds, reason: state.logoutReason);
           }
         },
         child: BlocBuilder<EditProfileBloc, EditProfileState>(
@@ -458,115 +469,135 @@ class _EditProfileState extends State<EditProfile> {
             // Email verification UI moved to ContactInfoCard; state.emailVerified retained for compatibility
 
             return Scaffold(
-      backgroundColor: secondaryColor,
-      appBar: AppBar(
-        backgroundColor: secondaryColor,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: Text(
-          data?['email'] ?? "",
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: Colors.black,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-      body: data == null
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: fetchUserData,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 24),
-                children: [
-                  HeaderCard(imageUrl: imageUrl, displayName: (data['displayName'] ?? '') as String, onEditAvatar: pickImage),
-                  const SizedBox(height: 16),
-
-                  // Thông tin cơ bản 
-                  PersonalInfoCard(
-                    displayNameController: displayNameController,
-                    phoneController: phoneController,
-                    emailController: emailController,
-                    selectedBirthDate: selectedBirthDate,
-                    onSelectBirthDate: _selectBirthDate,
-                    selectedGender: selectedGender,
-                    onGenderChanged: (val) => setState(() => selectedGender = val),
+              backgroundColor: secondaryColor,
+              appBar: AppBar(
+                backgroundColor: secondaryColor,
+                elevation: 0,
+                centerTitle: true,
+                iconTheme: const IconThemeData(color: Colors.black),
+                title: Text(
+                  data?['displayName'] ?? "",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.black,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 12),
-                  ContactInfoCard(
-                    currentEmail: data['email'] as String?,
-                    currentPhone: (data['phone'] ?? data['phoneNumber']) as String?,
-                    onChangeEmail: () async {
-                      final changed = await Navigator.push<bool>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChangeEmailPage(currentEmail: data['email'] as String?),
-                        ),
-                      );
-                      if (changed == true) {
-                        fetchUserData();
-                      }
-                    },
-                    onChangePhone: () async {
-                      final changed = await Navigator.push<bool>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChangePhonePage(currentPhone: (data['phone'] ?? data['phoneNumber']) as String?),
-                        ),
-                      );
-                      if (changed == true) {
-                        fetchUserData();
-                      }
-                    },
-                  ),
-                  if (_pendingEmail != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Email mới đang chờ xác minh: ${_pendingEmail}',
-                      style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
-                    ),
-                  ],
-
-                  const SizedBox(height: 20),
-
-                  // Thông tin giao hàng 
-                  ShippingInfoSection(
-                    deliveryInfos: deliveryInfos,
-                    onEditPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AddressListPage()),
-                      );
-                    },
-                    onDeleteAt: (i) => removeDeliveryInfo(i),
-                    onSetDefaultAt: (i) => setDefaultDeliveryInfo(i),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Lưu 
-                  SaveButton(
-                    isSaving: state.isSaving,
-                    onPressed: () {
-                      context.read<EditProfileBloc>().add(
-                            EditProfileUpdateSubmitted(
-                              displayName: displayNameController.text.trim(),
-                              // Email/SĐT được đổi qua trang riêng; giữ nguyên giá trị hiện tại
-                              phone: ((data['phone'] ?? data['phoneNumber']) as String? ?? '').trim(),
-                              email: (data['email'] as String? ?? '').trim(),
-                              deliveryInfos: deliveryInfos,
-                              imageUrl: imageUrl,
-                              gender: selectedGender,
-                              birthDate: selectedBirthDate,
-                            ),
-                          );
-                    },
-                  ),
-                ],
+                ),
               ),
-            ),
-    );
+              body: data == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: fetchUserData,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding:
+                            EdgeInsets.fromLTRB(horizontal, 16, horizontal, 24),
+                        children: [
+                          HeaderCard(
+                              imageUrl: imageUrl,
+                              displayName:
+                                  (data['displayName'] ?? '') as String,
+                              onEditAvatar: pickImage),
+                          const SizedBox(height: 16),
+
+                          // Thông tin cơ bản
+                          PersonalInfoCard(
+                            displayNameController: displayNameController,
+                            phoneController: phoneController,
+                            emailController: emailController,
+                            selectedBirthDate: selectedBirthDate,
+                            onSelectBirthDate: _selectBirthDate,
+                            selectedGender: selectedGender,
+                            onGenderChanged: (val) =>
+                                setState(() => selectedGender = val),
+                          ),
+                          const SizedBox(height: 12),
+                          ContactInfoCard(
+                            currentEmail: data['email'] as String?,
+                            currentPhone: (data['phone'] ?? data['phoneNumber'])
+                                as String?,
+                            onChangeEmail: () async {
+                              final changed = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChangeEmailPage(
+                                      currentEmail: data['email'] as String?),
+                                ),
+                              );
+                              if (changed == true) {
+                                fetchUserData();
+                              }
+                            },
+                            onChangePhone: () async {
+                              final changed = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChangePhonePage(
+                                      currentPhone: (data['phone'] ??
+                                          data['phoneNumber']) as String?),
+                                ),
+                              );
+                              if (changed == true) {
+                                fetchUserData();
+                              }
+                            },
+                          ),
+                          if (_pendingEmail != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Email mới đang chờ xác minh: ${_pendingEmail}',
+                              style: TextStyle(
+                                  color: Colors.orange.shade700, fontSize: 12),
+                            ),
+                          ],
+
+                          const SizedBox(height: 20),
+
+                          // Thông tin giao hàng
+                          ShippingInfoSection(
+                            deliveryInfos: deliveryInfos,
+                            onEditPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AddressListPage()),
+                              );
+                            },
+                            onDeleteAt: (i) => removeDeliveryInfo(i),
+                            onSetDefaultAt: (i) => setDefaultDeliveryInfo(i),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Lưu
+                          SaveButton(
+                            isSaving: state.isSaving,
+                            onPressed: () {
+                              context.read<EditProfileBloc>().add(
+                                    EditProfileUpdateSubmitted(
+                                      displayName:
+                                          displayNameController.text.trim(),
+                                      // Email/SĐT được đổi qua trang riêng; giữ nguyên giá trị hiện tại
+                                      phone: ((data['phone'] ??
+                                                      data['phoneNumber'])
+                                                  as String? ??
+                                              '')
+                                          .trim(),
+                                      email: (data['email'] as String? ?? '')
+                                          .trim(),
+                                      deliveryInfos: deliveryInfos,
+                                      imageUrl: imageUrl,
+                                      gender: selectedGender,
+                                      birthDate: selectedBirthDate,
+                                    ),
+                                  );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+            );
           },
         ),
       ),

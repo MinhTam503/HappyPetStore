@@ -13,10 +13,12 @@ import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/order_success.dart';
 import '../../../../data/models/cart_model.dart';
 import '../../../bloc/vnpay/vnpay_bloc.dart';
 import '../../../bloc/vnpay/vnpay_event.dart';
@@ -252,13 +254,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       );
 
       if (response.statusCode != 200) {
-        print(" Stripe API Error: ${response.body}");
+        debugPrint("Stripe API Error: ${response.body}");
         return null;
       }
 
       return jsonDecode(response.body);
     } catch (error) {
-      print(" Stripe Error: $error");
+      debugPrint("Stripe Error: $error");
       return null;
     }
   }
@@ -267,6 +269,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     try {
       final canUse = await StripeHelper.canUseStripe();
       if (!canUse) {
+        if (!context.mounted) return;
         NotificationHelper.showError(
           context,
           'Lỗi thanh toán Stripe',
@@ -284,6 +287,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       if (amountInUSD < 0.5) {
+        if (!context.mounted) return;
         NotificationHelper.showWarning(
           context,
           'Số tiền quá nhỏ',
@@ -292,8 +296,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         return;
       }
 
+      // Show loading while creating payment intent and initializing payment sheet
+      DialogHelper.showLoadingDialog(context, message: 'Đang khởi tạo thanh toán...');
       final intent = await makeIntentForPayment(amountInUSD, currency);
       if (intent == null) {
+        await DialogHelper.safeHideLoadingDialog();
+        if (!context.mounted) return;
         NotificationHelper.showError(context, 'Lỗi thanh toán', 'Không thể tạo giao dịch Stripe.');
         return;
       }
@@ -306,11 +314,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           merchantDisplayName: "Pet Shop",
         ),
       );
+  // Hide loading before showing payment sheet UI
+  await DialogHelper.safeHideLoadingDialog();
+  await Stripe.instance.presentPaymentSheet();
 
-      await Stripe.instance.presentPaymentSheet();
-
-      // Save order
-      await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
+  // Save order and get purchased breeds for Apriori
+  DialogHelper.showLoadingDialog(context, message: 'Đang lưu đơn hàng...');
+  final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
 
       // Remove purchased items from cart (directly update Firestore)
       try {
@@ -333,22 +343,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           await cartDoc.set({'items': items, 'selectedProductIds': selected}, SetOptions(merge: true));
         }
       } catch (e) {
-        print('⚠️ Failed to remove purchased items from cart (Stripe): $e');
+        debugPrint('⚠️ Failed to remove purchased items from cart (Stripe): $e');
       }
 
-      // Clear all items (optional): here we keep cart intact; if desired, dispatch removal per item
-      if (!mounted) return;
-    NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
-
-  // Navigate back to Cart and hint refresh
-  Navigator.pop(context, true);
+      // Navigate to OrderSuccess to display suggestions
+      await DialogHelper.safeHideLoadingDialog();
+      if (!context.mounted) return;
+      NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds),
+        ),
+      );
     } on StripeException catch (e) {
+      await DialogHelper.safeHideLoadingDialog();
+      if (!context.mounted) return;
       NotificationHelper.showError(
         context,
         'Thanh toán thất bại',
         e.error.message ?? 'Đã xảy ra lỗi trong quá trình thanh toán',
       );
     } catch (e) {
+      await DialogHelper.safeHideLoadingDialog();
+      if (!context.mounted) return;
       NotificationHelper.showError(context, 'Lỗi thanh toán', 'Lỗi không mong muốn: $e');
     }
   }
@@ -359,7 +377,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final orderId = 'ORDER_${DateTime.now().millisecondsSinceEpoch}';
       final orderInfo = 'Thanh toan don hang HappyPetStore $orderId';
       final returnUrl = VnpayConfig.returnUrl;
-
+      DialogHelper.showLoadingDialog(context, message: 'Đang tạo giao dịch VNPay...');
       context.read<VnpayBloc>().add(CreateVnpayPayment(
             orderId: orderId,
             amount: grandTotal,
@@ -367,6 +385,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             returnUrl: returnUrl,
           ));
     } catch (e) {
+      await DialogHelper.safeHideLoadingDialog();
+      if (!context.mounted) return;
       NotificationHelper.showError(context, 'Lỗi thanh toán VNPay', 'Đã có lỗi xảy ra: $e');
     }
   }
@@ -389,6 +409,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (state is VnpayPaymentUrlCreated) {
             final paymentUrl = state.payment.paymentUrl;
             if (paymentUrl != null) {
+              await DialogHelper.safeHideLoadingDialog();
               final result = await Navigator.push<Map<String, String>>(
                 context,
                 MaterialPageRoute(
@@ -399,7 +420,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               );
 
-              if (result != null && mounted) {
+              if (result != null && context.mounted) {
                 context.read<VnpayBloc>().add(VerifyVnpayCallback(result));
                 // Consider saving order after verifying success via a Result Screen, as in CartScreen
                 Navigator.push(
@@ -409,7 +430,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       vnpayResponse: result,
                       onPaymentResult: (isSuccess, orderId) async {
                         if (isSuccess) {
-                          await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
+                          final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
                           // Remove purchased items from cart store
                           try {
                             final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
@@ -432,11 +453,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             }
                           } catch (e) {
                             // best-effort cleanup; ignore failures
-                            print('⚠️ Failed to remove purchased items from cart: $e');
+                            debugPrint('⚠️ Failed to remove purchased items from cart: $e');
                           }
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
-                          Navigator.popUntil(context, (route) => route.isFirst);
+                          // Go to OrderSuccess page
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds)),
+                            (route) => route.isFirst,
+                          );
                         } else {
                           NotificationHelper.showError(context, 'Thanh toán thất bại', 'Giao dịch không thành công.');
                         }
@@ -447,6 +473,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               }
             }
           } else if (state is VnpayError) {
+            await DialogHelper.safeHideLoadingDialog();
             NotificationHelper.showError(context, 'Lỗi thanh toán VNPay', state.message);
           }
         },
@@ -487,7 +514,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
+                            color: primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(Icons.location_on, color: primaryColor, size: 20),
@@ -555,7 +582,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, -4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -4))],
               ),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
@@ -616,9 +643,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 await _payWithVnPay(subtotal);
                               } else if (paymentMethod == 'stripe') {
                                 await _payWithStripe(subtotal);
-                              } else {
+          } else {
                                 // COD
-                                    await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: false);
+            DialogHelper.showLoadingDialog(context, message: 'Đang tạo đơn hàng...');
+            final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: false);
                                     // Remove purchased items from cart
                                     try {
                                       final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
@@ -640,12 +668,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         await cartDoc.set({'items': items, 'selectedProductIds': selected}, SetOptions(merge: true));
                                       }
                                     } catch (e) {
-                                      print('⚠️ Failed to remove purchased items from cart (COD): $e');
+                                      debugPrint('⚠️ Failed to remove purchased items from cart (COD): $e');
                                     }
-                                if (!mounted) return;
+                                await DialogHelper.safeHideLoadingDialog();
+                                if (!context.mounted) return;
                                 NotificationHelper.showSuccess(context, 'Đặt hàng thành công!', 'Đơn hàng sẽ được thanh toán khi nhận hàng.');
-                                // Navigate back to Cart and hint refresh
-                                Navigator.pop(context, true);
+                                // Navigate to OrderSuccess
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds),
+                                  ),
+                                );
                               }
                             },
                       style: ElevatedButton.styleFrom(

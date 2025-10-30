@@ -8,10 +8,11 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/utils/localization_helper.dart';
-import 'package:pet_shop/presentation/pages/mobile/order/orderSuccess.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/order_success.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/checkout_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 // Address selection is handled in CheckoutScreen
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
@@ -957,8 +958,10 @@ class _CartScreenState extends State<CartScreen> {
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
                                 onTap: () async {
+                                  DialogHelper.showLoadingDialog(context, message: 'Đang mở chi tiết...');
                                   final Map<String, dynamic>? pet =
                                       await getPetById(id);
+                                  await DialogHelper.safeHideLoadingDialog();
                                   if (pet != null && mounted) {
                                     Navigator.push(
                                       context,

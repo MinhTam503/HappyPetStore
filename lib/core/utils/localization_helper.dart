@@ -6,9 +6,13 @@ class LocalizationHelper {
     switch (key) {
        case 'total':
         return fallback ?? 'Tổng tiền';
-      // Auth messages with Vietnamese fallbacks
+      // Auth messages with Vietnamese fallback
       case 'verifyEmail':
         return fallback ?? 'Xác nhận Email';
+      case 'checkout':
+        return fallback ?? 'Thanh toán';
+         case 'payNow':
+        return fallback ?? 'Đặt hàng ngay';
       case 'verifyAccount':
         return fallback ?? 'Xác minh tài khoản';
       case 'pleaseCheckEmail':
