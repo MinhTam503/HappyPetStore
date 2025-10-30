@@ -18,7 +18,6 @@ import 'package:pet_shop/domain/usecases/verify_vnpay_payment.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
-import 'package:pet_shop/debug_connection.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 import 'package:pet_shop/core/providers/theme_provider.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
@@ -183,48 +182,79 @@ class MyApp extends StatelessWidget {
                 if (segs.isNotEmpty && segs.first == 'admin') {
                   // /admin
                   if (segs.length == 1) {
-                    return MaterialPageRoute(builder: (_) => const HomePageAdmin(), settings: settings);
+                    return MaterialPageRoute(
+                        builder: (_) => const HomePageAdmin(),
+                        settings: settings);
                   }
                   final section = segs[1];
                   switch (section) {
                     case 'home':
-                      return MaterialPageRoute(builder: (_) => const HomePageAdmin(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const HomePageAdmin(),
+                          settings: settings);
                     case 'dashboard':
-                      return MaterialPageRoute(builder: (_) => const DashboardPage(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const DashboardPage(),
+                          settings: settings);
                     case 'order':
                     case 'orders':
-                      return MaterialPageRoute(builder: (_) => const OrdersAdmin(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const OrdersAdmin(),
+                          settings: settings);
                     case 'shipping':
-                      return MaterialPageRoute(builder: (_) => const ShippingManagementPage(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const ShippingManagementPage(),
+                          settings: settings);
                     case 'pet':
                     case 'pets':
-                      return MaterialPageRoute(builder: (_) => const PetsAdmin(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const PetsAdmin(),
+                          settings: settings);
                     case 'category':
-                      return MaterialPageRoute(builder: (_) => const CategoryAdmin(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const CategoryAdmin(),
+                          settings: settings);
                     case 'account':
                     case 'accounts':
-                      return MaterialPageRoute(builder: (_) => const AccountAdmin(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const AccountAdmin(),
+                          settings: settings);
                     case 'notification':
                     case 'notifications':
-                      return MaterialPageRoute(builder: (_) => const NotificationManagementPanel(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const NotificationManagementPanel(),
+                          settings: settings);
                     case 'revenue':
-                      return MaterialPageRoute(builder: (_) => const RevenuePage(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const RevenuePage(),
+                          settings: settings);
                     case 'analytics':
                     case 'pet-analytics':
-                      return MaterialPageRoute(builder: (_) => const PetAnalyticsPage(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const PetAnalyticsPage(),
+                          settings: settings);
                     case 'shop-info':
-                      return MaterialPageRoute(builder: (_) => const ShopInfo(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const ShopInfo(), settings: settings);
                     case 'chat':
                     case 'inbox':
                       // /admin/chat/:email -> Chat detail; otherwise inbox
                       if (section == 'chat' && segs.length >= 3) {
-                        final email = Uri.decodeComponent(segs.sublist(2).join('/'));
-                        return MaterialPageRoute(builder: (_) => ChatDetailPage(customerEmail: email), settings: settings);
+                        final email =
+                            Uri.decodeComponent(segs.sublist(2).join('/'));
+                        return MaterialPageRoute(
+                            builder: (_) =>
+                                ChatDetailPage(customerEmail: email),
+                            settings: settings);
                       }
-                      return MaterialPageRoute(builder: (_) => const InboxPageAdmin(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const InboxPageAdmin(),
+                          settings: settings);
                     default:
                       // Fallback to admin home
-                      return MaterialPageRoute(builder: (_) => const HomePageAdmin(), settings: settings);
+                      return MaterialPageRoute(
+                          builder: (_) => const HomePageAdmin(),
+                          settings: settings);
                   }
                 }
               }
@@ -310,7 +340,6 @@ class MyApp extends StatelessWidget {
               '/home': (context) => const HomePageWebUser(),
               '/cart': (context) => const CartScreenWeb(),
               '/shipping': (context) => const ShippingManagementPage(),
-              '/debug': (context) => const DebugConnectionScreen(),
               '/payment-success': (context) {
                 // Parse session_id from URL
                 String? sessionId;

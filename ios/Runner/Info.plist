@@ -60,11 +60,41 @@
 				<string>com.googleusercontent.apps.1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o</string>
 			</array>
 		</dict>
+		<!-- Facebook URL Scheme: fb + FacebookAppID -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb382084861054704</string>
+			</array>
+		</dict>
 	</array>
+
+	<!-- Google Sign-In iOS client ID (non-reversed). Required by GoogleSignIn SDK v7+/v8+ -->
+	<key>GIDClientID</key>
+	<string>1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o.apps.googleusercontent.com</string>
 
 	<!-- Ensure Firebase can automatically intercept application:openURL for auth flows -->
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
+
+	<!-- Facebook SDK configuration for iOS login -->
+	<key>FacebookAppID</key>
+	<string>382084861054704</string>
+	<key>FacebookDisplayName</key>
+	<string>Happy Pet</string>
+	<key>FacebookClientToken</key>
+	<string>95f394c6f4fa44c93ec9edc329361a0d</string>
+
+	<!-- Whitelist Facebook URL schemes used by the SDK (iOS 9+) -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
 	
 	<!-- Location permission usage descriptions for iOS -->
 	<key>NSLocationWhenInUseUsageDescription</key>

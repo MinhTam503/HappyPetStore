@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/core/services/search_recommendations_cache.dart';
+import 'package:pet_shop/core/services/search_recommendations_manager.dart';
 import 'package:pet_shop/presentation/bloc/search/search_bloc.dart';
 import 'package:pet_shop/presentation/bloc/search/search_event.dart';
 // Removed RecommendationConfig here because search is cache-only and doesn't trigger loads
@@ -22,6 +23,8 @@ class SearchRecommendationsSection extends StatefulWidget {
 class _SearchRecommendationsSectionState extends State<SearchRecommendationsSection> {
   List<RecommendationItem>? _cachedRecommendations;
   bool _isLoadingFromCache = true;
+  bool _isRefreshing = false;
+  bool _refreshAttempted = false;
 
   @override
   void initState() {
@@ -44,12 +47,46 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
       print('📦 Using cached home recommendations (${cachedRecommendations.length} items) for search');
       return;
     }
-    // No cache available → show nothing (respect strict cache-only behavior)
+
+    // No cache available → trigger one-time background refresh, then try again
+    if (!_refreshAttempted) {
+      _refreshAttempted = true;
+      setState(() {
+        _isRefreshing = true;
+        _isLoadingFromCache = false;
+      });
+
+      try {
+        print('🌐 No cache for search; triggering manual refresh...');
+        await SearchRecommendationsManager().refreshNow();
+        final fetched = await SearchRecommendationsCache.getRecommendations(widget.userId);
+        if (mounted) {
+          setState(() {
+            _cachedRecommendations = fetched;
+            _isRefreshing = false;
+          });
+          if (fetched != null) {
+            print('✅ Search recommendations fetched (${fetched.length}) after refresh');
+          } else {
+            print('ℹ️ Still no recommendations after refresh (possibly no data or user not logged in)');
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isRefreshing = false;
+          });
+        }
+        print('❌ Error refreshing search recommendations: $e');
+      }
+      return;
+    }
+
+    // After a failed refresh attempt, show nothing
     if (mounted) {
       setState(() {
         _isLoadingFromCache = false;
       });
-      print('ℹ️ No cached recommendations available for search; not triggering refresh or fallback');
     }
   }
 
@@ -89,6 +126,37 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
     // Nếu có cache, hiển thị ngay lập tức
     if (_cachedRecommendations != null) {
       return _buildRecommendationsList(_cachedRecommendations!);
+    }
+
+    // Nếu đang refresh sau khi không có cache, hiển thị loading nhỏ gọn
+    if (_isRefreshing) {
+      return Container(
+        margin: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text('Đang làm mới gợi ý...'),
+          ],
+        ),
+      );
     }
 
     // Nếu không có cache, ẩn section (không trigger load mới)
