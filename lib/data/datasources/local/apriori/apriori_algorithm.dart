@@ -7,15 +7,31 @@ import 'package:pet_shop/data/datasources/local/apriori/apriori_logger.dart';
 class AprioriAlgorithm {
   /// Fetches completed orders from Firestore and converts them to transactions of breeds.
   /// Each transaction is a set of unique breed strings purchased together in an order.
-  Future<List<List<String>>> getAllBreedTransactions() async {
+  Future<List<List<String>>> getAllBreedTransactions({String? runId}) async {
     try {
       debugPrint("🔍 Fetching completed orders...");
+      final ordersT0 = DateTime.now();
+      if (runId != null) {
+        await AprioriLogger.append(runId, type: 'FETCH_ORDERS_START', data: {
+          'query': {
+            'collection': 'orders',
+            'where': {'statusOrder': 'Completed'},
+          }
+        });
+      }
       final ordersSnapshot = await FirebaseFirestore.instance
           .collection("orders")
           .where("statusOrder", isEqualTo: "Completed")
           .get();
 
+      final ordersMs = DateTime.now().difference(ordersT0).inMilliseconds;
       debugPrint("Found ${ordersSnapshot.docs.length} completed orders");
+      if (runId != null) {
+        await AprioriLogger.append(runId, type: 'FETCH_ORDERS_END', data: {
+          'orderCount': ordersSnapshot.docs.length,
+          'durationMs': ordersMs,
+        });
+      }
 
       Set<String> neededProductIds = {};
       for (var doc in ordersSnapshot.docs) {
@@ -29,10 +45,20 @@ class AprioriAlgorithm {
 
       if (neededProductIds.isEmpty) {
         debugPrint(" No product IDs found in orders");
+        if (runId != null) {
+          await AprioriLogger.append(runId, type: 'PRODUCT_IDS_COLLECTED', data: {
+            'count': 0,
+          });
+        }
         return [];
       }
 
       debugPrint(" Fetching breed info for ${neededProductIds.length} pets");
+      if (runId != null) {
+        await AprioriLogger.append(runId, type: 'PRODUCT_IDS_COLLECTED', data: {
+          'count': neededProductIds.length,
+        });
+      }
 
       // Tách ID thành nhiều phần nếu vượt quá giới hạn
       final chunks = <List<String>>[];
@@ -40,9 +66,16 @@ class AprioriAlgorithm {
       for (var i = 0; i < ids.length; i += 10) {
         chunks.add(ids.sublist(i, i + 10 > ids.length ? ids.length : i + 10));
       }
+      if (runId != null) {
+        await AprioriLogger.append(runId, type: 'FETCH_PETS_START', data: {
+          'chunkCount': chunks.length,
+          'chunkSizes': chunks.map((c) => c.length).toList(),
+        });
+      }
 
       Map<String, String> productIdToBreed = {};
       for (var chunk in chunks) {
+        final tChunk = DateTime.now();
         final petsSnapshot = await FirebaseFirestore.instance
             .collection("Pets")
             .where(FieldPath.documentId, whereIn: chunk)
@@ -54,9 +87,28 @@ class AprioriAlgorithm {
             productIdToBreed[doc.id] = breed;
           }
         }
+        if (runId != null) {
+          await AprioriLogger.append(runId, type: 'FETCH_PETS_CHUNK', data: {
+            'chunkSize': chunk.length,
+            'fetched': petsSnapshot.docs.length,
+            'durationMs': DateTime.now().difference(tChunk).inMilliseconds,
+          });
+        }
       }
 
       debugPrint(" Found breed info for ${productIdToBreed.length} pets");
+      if (runId != null) {
+        final missing = neededProductIds.length - productIdToBreed.length;
+        final missingIds = neededProductIds
+            .where((id) => !productIdToBreed.containsKey(id))
+            .take(20)
+            .toList();
+        await AprioriLogger.append(runId, type: 'MAP_BREEDS_SUMMARY', data: {
+          'mappedCount': productIdToBreed.length,
+          'missingCount': missing,
+          'missingSample': missingIds,
+        });
+      }
 
       List<List<String>> breedTransactions = [];
       for (var doc in ordersSnapshot.docs) {
@@ -76,6 +128,18 @@ class AprioriAlgorithm {
       }
 
       debugPrint(" Generated ${breedTransactions.length} breed transactions");
+      if (runId != null) {
+        // Build a small histogram of transaction sizes
+        final hist = <int, int>{};
+        for (final t in breedTransactions) {
+          final s = t.length;
+          hist[s] = (hist[s] ?? 0) + 1;
+        }
+        await AprioriLogger.append(runId, type: 'TRANSACTIONS_BUILT', data: {
+          'transactionCount': breedTransactions.length,
+          'sizeHistogram': hist.map((k, v) => MapEntry(k.toString(), v)),
+        });
+      }
       return breedTransactions;
     } catch (e) {
       debugPrint(" Error in getAllBreedTransactions: $e");
@@ -172,7 +236,9 @@ class AprioriAlgorithm {
       final t0 = DateTime.now();
       debugPrint("🐾 Apriori: Getting suggestions for ${selectedBreeds.join(', ')}");
 
-      final transactions = await getAllBreedTransactions();
+      final fetchT0 = DateTime.now();
+      final transactions = await getAllBreedTransactions(runId: runId);
+      final fetchMs = DateTime.now().difference(fetchT0).inMilliseconds;
       if (transactions.isEmpty) {
         await AprioriLogger.append(runId, type: 'NO_DATA', data: {
           'message': 'No transactions available',
@@ -191,7 +257,7 @@ class AprioriAlgorithm {
         'avgTransactionSize': avgSize,
       });
 
-      final miningStart = DateTime.now();
+    final miningStart = DateTime.now();
       final miningResult = _mineApriori(transactions,
           minSupport: minSupport, minConfidence: minConfidence, maxItemsetSize: maxItemsetSize);
       final miningDuration = DateTime.now().difference(miningStart);
@@ -214,6 +280,12 @@ class AprioriAlgorithm {
             'lift': double.parse(r.lift.toStringAsFixed(4)),
           }).toList();
 
+      // rules by antecedent size
+      final rulesBySize = <int, int>{};
+      for (final r in miningResult.rules) {
+        rulesBySize[r.antecedent.length] = (rulesBySize[r.antecedent.length] ?? 0) + 1;
+      }
+
       await AprioriLogger.append(runId, type: 'MINING_SUMMARY', data: {
         'durationMs': miningDuration.inMilliseconds,
         'minSupport': minSupport,
@@ -221,24 +293,108 @@ class AprioriAlgorithm {
         'frequentItemsets': miningResult.frequentItemsets.map((k, v) => MapEntry(k.toString(), v.length)),
         'topL1': topL1Trimmed,
         'ruleCount': miningResult.rules.length,
+        'rulesByAntecedentSize': rulesBySize.map((k, v) => MapEntry(k.toString(), v)),
         'ruleSamples': ruleSamples,
+        'candidateStats': miningResult.candidateStats,
       });
 
       // Build suggestions for the selected breeds using rules where antecedent intersects selection
-      final rankedBreeds = _rankSuggestionsFromRulesMulti(
-        selectedBreeds.toSet(),
-        miningResult.rules,
-        maxConsequents: maxConsequents,
-      );
+      final selectedSet = selectedBreeds.toSet();
+      final scoreMap = _computeScoresMulti(selectedSet, miningResult.rules, maxConsequents: maxConsequents);
+      final rankedBreeds = scoreMap.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final rankedBreedList = rankedBreeds.map((e) => e.key).toList();
 
-      await AprioriLogger.append(runId, type: 'SUGGESTED_BREEDS', data: {
-        'count': rankedBreeds.length,
-        'top': rankedBreeds.take(10).toList(),
+      await AprioriLogger.append(runId, type: 'RANKING_SCORES', data: {
+        'selectedBreeds': selectedBreeds,
+        'top': rankedBreeds.take(10).map((e) => {
+          'breed': e.key,
+          'score': double.parse(e.value.toStringAsFixed(6)),
+        }).toList(),
       });
 
-      if (rankedBreeds.isEmpty) {
+      await AprioriLogger.append(runId, type: 'SUGGESTED_BREEDS', data: {
+        'count': rankedBreedList.length,
+        'top': rankedBreedList.take(10).toList(),
+      });
+
+      if (rankedBreedList.isEmpty) {
         // Fallback to legacy co-occurrence pairs to still provide something
         final pairCounts = analyzeBreedPairs(transactions);
+        // Extra visibility: compute global pair stats and per-selected details
+        try {
+          // Flatten all pairs for global top view
+          final allPairs = <Map<String, dynamic>>[];
+          pairCounts.forEach((a, mapB) {
+            mapB.forEach((b, c) {
+              allPairs.add({'a': a, 'b': b, 'count': c});
+            });
+          });
+
+          allPairs.sort((x, y) => (y['count'] as int).compareTo(x['count'] as int));
+          final topPairsGlobal = allPairs.take(20).toList();
+
+          // Build L1 support map from mining result to compute confidences
+          final l1map = miningResult.frequentItemsets[1] ?? const {};
+          final supportMap = <String, int>{};
+          for (final e in l1map.entries) {
+            final item = e.key.first;
+            supportMap[item] = e.value;
+          }
+
+          final selectedDetails = <Map<String, dynamic>>[];
+          for (final sel in selectedBreeds) {
+            final fromA = Map<String, int>.from(pairCounts[sel] ?? const {});
+            // Where selected appears on the RHS side
+            final rhs = <String, int>{};
+            pairCounts.forEach((a, mapB) {
+              final c = mapB[sel];
+              if (c != null) rhs[a] = c;
+            });
+
+            // Combine counts from both directions
+            final combined = <String, int>{}..addAll(fromA);
+            rhs.forEach((k, v) => combined[k] = (combined[k] ?? 0) + v);
+
+            // Build ranked list with confidence relative to support(sel)
+            final supSel = supportMap[sel] ?? 0;
+            final combinedList = combined.entries
+                .map((e) => {
+                      'with': e.key,
+                      'count': e.value,
+                      'confidence': supSel > 0 ? (e.value / supSel) : 0.0,
+                    })
+                .toList()
+              ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
+
+            selectedDetails.add({
+              'breed': sel,
+              'support': supSel,
+              'topCombined': combinedList.take(10).toList(),
+              'topFromKey': (fromA.entries.toList()
+                    ..sort((a, b) => b.value.compareTo(a.value)))
+                  .take(10)
+                  .map((e) => {'with': e.key, 'count': e.value})
+                  .toList(),
+              'topFromRhs': (rhs.entries.toList()
+                    ..sort((a, b) => b.value.compareTo(a.value)))
+                  .take(10)
+                  .map((e) => {'with': e.key, 'count': e.value})
+                  .toList(),
+            });
+          }
+
+          await AprioriLogger.append(runId, type: 'PAIR_COUNT_DETAILS', data: {
+            'uniquePairCount': allPairs.length,
+            'topPairsGlobal': topPairsGlobal,
+            'selectedDetails': selectedDetails,
+          });
+        } catch (e) {
+          // Swallow logging errors to avoid breaking suggestions
+          debugPrint('PAIR_COUNT_DETAILS log failed: $e');
+        }
+        // Log a small top snapshot of pair counts related to selected breeds
+        final pairTops = <Map<String, dynamic>>[];
         final fallback = <String, int>{};
         for (final sel in selectedBreeds) {
           // boost breeds co-occurring with any selected
@@ -253,6 +409,13 @@ class AprioriAlgorithm {
               fallback[a.key] = (fallback[a.key] ?? 0) + count;
             }
           }
+          // capture a small snapshot per selected breed
+          final selTop = (fromA.entries.toList()
+                ..sort((a, b) => b.value.compareTo(a.value)))
+              .take(5)
+              .map((e) => {'with': e.key, 'count': e.value})
+              .toList();
+          pairTops.add({'breed': sel, 'topPairs': selTop});
         }
         // Remove selected breeds from suggestions
         for (final s in selectedBreeds) {
@@ -289,6 +452,7 @@ class AprioriAlgorithm {
             'popularBreeds': popularBreeds,
           });
 
+          final petQueryT0 = DateTime.now();
           final petsSnapshot = await FirebaseFirestore.instance
               .collection("Pets")
               .where("breed", whereIn: popularBreeds)
@@ -310,6 +474,11 @@ class AprioriAlgorithm {
             'totalTimeMs': DateTime.now().difference(t0).inMilliseconds,
             'selectedBreeds': selectedBreeds,
             'results': suggestions.length,
+            'timelineMs': {
+              'fetchMs': fetchMs,
+              'miningMs': miningDuration.inMilliseconds,
+              'petQueryMs': DateTime.now().difference(petQueryT0).inMilliseconds,
+            }
           });
           return suggestions;
         }
@@ -317,8 +486,10 @@ class AprioriAlgorithm {
         await AprioriLogger.append(runId, type: 'FALLBACK_PAIRS', data: {
           'pairSuggestionCount': queryBreeds.length,
           'topPairs': coOccurRanked.take(10).map((e) => {'breed': e.key, 'count': e.value}).toList(),
+          'selectedPairSnapshots': pairTops,
         });
 
+        final petQueryT0 = DateTime.now();
         final petsSnapshot = await FirebaseFirestore.instance
             .collection("Pets")
             .where("breed", whereIn: queryBreeds)
@@ -340,11 +511,17 @@ class AprioriAlgorithm {
           'totalTimeMs': DateTime.now().difference(t0).inMilliseconds,
           'selectedBreeds': selectedBreeds,
           'results': suggestions.length,
+          'timelineMs': {
+            'fetchMs': fetchMs,
+            'miningMs': miningDuration.inMilliseconds,
+            'petQueryMs': DateTime.now().difference(petQueryT0).inMilliseconds,
+          }
         });
         return suggestions;
       }
 
-      final queryBreeds = rankedBreeds.take(10).toList();
+      final queryBreeds = rankedBreedList.take(10).toList();
+      final petQueryT0 = DateTime.now();
       final petsSnapshot = await FirebaseFirestore.instance
           .collection("Pets")
           .where("breed", whereIn: queryBreeds)
@@ -367,6 +544,11 @@ class AprioriAlgorithm {
         'totalTimeMs': DateTime.now().difference(t0).inMilliseconds,
         'selectedBreeds': selectedBreeds,
         'results': suggestions.length,
+        'timelineMs': {
+          'fetchMs': fetchMs,
+          'miningMs': miningDuration.inMilliseconds,
+          'petQueryMs': DateTime.now().difference(petQueryT0).inMilliseconds,
+        }
       });
       return suggestions;
     } catch (e) {
@@ -400,6 +582,7 @@ class AprioriAlgorithm {
 
     final frequentBySize = <int, Map<Set<String>, int>>{1: lk};
 
+    final candidateStats = <Map<String, int>>[];
     int k = 2;
     while (lk.isNotEmpty && k <= maxItemsetSize) {
       // Generate candidates Ck by self-join Lk-1
@@ -440,6 +623,12 @@ class AprioriAlgorithm {
       final lnext = <Set<String>, int>{
         for (final e in counts.entries.where((e) => e.value >= minSupportCount)) e.key: e.value
       };
+
+      candidateStats.add({
+        'k': k,
+        'candidateCount': candidates.length,
+        'retainedCount': lnext.length,
+      });
 
       if (lnext.isEmpty) break;
 
@@ -491,7 +680,7 @@ class AprioriAlgorithm {
       return b.lift.compareTo(a.lift);
     });
 
-    return _AprioriResult(frequentItemsets: frequentBySize, rules: rules);
+    return _AprioriResult(frequentItemsets: frequentBySize, rules: rules, candidateStats: candidateStats);
   }
 
   int _minSupportCount(double minSupport, int transactionCount) {
@@ -537,31 +726,41 @@ class AprioriAlgorithm {
     List<_Rule> rules, {
     int maxConsequents = 1,
   }) {
+    final scores = _computeScoresMulti(selectedBreeds, rules, maxConsequents: maxConsequents);
+    final sorted = scores.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.map((e) => e.key).toList();
+  }
+
+  Map<String, double> _computeScoresMulti(
+    Set<String> selectedBreeds,
+    List<_Rule> rules, {
+    int maxConsequents = 1,
+  }) {
     // Score suggestions by summing (confidence * lift) for consequents when antecedent intersects selectedBreeds
     final scores = <String, double>{};
     for (final rule in rules) {
-      if (rule.antecedent.intersection(selectedBreeds).isEmpty) continue;
+      final intersect = rule.antecedent.intersection(selectedBreeds);
+      if (intersect.isEmpty) continue;
       final consequents = rule.consequent.toList();
       if (maxConsequents > 0 && consequents.length > maxConsequents) continue;
       // Weight by overlap size to reward rules that match more of the selection
-      final overlap = rule.antecedent.intersection(selectedBreeds).length;
-      final weight = overlap.toDouble();
+      final weight = intersect.length.toDouble();
       final score = weight * rule.confidence * max(1.0, rule.lift);
       for (final c in consequents) {
         if (selectedBreeds.contains(c)) continue; // don't suggest what was already purchased
         scores[c] = (scores[c] ?? 0) + score;
       }
     }
-    final sorted = scores.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.map((e) => e.key).toList();
+    return scores;
   }
 }
 
 class _AprioriResult {
   final Map<int, Map<Set<String>, int>> frequentItemsets;
   final List<_Rule> rules;
-  _AprioriResult({required this.frequentItemsets, required this.rules});
+  final List<Map<String, int>> candidateStats;
+  _AprioriResult({required this.frequentItemsets, required this.rules, required this.candidateStats});
 }
 
 class _Rule {
