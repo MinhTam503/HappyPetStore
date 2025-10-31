@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'address_edit_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pet_shop/presentation/bloc/address/address_bloc.dart';
+import 'package:pet_shop/presentation/bloc/address/address_event.dart';
+import 'package:pet_shop/presentation/bloc/address/address_state.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 
 class AddressListPage extends StatefulWidget {
   final Map<String, dynamic>? selectedAddress;
@@ -22,107 +25,29 @@ class AddressListPage extends StatefulWidget {
 class _AddressListPageState extends State<AddressListPage> {
   List<Map<String, dynamic>> addresses = [];
   bool isLoading = true;
+  bool _hasCompletedInitialLoad = false; // to decide when to show global overlay
+  bool _hasInteracted = false; // user performed an action (add/edit/delete/default)
 
   @override
   void initState() {
     super.initState();
-    _loadAddresses();
+    // Loading is triggered in BlocProvider via create() ..add(LoadAddresses())
   }
 
-  Future<void> _loadAddresses() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+  // _loadAddresses removed; AddressBloc handles loading and migration.
 
+  Future<void> _setDefaultAddress(BuildContext ctx, int index) async {
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      if (userDoc.exists) {
-        final userData = userDoc.data()!;
-        
-        // Check for new deliveryInfos format first
-        var deliveryData = userData['deliveryInfos'];
-        if (deliveryData is List && deliveryData.isNotEmpty) {
-          setState(() {
-            addresses = List<Map<String, dynamic>>.from(deliveryData);
-            isLoading = false;
-          });
-          return;
-        }
-        
-        // Fallback to old address format for migration
-        var addr = userData['address'];
-        if (addr == null || (addr is String && addr.isEmpty)) {
-          setState(() {
-            addresses = [];
-            isLoading = false;
-          });
-        } else if (addr is List) {
-          // Migrate old addresses to new format
-          final migratedAddresses = addr
-              .map<Map<String, dynamic>>((address) => {
-                    'name': userData['displayName'] ?? '',
-                    'phone': userData['phone'] ?? '',
-                    'address': address.toString(),
-                    'isDefault': addresses.isEmpty,
-                  })
-              .toList();
-          
-          setState(() {
-            addresses = migratedAddresses;
-            isLoading = false;
-          });
-          
-          // Save migrated data back to Firestore
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .update({'deliveryInfos': migratedAddresses});
-        } else {
-          setState(() {
-            addresses = [];
-            isLoading = false;
-          });
-        }
-      }
+      _hasInteracted = true;
+      ctx.read<AddressBloc>().add(SetDefaultAddress(index));
     } catch (e) {
-      setState(() => isLoading = false);
-      NotificationHelper.showError(context, 'Lỗi', 'Không thể tải danh sách địa chỉ: $e');
+      NotificationHelper.showError(ctx, 'Lỗi', 'Không thể cập nhật địa chỉ mặc định: $e');
     }
   }
 
-  Future<void> _setDefaultAddress(int index) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      // Update local state
-      setState(() {
-        for (int i = 0; i < addresses.length; i++) {
-          addresses[i]['isDefault'] = i == index;
-        }
-      });
-
-      // Update Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'deliveryInfos': addresses});
-
-      NotificationHelper.showSuccess(context, 'Thành công', 'Đã đặt làm địa chỉ mặc định');
-    } catch (e) {
-      NotificationHelper.showError(context, 'Lỗi', 'Không thể cập nhật địa chỉ mặc định: $e');
-    }
-  }
-
-  Future<void> _deleteAddress(int index) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
+  Future<void> _deleteAddress(BuildContext ctx, int index) async {
     final confirmed = await showDialog<bool>(
-      context: context,
+      context: ctx,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận xóa'),
         content: const Text('Bạn có chắc chắn muốn xóa địa chỉ này?'),
@@ -140,26 +65,20 @@ class _AddressListPageState extends State<AddressListPage> {
     );
 
     if (confirmed != true) return;
+    if (!mounted) return;
 
     try {
-      setState(() {
-        addresses.removeAt(index);
-      });
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'deliveryInfos': addresses});
-
-      NotificationHelper.showSuccess(context, 'Thành công', 'Đã xóa địa chỉ');
+      _hasInteracted = true;
+      ctx.read<AddressBloc>().add(DeleteAddress(index));
     } catch (e) {
-      NotificationHelper.showError(context, 'Lỗi', 'Không thể xóa địa chỉ: $e');
+      NotificationHelper.showError(ctx, 'Lỗi', 'Không thể xóa địa chỉ: $e');
     }
   }
 
-  void _navigateToEdit([Map<String, dynamic>? address, int? index]) async {
+  void _navigateToEdit(BuildContext ctx, [Map<String, dynamic>? address, int? index]) async {
+    _hasInteracted = true;
     final result = await Navigator.push<Map<String, dynamic>>(
-      context,
+      ctx,
       MaterialPageRoute(
         builder: (context) => AddressEditPage(
           address: address,
@@ -168,46 +87,40 @@ class _AddressListPageState extends State<AddressListPage> {
       ),
     );
 
+    if (!mounted) return;
     if (result != null) {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      try {
-        if (index != null) {
-          // Edit existing address
-          setState(() {
-            addresses[index] = result;
-          });
-        } else {
-          // Add new address
-          setState(() {
-            // If this is the first address, set as default
-            if (addresses.isEmpty) {
-              result['isDefault'] = true;
-            }
-            addresses.add(result);
-          });
-        }
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({'deliveryInfos': addresses});
-
-        NotificationHelper.showSuccess(
-          context, 
-          'Thành công', 
-          index != null ? 'Đã cập nhật địa chỉ' : 'Đã thêm địa chỉ mới'
-        );
-      } catch (e) {
-        NotificationHelper.showError(context, 'Lỗi', 'Không thể lưu địa chỉ: $e');
-      }
+      ctx.read<AddressBloc>().add(AddOrUpdateAddress(address: result, index: index));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocProvider(
+      create: (_) => AddressBloc()..add(LoadAddresses()),
+      child: BlocConsumer<AddressBloc, AddressState>(
+        listener: (context, state) {
+          // Mark initial load done when we first see isLoading == false
+          if (!state.isLoading && !_hasCompletedInitialLoad) {
+            _hasCompletedInitialLoad = true;
+          }
+          // Show overlay for operations after initial load or after any user interaction
+          if (state.isLoading && (_hasCompletedInitialLoad || _hasInteracted)) {
+            DialogHelper.showLoadingDialog(context, message: 'Đang xử lý...');
+          } else if (!state.isLoading) {
+            DialogHelper.safeHideLoadingDialog();
+          }
+
+          if (state.infoMessage != null && state.infoMessage!.isNotEmpty) {
+            NotificationHelper.showSuccess(context, 'Thành công', state.infoMessage!);
+          }
+          if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
+            NotificationHelper.showError(context, 'Lỗi', state.errorMessage!);
+          }
+          addresses = state.addresses;
+          isLoading = state.isLoading;
+        },
+        builder: (context, state) {
+          return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
         backgroundColor: secondaryColor,
@@ -224,13 +137,13 @@ class _AddressListPageState extends State<AddressListPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: primaryColor),
-            onPressed: () => _navigateToEdit(),
+            onPressed: () => _navigateToEdit(context),
           ),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : addresses.isEmpty
+  body: state.isLoading && state.addresses.isEmpty && !_hasCompletedInitialLoad
+      ? const Center(child: CircularProgressIndicator())
+      : state.addresses.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -255,7 +168,7 @@ class _AddressListPageState extends State<AddressListPage> {
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
-                        onPressed: () => _navigateToEdit(),
+                        onPressed: () => _navigateToEdit(context),
                         icon: const Icon(Icons.add),
                         label: const Text('Thêm địa chỉ'),
                         style: ElevatedButton.styleFrom(
@@ -269,9 +182,9 @@ class _AddressListPageState extends State<AddressListPage> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: addresses.length,
+                  itemCount: state.addresses.length,
                   itemBuilder: (context, index) {
-                    final address = addresses[index];
+                    final address = state.addresses[index];
                     final isDefault = address['isDefault'] == true;
                     final isSelected = widget.selectedAddress != null &&
                         address['address'] == widget.selectedAddress!['address'];
@@ -349,16 +262,16 @@ class _AddressListPageState extends State<AddressListPage> {
                                 children: [
                                   if (!isDefault)
                                     TextButton(
-                                      onPressed: () => _setDefaultAddress(index),
+                                      onPressed: () => _setDefaultAddress(context, index),
                                       child: const Text('Đặt mặc định'),
                                     ),
                                   const Spacer(),
                                   TextButton(
-                                    onPressed: () => _navigateToEdit(address, index),
+                                    onPressed: () => _navigateToEdit(context, address, index),
                                     child: const Text('Sửa'),
                                   ),
                                   TextButton(
-                                    onPressed: () => _deleteAddress(index),
+                                    onPressed: () => _deleteAddress(context, index),
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.red,
                                     ),
@@ -373,6 +286,9 @@ class _AddressListPageState extends State<AddressListPage> {
                     );
                   },
                 ),
+          );
+        },
+      ),
     );
   }
 }

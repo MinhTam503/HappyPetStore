@@ -5,6 +5,7 @@ import 'package:location/location.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/vn_admin_units.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
+import 'widgets/address_form.dart';
 
 class AddressEditPage extends StatefulWidget {
   final Map<String, dynamic>? address;
@@ -58,9 +59,20 @@ class _AddressEditPageState extends State<AddressEditPage> {
         );
       }
 
-      // Parse address to extract province, district, and detail
+      // Prefer structured fields if available, else parse from combined address string
       final fullAddress = widget.address!['address'] ?? '';
-      _parseAddress(fullAddress);
+      final province = widget.address!['province'] as String?;
+      final ward = widget.address!['ward'] as String?;
+      final detail = widget.address!['detail'] as String?;
+
+      if ((province != null && province.isNotEmpty) || (ward != null && ward.isNotEmpty)) {
+        selectedProvince = province;
+        selectedWard = ward;
+        _detailController.text = detail ?? '';
+      } else {
+        // Fallback parse from combined address
+        _parseAddress(fullAddress);
+      }
     }
   }
 
@@ -136,8 +148,12 @@ class _AddressEditPageState extends State<AddressEditPage> {
       }
       if (selectedProvince != null) {
         final wards = wardsByProvince[selectedProvince!] ?? const <String>[];
+        // Try exact match first, then try case-insensitive match
         if (!wards.contains(selectedWard)) {
-          selectedWard = null;
+          final match = wards.firstWhere(
+              (w) => w.toLowerCase() == (selectedWard ?? '').toLowerCase(),
+              orElse: () => '');
+          selectedWard = match.isNotEmpty ? match : null;
         }
       }
     } else {
@@ -298,6 +314,10 @@ class _AddressEditPageState extends State<AddressEditPage> {
       'name': _nameController.text.trim(),
       'phone': _phoneController.text.trim(),
       'address': _buildFullAddress(),
+      // keep structured fields for reliability
+      'province': selectedProvince,
+      'ward': selectedWard,
+      'detail': _detailController.text.trim(),
       'isDefault': isDefault,
       'latitude': selectedLocation?.latitude,
       'longitude': selectedLocation?.longitude,
@@ -330,303 +350,64 @@ class _AddressEditPageState extends State<AddressEditPage> {
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.black),
-        actions: [
-          TextButton(
-            onPressed: _saveAddress,
-            child: const Text(
-              'Lưu',
-              style: TextStyle(
-                color: primaryColor,
-                fontWeight: FontWeight.bold,
+        actions: const [],
+      ),
+      body: AddressForm(
+        formKey: _formKey,
+        nameController: _nameController,
+        phoneController: _phoneController,
+        detailController: _detailController,
+        provinces: provinces,
+        wardsByProvince: wardsByProvince,
+        selectedProvince: selectedProvince,
+        selectedWard: selectedWard,
+        isDefault: isDefault,
+        selectedLocation: selectedLocation,
+        onPickLocation: _showMapDialog,
+        onProvinceChanged: (value) => setState(() {
+          selectedProvince = value;
+          selectedWard = null;
+        }),
+        onWardChanged: (value) => setState(() {
+          selectedWard = value;
+        }),
+        onDefaultChanged: (value) => setState(() {
+          isDefault = value ?? false;
+        }),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.05),
+                blurRadius: 8,
+                offset: Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: _saveAddress,
+              icon: const Icon(Icons.save),
+              label: const Text(
+                'Lưu',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Name field
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Thông tin liên hệ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Tên người nhận *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Vui lòng nhập tên người nhận';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Số điện thoại *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.phone),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Vui lòng nhập số điện thoại';
-                        }
-                        // Basic phone validation
-                        if (!RegExp(r'^[0-9+\-\s()]+$')
-                            .hasMatch(value.trim())) {
-                          return 'Số điện thoại không hợp lệ';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Address fields
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Địa chỉ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Tỉnh/Thành phố *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_city),
-                      ),
-                      value: selectedProvince,
-                      items: provinces
-                          .map((province) => DropdownMenuItem(
-                                value: province,
-                                child: Text(province),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedProvince = value;
-                          selectedWard = null; // Reset ward when province changes
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Vui lòng chọn tỉnh/thành phố';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Phường/Xã *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
-                      value: selectedWard,
-                      items: () {
-                        if (selectedProvince == null) return const <DropdownMenuItem<String>>[];
-                        final wards = wardsByProvince[selectedProvince!] ?? const <String>[];
-                        return wards
-                            .map((w) => DropdownMenuItem(
-                                  value: w,
-                                  child: Text(w),
-                                ))
-                            .toList();
-                      }(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedWard = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Vui lòng chọn phường/xã';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _detailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Địa chỉ chi tiết *',
-                        hintText: 'Số nhà, tên đường, khu vực...',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.home),
-                      ),
-                      maxLines: 3,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Vui lòng nhập địa chỉ chi tiết';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Map location selection card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Vị trí trên bản đồ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            selectedLocation != null
-                                ? 'Vị trí: ${selectedLocation!.latitude.toStringAsFixed(6)}, ${selectedLocation!.longitude.toStringAsFixed(6)}'
-                                : 'Chưa chọn vị trí trên bản đồ',
-                            style: TextStyle(
-                              color: selectedLocation != null
-                                  ? Colors.green[700]
-                                  : Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _showMapDialog,
-                          icon: const Icon(Icons.map, color: primaryColor),
-                          tooltip: 'Chọn vị trí trên bản đồ',
-                        ),
-                      ],
-                    ),
-                    if (selectedLocation != null)
-                      Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green[200]!),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle,
-                                size: 16, color: Colors.green[700]),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Vị trí đã được chọn',
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Default address option
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: CheckboxListTile(
-                title: const Text('Đặt làm địa chỉ mặc định'),
-                subtitle: const Text(
-                    'Địa chỉ này sẽ được chọn mặc định khi đặt hàng'),
-                value: isDefault,
-                onChanged: (value) {
-                  setState(() {
-                    isDefault = value ?? false;
-                  });
-                },
-                activeColor: primaryColor,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Save button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _saveAddress,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  widget.isEdit ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

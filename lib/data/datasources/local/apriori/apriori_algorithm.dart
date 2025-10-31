@@ -258,8 +258,14 @@ class AprioriAlgorithm {
       });
 
     final miningStart = DateTime.now();
-      final miningResult = _mineApriori(transactions,
-          minSupport: minSupport, minConfidence: minConfidence, maxItemsetSize: maxItemsetSize);
+      final miningResult = await _mineApriori(
+        transactions,
+        minSupport: minSupport,
+        minConfidence: minConfidence,
+        maxItemsetSize: maxItemsetSize,
+        runId: runId,
+        detailedLog: true,
+      );
       final miningDuration = DateTime.now().difference(miningStart);
 
       // Extra diagnostics: support threshold and top L1 items
@@ -468,6 +474,11 @@ class AprioriAlgorithm {
           await AprioriLogger.append(runId, type: 'PET_RESULTS', data: {
             'requestedBreeds': popularBreeds,
             'resultCount': suggestions.length,
+            'pets': suggestions.take(20).map((p) => {
+                  'id': p['id'],
+                  'name': p['name'],
+                  'breed': p['breed'],
+                }).toList(),
           });
 
           await AprioriLogger.complete(runId, success: true, metrics: {
@@ -505,6 +516,11 @@ class AprioriAlgorithm {
         await AprioriLogger.append(runId, type: 'PET_RESULTS', data: {
           'requestedBreeds': queryBreeds,
           'resultCount': suggestions.length,
+          'pets': suggestions.take(20).map((p) => {
+                'id': p['id'],
+                'name': p['name'],
+                'breed': p['breed'],
+              }).toList(),
         });
 
         await AprioriLogger.complete(runId, success: true, metrics: {
@@ -538,6 +554,11 @@ class AprioriAlgorithm {
       await AprioriLogger.append(runId, type: 'PET_RESULTS', data: {
         'requestedBreeds': queryBreeds,
         'resultCount': suggestions.length,
+        'pets': suggestions.take(20).map((p) => {
+              'id': p['id'],
+              'name': p['name'],
+              'breed': p['breed'],
+            }).toList(),
       });
 
       await AprioriLogger.complete(runId, success: true, metrics: {
@@ -559,21 +580,64 @@ class AprioriAlgorithm {
 
   // ===== Apriori mining internals =====
 
-  _AprioriResult _mineApriori(
+  Future<_AprioriResult> _mineApriori(
     List<List<String>> transactions, {
     required double minSupport,
     required double minConfidence,
     required int maxItemsetSize,
-  }) {
+    String? runId,
+    bool detailedLog = false,
+  }) async {
     final transactionCount = transactions.length;
     final minSupportCount = _minSupportCount(minSupport, transactionCount);
 
-    // L1 counts
+    // TID list for logging: T1..Tn
+    final tids = List.generate(transactionCount, (i) => 'T${i + 1}');
+    final tsets = transactions.map((t) => t.toSet()).toList(growable: false);
+
+    // INIT log
+    if (detailedLog && runId != null) {
+      final avgLen = transactionCount == 0
+          ? 0.0
+          : tsets.map((s) => s.length).reduce((a, b) => a + b) / transactionCount;
+      await AprioriLogger.append(runId, type: 'INIT', data: {
+        'minSupport': minSupport,
+        'minSupportCount': minSupportCount,
+        'minConfidence': minConfidence,
+      });
+      await AprioriLogger.append(runId, type: 'DATA', data: {
+        'transactions': transactionCount,
+        'avgLen': avgLen,
+      });
+    }
+
+    // L1 counts and TID sets
     final itemCounts = <String, int>{};
-    for (final t in transactions) {
-      for (final item in t.toSet()) {
+    final itemTidsets = <String, Set<int>>{};
+    for (int ti = 0; ti < tsets.length; ti++) {
+      final s = tsets[ti];
+      for (final item in s) {
         itemCounts[item] = (itemCounts[item] ?? 0) + 1;
+        (itemTidsets[item] ??= <int>{}).add(ti);
       }
+    }
+
+    if (detailedLog && runId != null) {
+      final items = itemCounts.keys.toList()..sort();
+      await AprioriLogger.append(runId, type: 'K1_CANDIDATES', data: {
+        'items': items,
+      });
+      // Count with tidsets
+      final k1Counts = items
+          .map((it) => {
+                'item': it,
+                'support': itemCounts[it],
+                'tids': (itemTidsets[it] ?? const {}).map((i) => tids[i]).toList(),
+              })
+          .toList();
+      await AprioriLogger.append(runId, type: 'K1_COUNT', data: {
+        'entries': k1Counts,
+      });
     }
     Map<Set<String>, int> lk = {
       for (final e in itemCounts.entries.where((e) => e.value >= minSupportCount))
@@ -584,11 +648,16 @@ class AprioriAlgorithm {
 
     final candidateStats = <Map<String, int>>[];
     int k = 2;
+    int totalCandidates = 0;
+    int totalPruned = 0;
+    int iterations = 1; // include k=1
     while (lk.isNotEmpty && k <= maxItemsetSize) {
       // Generate candidates Ck by self-join Lk-1
       final prev = frequentBySize[k - 1] ?? {};
       final prevKeys = prev.keys.toList();
       final candidates = <Set<String>>{};
+      final joinLogs = <Map<String, dynamic>>[];
+      final pruneLogs = <Map<String, dynamic>>[];
       for (int i = 0; i < prevKeys.length; i++) {
         for (int j = i + 1; j < prevKeys.length; j++) {
           final a = prevKeys[i];
@@ -597,24 +666,60 @@ class AprioriAlgorithm {
           if (union.length == k) {
             // Prune: all (k-1)-subsets must be frequent
             bool allSubsetsFrequent = true;
+            final missingSubsets = <List<String>>[];
             for (final subset in _subsets(union, k - 1)) {
               if (!(prev.containsKey(subset))) {
                 allSubsetsFrequent = false;
+                missingSubsets.add(subset.toList()..sort());
                 break;
               }
             }
-            if (allSubsetsFrequent) candidates.add(union);
+            if (allSubsetsFrequent) {
+              candidates.add(union);
+              if (detailedLog && runId != null) {
+                joinLogs.add({
+                  'a': a.toList()..sort(),
+                  'b': b.toList()..sort(),
+                  'c': union.toList()..sort(),
+                });
+              }
+            } else {
+              totalPruned += 1;
+              if (detailedLog && runId != null) {
+                pruneLogs.add({
+                  'candidate': union.toList()..sort(),
+                  'missingSubsets': missingSubsets,
+                });
+              }
+            }
           }
         }
       }
-
+      totalCandidates += candidates.length;
+      if (detailedLog && runId != null) {
+        await AprioriLogger.append(runId, type: 'K_JOIN', data: {
+          'k': k,
+          'joins': joinLogs,
+        });
+        if (pruneLogs.isNotEmpty) {
+          await AprioriLogger.append(runId, type: 'K_PRUNE', data: {
+            'k': k,
+            'pruned': pruneLogs,
+          });
+        }
+      }
       // Count supports
       final counts = <Set<String>, int>{};
+      final tidsetsK = <Set<String>, Set<int>>{};
       for (final t in transactions) {
         final tset = t.toSet();
         for (final c in candidates) {
           if (tset.containsAll(c)) {
             counts[c] = (counts[c] ?? 0) + 1;
+            if (detailedLog && runId != null) {
+              final idx = transactions.indexOf(t);
+              (tidsetsK[c] ??= <int>{}).add(idx);
+            }
           }
         }
       }
@@ -630,11 +735,43 @@ class AprioriAlgorithm {
         'retainedCount': lnext.length,
       });
 
+      if (detailedLog && runId != null) {
+        // K_COUNT
+        final countEntries = counts.entries
+            .map((e) => {
+                  'itemset': e.key.toList()..sort(),
+                  'support': e.value,
+                  'tids': (tidsetsK[e.key] ?? const {}).map((i) => tids[i]).toList(),
+                })
+            .toList()
+          ..sort((a, b) => (b['support'] as int).compareTo(a['support'] as int));
+        await AprioriLogger.append(runId, type: 'K_COUNT', data: {
+          'k': k,
+          'entries': countEntries,
+        });
+      }
+
+      if (detailedLog && runId != null) {
+        final lEntries = lnext.entries
+            .map((e) => {
+                  'itemset': e.key.toList()..sort(),
+                  'support': e.value,
+                })
+            .toList()
+          ..sort((a, b) => (b['support'] as int).compareTo(a['support'] as int));
+        await AprioriLogger.append(runId, type: 'L_LEVEL', data: {
+          'k': k,
+          'size': lEntries.length,
+          'itemsets': lEntries,
+        });
+      }
+
       if (lnext.isEmpty) break;
 
       frequentBySize[k] = lnext;
       lk = lnext;
       k += 1;
+      iterations += 1;
     }
 
     // Generate association rules from frequent itemsets
@@ -644,6 +781,7 @@ class AprioriAlgorithm {
     }
 
     final rules = <_Rule>[];
+    int rulesEvaluated = 0;
     for (final entry in frequentBySize.entries) {
       final size = entry.key;
       if (size < 2) continue;
@@ -656,12 +794,26 @@ class AprioriAlgorithm {
           final supAntecedent = supportOf(antecedent);
           if (supAntecedent == 0) continue;
           final confidence = supItemset / supAntecedent;
-          if (confidence + 1e-9 < minConfidence) continue;
           final supConsequent = supportOf(consequent);
           final lift = (supConsequent == 0)
               ? 0.0
               : (supItemset / transactionCount) /
                   ((supAntecedent / transactionCount) * (supConsequent / transactionCount));
+          final pass = confidence + 1e-9 >= minConfidence;
+          rulesEvaluated += 1;
+          if (detailedLog && runId != null) {
+            await AprioriLogger.append(runId, type: 'RULE_EVAL', data: {
+              'A': antecedent.toList()..sort(),
+              'B': consequent.toList()..sort(),
+              'supportF': supItemset,
+              'supportA': supAntecedent,
+              'supportB': supConsequent,
+              'confidence': double.parse(confidence.toStringAsFixed(6)),
+              'lift': double.parse(lift.toStringAsFixed(6)),
+              'passMinConfidence': pass,
+            });
+          }
+          if (!pass) continue;
           rules.add(_Rule(
             antecedent: antecedent,
             consequent: consequent,
@@ -679,6 +831,25 @@ class AprioriAlgorithm {
       if (c != 0) return c;
       return b.lift.compareTo(a.lift);
     });
+
+    if (detailedLog && runId != null) {
+      int totalFrequent = 0;
+      final perLevel = <String, int>{};
+      for (final e in frequentBySize.entries) {
+        final count = e.value.length;
+        totalFrequent += count;
+        perLevel[e.key.toString()] = count;
+      }
+      await AprioriLogger.append(runId, type: 'SUMMARY', data: {
+        'iterations': iterations,
+        'totalCandidates': totalCandidates,
+        'totalPruned': totalPruned,
+        'frequentItemsets': totalFrequent,
+        'frequentByLevel': perLevel,
+        'rulesKept': rules.length,
+        'rulesEvaluated': rulesEvaluated,
+      });
+    }
 
     return _AprioriResult(frequentItemsets: frequentBySize, rules: rules, candidateStats: candidateStats);
   }

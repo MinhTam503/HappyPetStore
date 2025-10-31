@@ -244,13 +244,12 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: secondaryColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => BottomNavigator(
-                  initialIndex: 3,
-                ),
-              )),
+          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => const BottomNavigator(initialIndex: 3),
+            ),
+            (route) => false,
+          ),
         ),
         title: Text(
           l10n?.settings ?? 'Settings',
