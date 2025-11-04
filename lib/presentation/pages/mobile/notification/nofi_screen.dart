@@ -7,6 +7,8 @@ import 'package:pet_shop/data/models/notification_model.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_event.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_state.dart';
+import 'package:pet_shop/presentation/pages/mobile/notification/notification_detail_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
 
 class NofiScreen extends StatefulWidget {
   final String userId;
@@ -651,31 +653,49 @@ class _NofiScreenState extends State<NofiScreen> {
       case NotificationType.orderShipped:
       case NotificationType.orderDelivered:
       case NotificationType.orderCancelled:
-        // Navigate to order details
-        final orderId = notification.data?['orderId'];
-        if (orderId != null) {
-          // TODO: Navigate to order details page
-          print('Navigate to order details: $orderId');
+        // Navigate to orders screen and open the specific order details
+        final orderId = notification.data?['orderId']?.toString();
+        if (orderId != null && orderId.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => YourOrderScreen(initialOrderId: orderId),
+            ),
+          );
+        } else {
+          // Fallback: just open orders list
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const YourOrderScreen(),
+            ),
+          );
         }
         break;
       case NotificationType.promotion:
-        // Navigate to promotions page or show promo details
-        final promoCode = notification.data?['promoCode'];
-        if (promoCode != null) {
-          // TODO: Navigate to promotions or apply promo code
-          print('Show promotion: $promoCode');
-        }
+        // Navigate to notification detail page for admin-created content
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationDetailPage(notification: notification),
+          ),
+        );
         break;
       case NotificationType.appointment:
-        // Navigate to appointments page
-        final appointmentId = notification.data?['appointmentId'];
-        if (appointmentId != null) {
-          // TODO: Navigate to appointment details
-          print('Navigate to appointment: $appointmentId');
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationDetailPage(notification: notification),
+          ),
+        );
         break;
       case NotificationType.general:
-        // Show notification details or do nothing
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NotificationDetailPage(notification: notification),
+          ),
+        );
         break;
     }
   }

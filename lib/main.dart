@@ -48,11 +48,15 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_strategy/url_strategy.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart' as mobile_chat;
 import 'presentation/bloc/cartBloc/cart_bloc.dart';
 import 'firebase_options.dart';
 import 'core/di/service_locator.dart';
 import 'core/service_locator.dart' as chatbot_sl;
 import 'core/services/user_manager.dart';
+import 'core/services/push_notification_service.dart';
+
+final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -92,6 +96,27 @@ void main() async {
 
   // Initialize UserManager for centralized user state management
   await userManager.initialize();
+
+  // Initialize push notifications (Android)
+  try {
+    await PushNotificationService.initialize();
+    // Register navigation handler for notification taps
+    PushNotificationService.registerTapHandler((payload, data) {
+      if (kIsWeb) return; // only handle on mobile app
+      final nav = _navKey.currentState;
+      if (nav == null) return;
+      // Basic routing: chat notifications go to ChatPage
+      final route = (payload ?? data?['route'] as String?) ?? '';
+      if (route == 'chat' || data?['type'] == 'chat') {
+        nav.push(MaterialPageRoute(builder: (_) => const mobile_chat.ChatPage()));
+        return;
+      }
+    });
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('❌ Failed to initialize push notifications: $e');
+    }
+  }
 
   // Initialize recommendation system
   try {
@@ -148,6 +173,7 @@ class MyApp extends StatelessWidget {
       child: Consumer2<LocaleProvider, ThemeProvider>(
         builder: (context, localeProvider, themeProvider, child) {
           return MaterialApp(
+            navigatorKey: _navKey,
             debugShowCheckedModeBanner: false,
             initialRoute: '/',
             theme: themeProvider.lightTheme,

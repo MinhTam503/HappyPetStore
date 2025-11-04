@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -9,6 +11,7 @@ import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/change_password_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/viewed_pets/viewed_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
@@ -16,6 +19,9 @@ import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dar
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 
 import '../profile/edit_profile.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pet_shop/presentation/bloc/profile/edit_profile_bloc.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 // Removed unused import for favorite_screen.dart
 
 class ProfileScreen extends StatefulWidget {
@@ -29,6 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? userInfo;
   String? userIdentifier;
   final UserManager userManager = UserManager();
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
 
   @override
   void initState() {
@@ -42,6 +49,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       userIdentifier = await userManager.getUserIdentifier();
       userInfo = await userManager.getCurrentUserInfo();
       setState(() {});
+
+      // Subscribe to realtime changes for avatar and other profile fields
+      await _userSub?.cancel();
+      if (userIdentifier != null) {
+        _userSub = FirebaseFirestore.instance
+            .collection('users')
+            .doc(userIdentifier)
+            .snapshots()
+            .listen((snap) {
+          final data = snap.data();
+          if (data != null) {
+            setState(() {
+              userInfo = data;
+            });
+          }
+        });
+      }
     } catch (e) {
       print('Error fetching user data: $e');
       // Fallback to authService if UserManager fails
@@ -54,6 +78,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         print('Fallback auth service error: $fallbackError');
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -108,6 +138,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 24),
                   child: Column(
                     children: [
+                      _MenuCard(children: [
+                        _MenuItem(
+                            icon: Icons.home,
+                            iconBg: const Color(0xfffdeefe),
+                            iconColor: Colors.green,
+                            title: l10n?.store ?? 'Cửa hàng',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const StoreInfoScreen(),
+                                ),
+                              );
+                            }),
+                      ]),
+                      const SizedBox(height: 12),
                       _MenuCard(children: [
                         _MenuItem(
                           icon: Icons.favorite,
@@ -181,7 +227,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const EditProfile(),
+                                builder: (_) => BlocProvider(
+                                  create: (_) => EditProfileBloc(),
+                                  child: const EditProfile(),
+                                ),
                               ),
                             );
                           },
@@ -388,6 +437,7 @@ void _showLogoutDialog(BuildContext context) {
 
 Future<void> _logout(BuildContext context) async {
   try {
+    DialogHelper.showLoadingDialog(context, message: 'Đang đăng xuất...');
     // Use AuthService signOut which handles Google, Facebook, and Firebase signOut
     await authService.value.signOut();
 
@@ -415,6 +465,8 @@ Future<void> _logout(BuildContext context) async {
         'Không thể đăng xuất. Vui lòng thử lại.',
       );
     }
+  } finally {
+    await DialogHelper.safeHideLoadingDialog();
   }
 }
 

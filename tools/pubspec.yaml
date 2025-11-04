@@ -1,0 +1,8 @@
+name: fcm_tools
+publish_to: 'none'
+environment:
+  sdk: '>=3.4.4 <4.0.0'
+dependencies:
+  http: ^1.2.2
+  googleapis_auth: ^1.6.0
+  args: ^2.6.0

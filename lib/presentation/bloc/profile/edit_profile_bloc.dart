@@ -323,15 +323,20 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
     final user = _auth.currentUser;
     if (user == null) return;
     try {
+      emit(state.copyWith(isSaving: true, infoMessage: null, errorMessage: null));
       final file = File(event.filePath);
       final fileName = 'profile_${user.uid}.jpg';
       final ref = _storage.ref().child('profile_images/$fileName');
       await ref.putFile(file);
       final url = await ref.getDownloadURL();
       await _db.collection('users').doc(user.uid).update({'imageUrl': url});
-      emit(state.copyWith(imageUrl: url, infoMessage: 'Ảnh đại diện đã được cập nhật'));
+      emit(state.copyWith(
+        isSaving: false,
+        imageUrl: url,
+        infoMessage: 'Ảnh đại diện đã được cập nhật',
+      ));
     } catch (e) {
-      emit(state.copyWith(errorMessage: 'Cập nhật ảnh thất bại: $e'));
+      emit(state.copyWith(isSaving: false, errorMessage: 'Cập nhật ảnh thất bại: $e'));
     }
   }
 

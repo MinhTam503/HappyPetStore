@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/data/models/notification_model.dart';
 import 'package:pet_shop/data/repositories/notification_repository.dart';
+import 'package:uuid/uuid.dart';
 
 /// Service cho việc quản lý thông báo từ phía admin
 /// Sử dụng cho web admin hoặc dashboard quản trị
@@ -299,13 +300,19 @@ class AdminNotificationService {
     print('📱 Sending general notification to all users');
     
     final userIds = await _getAllUserIds();
-    
+    // Attach a broadcastId so we can manage/delete this batch later
+    final broadcastId = const Uuid().v4();
+    final mergedData = {
+      ...?additionalData,
+      'broadcastId': broadcastId,
+    };
+
     return await _notificationRepository.createBroadcastNotification(
       title: title,
       content: content,
       type: NotificationType.general,
       userIds: userIds,
-      data: additionalData,
+      data: mergedData,
     );
   }
 
@@ -385,6 +392,8 @@ class AdminNotificationService {
       int total = notificationsSnapshot.docs.length;
       int unread = 0;
       Map<String, int> typeStats = {};
+      int totalGeneralDocs = 0;
+      final Set<String> broadcastIds = {};
       
       for (var doc in notificationsSnapshot.docs) {
         final data = doc.data();
@@ -397,17 +406,103 @@ class AdminNotificationService {
         // Đếm theo loại
         final type = data['type'] as String? ?? 'unknown';
         typeStats[type] = (typeStats[type] ?? 0) + 1;
+
+        if (type == NotificationType.general.name) {
+          totalGeneralDocs++;
+          final bId = (data['data'] is Map<String, dynamic>)
+              ? (data['data']['broadcastId'] as String?)
+              : null;
+          if (bId != null && bId.isNotEmpty) broadcastIds.add(bId);
+        }
       }
       
+      final broadcastGeneralCount = broadcastIds.length;
+      final avgRecipientsPerBroadcast = broadcastGeneralCount == 0
+          ? 0
+          : (totalGeneralDocs / broadcastGeneralCount);
+
       return {
         'total': total,
         'unread': unread,
         'read': total - unread,
         'typeStats': typeStats,
+        'general': {
+          'totalDocs': totalGeneralDocs,
+          'broadcastCount': broadcastGeneralCount,
+          'avgRecipientsPerBroadcast': avgRecipientsPerBroadcast,
+        },
       };
     } catch (e) {
       print('Error getting notification stats: $e');
       return {};
+    }
+  }
+
+  /// Liệt kê các đợt (broadcast) thông báo chung gần đây
+  Future<List<Map<String, dynamic>>> getRecentGeneralBroadcasts({int limit = 10}) async {
+    try {
+      // Lấy các thông báo general mới nhất (giới hạn để nhóm)
+      final snap = await _firestore
+          .collection('notifications')
+          .where('type', isEqualTo: NotificationType.general.name)
+          .orderBy('createdAt', descending: true)
+          .limit(1000)
+          .get();
+
+      // Nhóm theo broadcastId nếu có; nếu không có, nhóm theo title+content trong cùng ngày
+      final Map<String, Map<String, dynamic>> groups = {};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final title = data['title'] as String? ?? '';
+        final content = data['content'] as String? ?? '';
+        final ts = (data['createdAt'] as Timestamp).toDate();
+        final bId = (data['data'] is Map<String, dynamic>)
+            ? (data['data']['broadcastId'] as String?)
+            : null;
+
+        final key = bId ?? '${title}__${content}__${ts.year}-${ts.month}-${ts.day}';
+        final g = groups.putIfAbsent(key, () => {
+              'broadcastId': bId,
+              'title': title,
+              'content': content,
+              'firstAt': ts,
+              'lastAt': ts,
+              'count': 0,
+            });
+        g['count'] = (g['count'] as int) + 1;
+        if (ts.isBefore(g['firstAt'] as DateTime)) g['firstAt'] = ts;
+        if (ts.isAfter(g['lastAt'] as DateTime)) g['lastAt'] = ts;
+      }
+
+      final list = groups.values.toList()
+        ..sort((a, b) => (b['lastAt'] as DateTime).compareTo(a['lastAt'] as DateTime));
+      return list.take(limit).toList();
+    } catch (e) {
+      print('Error getting recent general broadcasts: $e');
+      return [];
+    }
+  }
+
+  /// Xóa toàn bộ thông báo thuộc một đợt broadcast (theo broadcastId)
+  Future<int> deleteGeneralBroadcast(String broadcastId) async {
+    try {
+      final query = await _firestore
+          .collection('notifications')
+          .where('type', isEqualTo: NotificationType.general.name)
+          .where('data.broadcastId', isEqualTo: broadcastId)
+          .get();
+
+      if (query.docs.isEmpty) return 0;
+
+      final batch = _firestore.batch();
+      for (final doc in query.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      return query.docs.length;
+    } catch (e) {
+      print('Error deleting general broadcast: $e');
+      rethrow;
     }
   }
 

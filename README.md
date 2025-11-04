@@ -72,6 +72,32 @@ ios/Runner/GoogleService-Info.plist # Firebase config (iOS)
 - google_sign_in, flutter_stripe, provider, bloc, flutter_bloc
 - fl_chart, lottie, intl, image_picker, file_picker, url_launcher, flutter_email_sender, google_maps_flutter, go_router, uuid, etc.
 
+## Push Notifications (Android)
+
+This project includes Firebase Cloud Messaging (FCM) with local notifications on Android and a Cloud Function to deliver pushes when new notification documents are created in Firestore.
+
+What’s included:
+- App-side init: `PushNotificationService` (saves FCM tokens to `users/{uid}/fcmTokens/{token}` and shows notifications in foreground/background/terminated).
+- Android 13+ permission: `POST_NOTIFICATIONS` and default channel metadata in `AndroidManifest.xml`.
+- Server-side: `functions/index.js` Cloud Function that triggers on `notifications/{id}` creates and sends to all saved user tokens.
+
+Setup steps:
+1) Ensure Firebase is configured (google-services.json / GoogleService-Info.plist).
+2) Install Flutter deps (already in pubspec):
+  - firebase_messaging, flutter_local_notifications.
+3) Deploy Cloud Function (requires Firebase CLI):
+  - cd functions && npm install
+  - firebase deploy --only functions
+
+How it works:
+- App writes domain notifications to `notifications` collection (via `NotificationRepository`).
+- Cloud Function reads the `userId`, fetches tokens from `users/{uid}/fcmTokens`, and sends push.
+- App listens for FCM messages and displays a local notification when running; Android shows heads-up when possible.
+
+Notes:
+- iOS push requires Apple Developer Program and APNs; current integration focuses on Android.
+- For deep links on tap, extend handlers in `PushNotificationService` to navigate using `message.data` or `payload`.
+
 ## Testing
 Run widget tests:
 ```bash

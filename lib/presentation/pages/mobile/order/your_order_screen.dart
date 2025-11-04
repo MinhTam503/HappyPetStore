@@ -10,7 +10,8 @@ import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dar
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class YourOrderScreen extends StatefulWidget {
-  const YourOrderScreen({super.key});
+  final String? initialOrderId; // If provided, auto-open that order's details
+  const YourOrderScreen({super.key, this.initialOrderId});
 
   @override
   State<YourOrderScreen> createState() => _YourOrderScreenState();
@@ -25,6 +26,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
 
   String orderSort = 'desc'; // 'desc' = mới nhất trước, 'asc' = cũ nhất trước
   String statusFilter = 'All';
+  bool _detailsOpened = false; // ensure we only open once when requested
 
   @override
   void initState() {
@@ -266,6 +268,29 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
 
             if (orders.isEmpty) {
               return const _EmptyOrders();
+            }
+
+            // Auto-open a specific order's details if requested
+            if (widget.initialOrderId != null && !_detailsOpened) {
+              QueryDocumentSnapshot? matchDoc;
+              for (final doc in orders) {
+                final docId = doc.id;
+                final orderIdField =
+                    (doc.data() as Map<String, dynamic>?)?['orderId']?.toString();
+                if (docId == widget.initialOrderId ||
+                    orderIdField == widget.initialOrderId) {
+                  matchDoc = doc;
+                  break;
+                }
+              }
+              if (matchDoc != null) {
+                _detailsOpened = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    _showOrderDetailsSheet(matchDoc!);
+                  }
+                });
+              }
             }
 
             return ListView.separated(

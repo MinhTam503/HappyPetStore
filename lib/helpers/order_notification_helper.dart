@@ -354,4 +354,26 @@ class OrderNotificationHelper {
       return [];
     }
   }
+
+  // ===================== GENERAL BROADCAST MANAGEMENT =====================
+
+  /// Liệt kê các đợt thông báo chung gần đây
+  static Future<List<Map<String, dynamic>>> listRecentGeneralBroadcasts({int limit = 10}) async {
+    try {
+      return await _adminNotificationService.getRecentGeneralBroadcasts(limit: limit);
+    } catch (e) {
+      print('❌ Error listing general broadcasts: $e');
+      return [];
+    }
+  }
+
+  /// Xóa toàn bộ thông báo thuộc một đợt broadcast
+  static Future<int> deleteGeneralBroadcast(String broadcastId) async {
+    try {
+      return await _adminNotificationService.deleteGeneralBroadcast(broadcastId);
+    } catch (e) {
+      print('❌ Error deleting general broadcast: $e');
+      rethrow;
+    }
+  }
 }

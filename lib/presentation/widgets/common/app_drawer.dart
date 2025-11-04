@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
+import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
@@ -20,6 +24,7 @@ class _AppDrawerState extends State<AppDrawer> {
   Map<String, dynamic>? userInfo;
   String? userIdentifier;
   final UserManager userManager = UserManager();
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
 
   @override
   void initState() {
@@ -32,6 +37,23 @@ class _AppDrawerState extends State<AppDrawer> {
     userIdentifier = await userManager.getUserIdentifier();
     userInfo = await userManager.getCurrentUserInfo();
     setState(() {});
+
+    // Subscribe to realtime updates so avatar/name/email refresh live
+    await _userSub?.cancel();
+    if (userIdentifier != null) {
+      _userSub = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userIdentifier)
+          .snapshots()
+          .listen((snap) {
+        final data = snap.data();
+        if (data != null) {
+          setState(() {
+            userInfo = data;
+          });
+        }
+      });
+    }
   }
 
   String _getDisplayName() {
@@ -190,11 +212,12 @@ class _AppDrawerState extends State<AppDrawer> {
 
   Future<void> _logout() async {
     try {
+      DialogHelper.showLoadingDialog(context, message: 'Đang đăng xuất...');
       await authService.value.signOut();
-    
-    // Clear UserManager data
-    final userManager = UserManager();
-    await userManager.clearUserData();
+
+      // Clear UserManager data
+      final userManager = UserManager();
+      await userManager.clearUserData();
 
       if (mounted) {
         NotificationHelper.showSuccess(
@@ -216,7 +239,15 @@ class _AppDrawerState extends State<AppDrawer> {
           'Không thể đăng xuất. Vui lòng thử lại.',
         );
       }
+    } finally {
+      await DialogHelper.safeHideLoadingDialog();
     }
+  }
+
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -326,6 +357,20 @@ class _AppDrawerState extends State<AppDrawer> {
                         ),
                       );
                     }
+                  },
+                ),
+                _DrawerItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home,
+                  title: 'Cửa hàng',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StoreInfoScreen(),
+                      ),
+                    );
                   },
                 ),
                 _DrawerItem(

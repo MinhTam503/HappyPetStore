@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
+import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 // import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
@@ -59,6 +60,15 @@ class _EditProfileState extends State<EditProfile> {
   void initState() {
     super.initState();
     _initializeUser();
+    // Dispatch start event after first frame so context has access to provided bloc (from route)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        context.read<EditProfileBloc>().add(EditProfileStarted());
+      } catch (_) {
+        // If provider not found, navigation wrapper may be missing; UI will still render
+      }
+    });
   }
 
   @override
@@ -295,12 +305,13 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   Future<void> pickImage() async {
+    // Capture bloc before awaiting to avoid context lookup after await
+    final bloc = context.read<EditProfileBloc>();
     final pickedFile =
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile == null) return;
-    context
-        .read<EditProfileBloc>()
-        .add(EditProfileUploadAvatar(pickedFile.path));
+    if (!mounted) return;
+    bloc.add(EditProfileUploadAvatar(pickedFile.path));
   }
 
   // =========================
@@ -354,10 +365,16 @@ class _EditProfileState extends State<EditProfile> {
     final isWide = size.width >= 900;
     final horizontal = isWide ? size.width * 0.15 : 16.0;
 
-    return BlocProvider(
-      create: (_) => EditProfileBloc()..add(EditProfileStarted()),
-      child: BlocListener<EditProfileBloc, EditProfileState>(
+    return BlocListener<EditProfileBloc, EditProfileState>(
         listener: (context, state) async {
+          // Global loading overlay for save/upload operations
+          if (state.isSaving) {
+            // Show loading overlay while saving or uploading avatar
+            DialogHelper.showLoadingDialog(context, message: 'Đang xử lý...');
+          } else {
+            await DialogHelper.safeHideLoadingDialog();
+          }
+
           // Cập nhật controllers từ state.user (lần đầu hoặc khi thay đổi quan trọng)
           final data = state.user;
           if (data != null) {
@@ -600,7 +617,6 @@ class _EditProfileState extends State<EditProfile> {
             );
           },
         ),
-      ),
-    );
+      );
   }
 }

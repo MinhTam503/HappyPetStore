@@ -12,7 +12,7 @@ class BreedPerformanceChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (breedData.isEmpty) {
       return const Center(
-        child: Text('No breed data available', style: TextStyle(color: Colors.grey)),
+        child: Text('Không có giống còn hàng', style: TextStyle(color: Colors.grey)),
       );
     }
 
@@ -40,7 +40,7 @@ class BreedPerformanceChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Top Performing Breeds',
+            'Phân tích hiệu xuất giống',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -51,11 +51,11 @@ class BreedPerformanceChart extends StatelessWidget {
           // Headers
           const Row(
             children: [
-              Expanded(flex: 3, child: Text('Breed', style: TextStyle(fontWeight: FontWeight.bold))),
-              Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
-              Expanded(flex: 2, child: Text('Sold', style: TextStyle(fontWeight: FontWeight.bold))),
-              Expanded(flex: 2, child: Text('Available', style: TextStyle(fontWeight: FontWeight.bold))),
-              Expanded(flex: 2, child: Text('Success %', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 3, child: Text('Giống', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 2, child: Text('Tổng', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 2, child: Text('Đã bán', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 2, child: Text('Có sẵn', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(flex: 2, child: Text('Thành công %', style: TextStyle(fontWeight: FontWeight.bold))),
             ],
           ),
           const Divider(),

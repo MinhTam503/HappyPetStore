@@ -990,6 +990,10 @@
   "@settings": {
     "description": "Settings page title"
   },
+    "store": "Store",
+  "@settings": {
+    "description": "Navigation to store"
+  },
   "appSettings": "App Settings",
   "@appSettings": {
     "description": "App settings section title"

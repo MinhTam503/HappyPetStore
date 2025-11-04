@@ -16,7 +16,7 @@ class PetStatusChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (totalPets == 0) {
       return const Center(
-        child: Text('No data available', style: TextStyle(color: Colors.grey)),
+        child: Text('Không có dữu liệu', style: TextStyle(color: Colors.grey)),
       );
     }
 
@@ -52,7 +52,7 @@ class PetStatusChart extends StatelessWidget {
           Column(
             children: [
               _buildBarRow(
-                'Sold', 
+                'Đã bán', 
                 soldPets, 
                 soldPercentage, 
                 Colors.orange,
@@ -60,7 +60,7 @@ class PetStatusChart extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _buildBarRow(
-                'Available', 
+                'Còn hàng', 
                 availablePets, 
                 availablePercentage, 
                 Colors.blue,

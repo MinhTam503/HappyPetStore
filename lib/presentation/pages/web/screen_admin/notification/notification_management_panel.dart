@@ -20,6 +20,9 @@ class _NotificationManagementPanelState
   final Map<String, dynamic> _notificationStats = {};
   final List<Map<String, dynamic>> _usersWithUnread = [];
   bool _isLoadingStats = false;
+  // General broadcasts management
+  final List<Map<String, dynamic>> _generalBroadcasts = [];
+  bool _isLoadingGeneral = false;
 
   @override
   void initState() {
@@ -27,6 +30,7 @@ class _NotificationManagementPanelState
     _tabController = TabController(length: 4, vsync: this);
     _tabController!.addListener(_onTabChanged);
     _loadNotificationAnalytics();
+    _loadGeneralBroadcasts();
   }
 
   @override
@@ -45,6 +49,8 @@ class _NotificationManagementPanelState
       // Refresh data when switching to analytics tab
       if (selectedTabIndex == 0) {
         _loadNotificationAnalytics();
+      } else if (selectedTabIndex == 1) {
+        _loadGeneralBroadcasts();
       }
     }
   }
@@ -71,6 +77,61 @@ class _NotificationManagementPanelState
       setState(() {
         _isLoadingStats = false;
       });
+    }
+  }
+
+  Future<void> _loadGeneralBroadcasts() async {
+    setState(() {
+      _isLoadingGeneral = true;
+    });
+
+    try {
+      final items = await OrderNotificationHelper.listRecentGeneralBroadcasts(limit: 20);
+      setState(() {
+        _generalBroadcasts
+          ..clear()
+          ..addAll(items);
+      });
+    } catch (e) {
+      print('Error loading general broadcasts: $e');
+    } finally {
+      setState(() {
+        _isLoadingGeneral = false;
+      });
+    }
+  }
+
+  Future<void> _confirmAndDeleteBroadcast(String broadcastId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa thông báo chung'),
+        content: const Text('Bạn có chắc muốn xóa toàn bộ thông báo trong đợt gửi này? Hành động không thể hoàn tác.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    if (!mounted) return;
+    DialogHelper.showLoadingDialog(context, message: 'Đang xóa...');
+    try {
+      final deleted = await OrderNotificationHelper.deleteGeneralBroadcast(broadcastId);
+      if (!mounted) return;
+      DialogHelper.hideLoadingDialog(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã xóa $deleted thông báo trong đợt gửi')), 
+      );
+      _loadGeneralBroadcasts();
+      _loadNotificationAnalytics();
+    } catch (e) {
+      if (!mounted) return;
+      DialogHelper.hideLoadingDialog(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Xóa thất bại: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -114,36 +175,73 @@ class _NotificationManagementPanelState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Stats Cards
-          Row(
-            children: [
+          Row(children: [
+            Expanded(
+              child: _buildStatCard(
+                'Tổng thông báo',
+                _notificationStats['total']?.toString() ?? '0',
+                Icons.notifications,
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Chưa đọc',
+                _notificationStats['unread']?.toString() ?? '0',
+                Icons.mark_email_unread,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Đã đọc',
+                _notificationStats['read']?.toString() ?? '0',
+                Icons.mark_email_read,
+                Colors.green,
+              ),
+            ),
+          ]),
+
+          const SizedBox(height: 16),
+
+          // General broadcasts specific stats
+          Builder(builder: (context) {
+            final general = _notificationStats['general'] as Map<String, dynamic>?;
+            final totalDocs = general?['totalDocs']?.toString() ?? '0';
+            final broadcastCount = general?['broadcastCount']?.toString() ?? '0';
+            final avg = general?['avgRecipientsPerBroadcast'];
+            final avgStr = avg == null ? '0' : (avg is num ? avg.toStringAsFixed(1) : avg.toString());
+            return Row(children: [
               Expanded(
                 child: _buildStatCard(
-                  'Tổng thông báo',
-                  _notificationStats['total']?.toString() ?? '0',
-                  Icons.notifications,
-                  Colors.blue,
+                  'Thông báo chung (tổng lượt gửi)',
+                  totalDocs,
+                  Icons.notifications_active,
+                  Colors.teal,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: _buildStatCard(
-                  'Chưa đọc',
-                  _notificationStats['unread']?.toString() ?? '0',
-                  Icons.mark_email_unread,
-                  Colors.orange,
+                  'Đợt gửi thông báo chung',
+                  broadcastCount,
+                  Icons.campaign,
+                  Colors.indigo,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatCard(
-                  'Đã đọc',
-                  _notificationStats['read']?.toString() ?? '0',
-                  Icons.mark_email_read,
-                  Colors.green,
-                ),
-              ),
-            ],
-          ),
+              // const SizedBox(width: 16),
+              // Expanded(
+              //   child: _buildStatCard(
+              //     'Số user/broadcast (TB)',
+              //     avgStr,
+              //     Icons.people_alt,
+              //     Colors.purple,
+              //   ),
+              // ),
+            ]);
+          }),
 
           const SizedBox(height: 24),
 
@@ -560,6 +658,76 @@ class _NotificationManagementPanelState
                     icon: const Icon(Icons.notifications),
                     label: const Text('Tạo thông báo'),
                   ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Recent broadcasts list
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Các đợt thông báo chung đã gửi',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Làm mới',
+                        onPressed: _isLoadingGeneral ? null : _loadGeneralBroadcasts,
+                        icon: _isLoadingGeneral
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.refresh),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_generalBroadcasts.isEmpty && !_isLoadingGeneral)
+                    const Text('Chưa có đợt gửi nào'),
+                  ..._generalBroadcasts.map((b) {
+                    final title = b['title'] as String? ?? '';
+                    final content = b['content'] as String? ?? '';
+                    final count = b['count'] as int? ?? 0;
+                    final brId = b['broadcastId'] as String?;
+                    final firstAt = b['firstAt'] as DateTime?;
+                    final lastAt = b['lastAt'] as DateTime?;
+                    final when = firstAt == null
+                        ? ''
+                        : '${firstAt.day}/${firstAt.month}/${firstAt.year} ${firstAt.hour}:${firstAt.minute.toString().padLeft(2, '0')}' +
+                            (lastAt != null && lastAt.difference(firstAt).inMinutes > 0
+                                ? ' – ${lastAt.hour}:${lastAt.minute.toString().padLeft(2, '0')}'
+                                : '');
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.campaign),
+                        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(content, maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Text('Đã gửi tới $count người dùng • $when', style: const TextStyle(color: Colors.grey)),
+                            if (brId != null) Text('ID: $brId', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                        trailing: brId == null
+                            ? const SizedBox.shrink()
+                            : IconButton(
+                                tooltip: 'Xóa đợt này',
+                                onPressed: () => _confirmAndDeleteBroadcast(brId),
+                                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              ),
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
             ),

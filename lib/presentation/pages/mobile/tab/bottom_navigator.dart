@@ -10,6 +10,7 @@ import 'package:pet_shop/presentation/pages/mobile/home/home_page.dart'
 import 'package:pet_shop/presentation/pages/mobile/tab/profile_screen.dart';
 import 'package:pet_shop/presentation/widgets/conditional_draggable_chat_bubble.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
+import 'package:pet_shop/core/services/push_notification_service.dart';
 
 class BottomNavigator extends StatefulWidget {
   final int initialIndex;
@@ -36,6 +37,10 @@ class _HomePageState extends State<BottomNavigator> {
   void initState() {
     super.initState();
     selectedIndex = widget.initialIndex;
+    // Ensure FCM token is synced once user reaches the home shell
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PushNotificationService.syncNow();
+    });
     // Gently close any remaining loading dialogs when navigating to home
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (DialogHelper.isDialogShowing) {
