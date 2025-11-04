@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:pet_shop/core/service_locator.dart';
 import 'package:pet_shop/presentation/bloc/chatBot/chatbot_bloc.dart';
 import 'package:pet_shop/presentation/bloc/chatBot/chatbot_event.dart';
@@ -254,6 +258,9 @@ class _ChatBotPageState extends State<ChatBotPage> {
   }
 
   Widget _buildMessageBubble(ChatBotMessage message) {
+    // Check if message contains map coordinates (for bot messages only)
+    final hasMapCoordinates = !message.isUser && _parseCoordinatesFromText(message.text) != null;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -275,7 +282,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
               ],
               Flexible(
                 child: _ExpandableMessageText(
-                  text: message.text,
+                  // If has map coordinates, replace text with friendly message
+                  text: hasMapCoordinates ? "Đây là vị trí của cửa hàng" : message.text,
                   isUser: message.isUser,
                 ),
               ),
@@ -290,6 +298,11 @@ class _ChatBotPageState extends State<ChatBotPage> {
               ],
             ],
           ),
+          // Display Flutter Map mini preview if message contains coordinates
+          if (!message.isUser) ...[
+            if (_maybeBuildMapPreview(message.text) != null)
+              _maybeBuildMapPreview(message.text)!,
+          ],
           // Display pets if available
           if (!message.isUser &&
               message.pets != null &&
@@ -517,30 +530,68 @@ class _ChatBotPageState extends State<ChatBotPage> {
 
   Widget _buildCompactPetCard(ChatBotPet pet) {
     return GestureDetector(
-      onTap: () {
-        // Navigate to pet detail page
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailPet(
-              pet: {
-                'id': pet.id,
-                'name': pet.name,
-                'breed': pet.breed,
-                'category': pet.category,
-                'age': pet.age,
-                'sex': pet.sex,
-                'weight': pet.weight,
-                'price': pet.price,
-                'imageUrl': pet.imageUrl,
-                'about': pet.about,
-                'health_status': pet.healthStatus ?? '',
-                'vaccination': pet.vaccination ?? '',
-                'location': pet.location ?? '',
-              },
+      onTap: () async {
+        try {
+          // Fetch pet details from Firestore using the pet's ID
+          final petDoc = await FirebaseFirestore.instance
+              .collection('Pets')
+              .doc(pet.id)
+              .get();
+
+          if (!mounted) return;
+
+          // Build pet data map - use Firestore data if available, fallback to model data
+          Map<String, dynamic> petData;
+          
+          if (petDoc.exists && petDoc.data() != null) {
+            final firestoreData = petDoc.data()!;
+            petData = {
+              'id': pet.id,
+              'name': firestoreData['name'] ?? pet.name,
+              'breed': firestoreData['breed'] ?? pet.breed,
+              'category': firestoreData['category'] ?? pet.category,
+              'age': firestoreData['age']?.toString() ?? pet.age,
+              'sex': firestoreData['sex'] ?? pet.sex,
+              'weight': firestoreData['weight']?.toString() ?? pet.weight,
+              'price': firestoreData['price'] ?? pet.price,
+              'imageUrl': firestoreData['imageUrl'] ?? pet.imageUrl,
+              'about': firestoreData['about'] ?? pet.about,
+              'health_status': firestoreData['health_status'] ?? pet.healthStatus ?? '',
+              'vaccination': firestoreData['vaccination'] ?? pet.vaccination ?? '',
+              'location': firestoreData['location'] ?? pet.location ?? '',
+            };
+          } else {
+            // Fallback to model data if Firestore fetch fails
+            petData = {
+              'id': pet.id,
+              'name': pet.name,
+              'breed': pet.breed,
+              'category': pet.category,
+              'age': pet.age,
+              'sex': pet.sex,
+              'weight': pet.weight,
+              'price': pet.price,
+              'imageUrl': pet.imageUrl,
+              'about': pet.about,
+              'health_status': pet.healthStatus ?? '',
+              'vaccination': pet.vaccination ?? '',
+              'location': pet.location ?? '',
+            };
+          }
+
+          // Navigate to pet detail page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetailPet(pet: petData),
             ),
-          ),
-        );
+          );
+        } catch (e) {
+          debugPrint('Error fetching pet details: $e');
+          if (mounted) {
+            _showSnack('Không thể tải thông tin thú cưng');
+          }
+        }
       },
       child: Container(
         width: 120,
@@ -826,6 +877,141 @@ class _ChatBotPageState extends State<ChatBotPage> {
       },
     );
   }
+
+  // Helper method to parse coordinates from Google Maps URLs or plain text
+  LatLng? _parseCoordinatesFromText(String text) {
+    try {
+      // Pattern 1: https://www.google.com/maps/search/?api=1&query=lat,lng
+      final queryPattern = RegExp(r'query=(-?\d+\.?\d*),\s*(-?\d+\.?\d*)');
+      final queryMatch = queryPattern.firstMatch(text);
+      if (queryMatch != null) {
+        final lat = double.parse(queryMatch.group(1)!);
+        final lng = double.parse(queryMatch.group(2)!);
+        return LatLng(lat, lng);
+      }
+
+      // Pattern 2: https://www.google.com/maps?q=lat,lng
+      final qPattern = RegExp(r'[?&]q=(-?\d+\.?\d*),\s*(-?\d+\.?\d*)');
+      final qMatch = qPattern.firstMatch(text);
+      if (qMatch != null) {
+        final lat = double.parse(qMatch.group(1)!);
+        final lng = double.parse(qMatch.group(2)!);
+        return LatLng(lat, lng);
+      }
+
+      // Pattern 3: Plain text with coordinates "lat, lng"
+      final plainPattern = RegExp(r'(-?\d+\.?\d+)\s*,\s*(-?\d+\.?\d+)');
+      final plainMatch = plainPattern.firstMatch(text);
+      if (plainMatch != null) {
+        final lat = double.parse(plainMatch.group(1)!);
+        final lng = double.parse(plainMatch.group(2)!);
+        return LatLng(lat, lng);
+      }
+    } catch (e) {
+      debugPrint('Error parsing coordinates: $e');
+    }
+    return null;
+  }
+
+  // Helper method to open coordinates in Google Maps app
+  Future<void> _openInGoogleMaps(LatLng coordinates) async {
+    final url = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${coordinates.latitude},${coordinates.longitude}',
+    );
+    
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          _showSnack('Không thể mở Google Maps');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error opening Google Maps: $e');
+      if (mounted) {
+        _showSnack('Lỗi khi mở Google Maps');
+      }
+    }
+  }
+
+  // Helper method to show snackbar messages
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Helper method to build mini map preview using Flutter Map (OpenStreetMap)
+  Widget? _maybeBuildMapPreview(String text) {
+    final coordinates = _parseCoordinatesFromText(text);
+    if (coordinates == null) return null;
+
+    return Container(
+      height: 180,
+      margin: const EdgeInsets.only(top: 8, left: 40),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            FlutterMap(
+              options: MapOptions(
+                initialCenter: coordinates,
+                initialZoom: 15.0,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.none, // Disable all interactions
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.pet_shop',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: coordinates,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.red,
+                        size: 40,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            // Overlay button to open in Google Maps
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: ElevatedButton.icon(
+                onPressed: () => _openInGoogleMaps(coordinates),
+                icon: const Icon(Icons.map, size: 16),
+                label: const Text('Mở Google Maps'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 }
 
 class _ExpandableMessageText extends StatefulWidget {

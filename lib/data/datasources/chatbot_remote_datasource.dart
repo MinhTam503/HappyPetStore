@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:pet_shop/data/models/chatbot_model.dart';
 
@@ -17,16 +15,8 @@ class ChatBotRemoteDataSourceImpl implements ChatBotRemoteDataSource {
   static const Duration _requestTimeout = Duration(seconds: 10);
 
   static String _autoBaseUrl() {
-    // Pick the correct host to reach local n8n depending on platform
-    if (kIsWeb) return 'http://localhost:5678';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:5678';
-      // iOS simulator and desktop
-      return 'http://localhost:5678';
-    } catch (_) {
-      // Fallback for platforms where dart:io Platform isn't available
-      return 'http://localhost:5678';
-    }
+    // Use cloud n8n instance
+    return 'https://minhtam23503.app.n8n.cloud';
   }
 
   ChatBotRemoteDataSourceImpl({

@@ -606,7 +606,7 @@ class _DetailPetState extends State<DetailPet> {
                   height: 20,
                   decoration: BoxDecoration(
                     color: _getColorFromKey(colorKey),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: Colors.grey.shade300,
                       width: 1,

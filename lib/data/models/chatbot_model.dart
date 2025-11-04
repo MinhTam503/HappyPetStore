@@ -97,8 +97,11 @@ class ChatBotPetModel extends ChatBotPet {
   });
 
   factory ChatBotPetModel.fromJson(Map<String, dynamic> json) {
+    // Handle multiple ID field names from n8n response: id, docId, or doc_id
+    final petId = (json['id'] ?? json['docId'] ?? json['doc_id'])?.toString() ?? '';
+    
     return ChatBotPetModel(
-      id: json['id']?.toString() ?? '',
+      id: petId,
       name: json['name']?.toString() ?? '',
       breed: json['breed']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
