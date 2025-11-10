@@ -2,6 +2,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/foundation.dart';
+import 'pdf_download_stub.dart'
+    if (dart.library.html) 'pdf_download_web.dart';
 
 class QRPrintService {
   /// In QR code cho một thú cưng
@@ -91,10 +93,18 @@ class QRPrintService {
         ),
       );
 
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save(),
-        name: 'pet_qr_$petId.pdf',
-      );
+      // Check if running on web
+      if (kIsWeb) {
+        // On web, download PDF instead of printing
+        final pdfBytes = await pdf.save();
+        downloadPdf(pdfBytes, 'pet_qr_$petId.pdf');
+      } else {
+        // On native platforms, use printing dialog
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => pdf.save(),
+          name: 'pet_qr_$petId.pdf',
+        );
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error printing single pet QR: $e');
@@ -235,10 +245,18 @@ class QRPrintService {
         );
       }
 
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save(),
-        name: 'pets_qr_codes.pdf',
-      );
+      // Check if running on web
+      if (kIsWeb) {
+        // On web, download PDF instead of printing
+        final pdfBytes = await pdf.save();
+        downloadPdf(pdfBytes, 'pets_qr_codes.pdf');
+      } else {
+        // On native platforms, use printing dialog
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => pdf.save(),
+          name: 'pets_qr_codes.pdf',
+        );
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error printing multiple pet QRs: $e');

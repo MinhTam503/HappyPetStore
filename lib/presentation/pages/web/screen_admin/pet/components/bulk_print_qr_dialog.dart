@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/core/services/qr_print_service.dart';
+import 'package:pet_shop/core/services/print/qr_print_service.dart';
 
 /// Dialog cho phép chọn nhiều thú cưng để in QR code hàng loạt
 class BulkPrintQRDialog extends StatefulWidget {

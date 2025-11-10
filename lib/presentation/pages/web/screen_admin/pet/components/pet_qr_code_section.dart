@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:pet_shop/core/services/qr_print_service.dart';
+import 'package:pet_shop/core/services/print/qr_print_service.dart';
 
 /// Widget hiển thị QR code section trong pet detail dialog
 class PetQRCodeSection extends StatelessWidget {
