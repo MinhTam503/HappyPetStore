@@ -563,6 +563,20 @@
   "pleaseEnterName": "Vui lòng nhập tên thú cưng",
   "@pleaseEnterName": {"description": "Please enter pet name error"},
   "pleaseSelectBreed": "Vui lòng chọn giống!",
-  "@pleaseSelectBreed": {"description": "Please select breed error"}
+  "@pleaseSelectBreed": {"description": "Please select breed error"},
+  "scanQRCode": "Quét mã QR",
+  "@scanQRCode": {"description": "Scan QR code label"},
+  "scanningPet": "Đang tải thông tin thú cưng...",
+  "@scanningPet": {"description": "Loading pet information message"},
+  "invalidQRCode": "Mã QR không hợp lệ",
+  "@invalidQRCode": {"description": "Invalid QR code error"},
+  "petNotFound": "Không tìm thấy thông tin thú cưng",
+  "@petNotFound": {"description": "Pet not found error"},
+  "scanQRCodeDescription": "Đưa camera vào mã QR để xem thông tin thú cưng",
+  "@scanQRCodeDescription": {"description": "Scan QR code instruction"},
+  "cameraPermissionDenied": "Quyền truy cập camera bị từ chối",
+  "@cameraPermissionDenied": {"description": "Camera permission denied message"},
+  "pleaseAllowCamera": "Vui lòng cấp quyền truy cập camera để quét mã QR",
+  "@pleaseAllowCamera": {"description": "Please allow camera permission message"}
 }
 

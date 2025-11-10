@@ -8,6 +8,7 @@ import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/home/home_page.dart'
     show HomePage;
 import 'package:pet_shop/presentation/pages/mobile/tab/profile_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/qr_scanner/qr_scanner_screen.dart';
 import 'package:pet_shop/presentation/widgets/conditional_draggable_chat_bubble.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
 import 'package:pet_shop/core/services/push_notification_service.dart';
@@ -28,7 +29,7 @@ class _HomePageState extends State<BottomNavigator> {
   final List pages = [
     const HomePage(),
     const FavoriteScreen(),
-    // const ChatScreen(),
+    const QRScannerScreen(),
     const CartScreen(),
     const ProfileScreen(),
   ];
@@ -80,11 +81,11 @@ class _HomePageState extends State<BottomNavigator> {
             activeIcon: const Icon(Icons.favorite),
             label: l10n?.favorite ?? "Yêu thích",
           ),
-          // BottomNavigationBarItem(
-          //   icon: Icon(Iconsax.message),
-          //   activeIcon: Icon(Iconsax.heart5),
-          //   label: "Messages",
-          // ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.qr_code_scanner_outlined),
+            activeIcon: const Icon(Icons.qr_code_scanner),
+            label: l10n?.scanQRCode ?? "Quét QR",
+          ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.shopping_cart_outlined),
             activeIcon: const Icon(Icons.shopping_cart),

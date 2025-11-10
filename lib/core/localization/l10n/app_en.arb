@@ -1654,6 +1654,20 @@
   "pleaseEnterName": "Please enter pet name",
   "@pleaseEnterName": {"description": "Please enter pet name error"},
   "pleaseSelectBreed": "Please select breed!",
-  "@pleaseSelectBreed": {"description": "Please select breed error"}
+  "@pleaseSelectBreed": {"description": "Please select breed error"},
+  "scanQRCode": "Scan QR Code",
+  "@scanQRCode": {"description": "Scan QR code label"},
+  "scanningPet": "Loading pet information...",
+  "@scanningPet": {"description": "Loading pet information message"},
+  "invalidQRCode": "Invalid QR code",
+  "@invalidQRCode": {"description": "Invalid QR code error"},
+  "petNotFound": "Pet not found",
+  "@petNotFound": {"description": "Pet not found error"},
+  "scanQRCodeDescription": "Point camera at QR code to view pet information",
+  "@scanQRCodeDescription": {"description": "Scan QR code instruction"},
+  "cameraPermissionDenied": "Camera permission denied",
+  "@cameraPermissionDenied": {"description": "Camera permission denied message"},
+  "pleaseAllowCamera": "Please allow camera access to scan QR codes",
+  "@pleaseAllowCamera": {"description": "Please allow camera permission message"}
 }
 

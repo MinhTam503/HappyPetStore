@@ -28,8 +28,8 @@ if (flutterVersionName == null) {
 
 android {
     namespace = "com.example.pet_shop"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = "25.1.8937393"
+    compileSdk = 36
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
