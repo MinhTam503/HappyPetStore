@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
 import 'package:pet_shop/core/di/recommendation_di.dart';
+import 'package:pet_shop/core/services/onboarding_service.dart';
 import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
 import 'package:pet_shop/core/services/search_recommendations_manager.dart';
 import 'package:pet_shop/core/services/settings_service.dart';
@@ -25,6 +26,7 @@ import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/bloc/vnpay/vnpay_bloc.dart';
+import 'package:pet_shop/presentation/pages/mobile/get_started/get_started_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shipping/shipping_management_page.dart';
@@ -292,74 +294,96 @@ class MyApp extends StatelessWidget {
               '/': (context) {
                 return kIsWeb
                     ? const WebAppWrapper()
-                    : StreamBuilder<User?>(
-                        stream: FirebaseAuth.instance.authStateChanges(),
-                        builder: (context, snapshot) {
-                          if (kDebugMode) {
-                            debugPrint(
-                                ' AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
-                          }
-
-                          // Show loading during connection state waiting
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
+                    : FutureBuilder<bool>(
+                        future: OnboardingService.hasSeenGetStarted(),
+                        builder: (context, onboardingSnapshot) {
+                          // Show loading while checking onboarding status
+                          if (onboardingSnapshot.connectionState == ConnectionState.waiting) {
                             return const Scaffold(
                               body: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    CircularProgressIndicator(
-                                        color: Colors.pink),
-                                    SizedBox(height: 16),
-                                    Text(
-                                        'Đang kiểm tra trạng thái đăng nhập...'),
-                                  ],
-                                ),
+                                child: CircularProgressIndicator(color: Colors.pink),
                               ),
                             );
                           }
 
-                          // User is authenticated
-                          if (snapshot.hasData) {
-                            final user = snapshot.data!;
+                          final hasSeenOnboarding = onboardingSnapshot.data ?? false;
 
-                            if (kDebugMode) {
-                              debugPrint(
-                                  'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
-                            }
-
-                            // Check authentication provider
-                            List<String> providers = user.providerData
-                                .map((info) => info.providerId)
-                                .toList();
-                            bool isSocialLogin =
-                                providers.contains('google.com') ||
-                                    providers.contains('facebook.com') ||
-                                    providers.contains('phone');
-
-                            // Allow social login users to bypass email verification
-                            // Email/password users still need email verification
-                            if (user.emailVerified || isSocialLogin) {
-                              if (kDebugMode) {
-                                debugPrint(
-                                    ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
-                              }
-                              return const BottomNavigator();
-                            } else {
-                              if (kDebugMode) {
-                                debugPrint(
-                                    ' Email not verified and not social login, showing LoginOrRegister');
-                              }
-                              return const LoginOrRegister();
-                            }
-                          } else {
-                            // User is not authenticated
-                            if (kDebugMode) {
-                              debugPrint(
-                                  ' User not authenticated, showing LoginOrRegister');
-                            }
-                            return const LoginOrRegister();
+                          // If first time opening app, show GetStarted
+                          if (!hasSeenOnboarding) {
+                            return const GetStartedPage();
                           }
+
+                          // Otherwise check auth state
+                          return StreamBuilder<User?>(
+                              stream: FirebaseAuth.instance.authStateChanges(),
+                              builder: (context, snapshot) {
+                                if (kDebugMode) {
+                                  debugPrint(
+                                      ' AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
+                                }
+
+                                // Show loading during connection state waiting
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Scaffold(
+                                    body: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          CircularProgressIndicator(
+                                              color: Colors.pink),
+                                          SizedBox(height: 16),
+                                          Text(
+                                              'Đang kiểm tra trạng thái đăng nhập...'),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                // User is authenticated
+                                if (snapshot.hasData) {
+                                  final user = snapshot.data!;
+
+                                  if (kDebugMode) {
+                                    debugPrint(
+                                        'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
+                                  }
+
+                                  // Check authentication provider
+                                  List<String> providers = user.providerData
+                                      .map((info) => info.providerId)
+                                      .toList();
+                                  bool isSocialLogin =
+                                      providers.contains('google.com') ||
+                                          providers.contains('facebook.com') ||
+                                          providers.contains('phone');
+
+                                  // Allow social login users to bypass email verification
+                                  // Email/password users still need email verification
+                                  if (user.emailVerified || isSocialLogin) {
+                                    if (kDebugMode) {
+                                      debugPrint(
+                                          ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
+                                    }
+                                    return const BottomNavigator();
+                                  } else {
+                                    if (kDebugMode) {
+                                      debugPrint(
+                                          ' Email not verified and not social login, showing LoginOrRegister');
+                                    }
+                                    return const LoginOrRegister();
+                                  }
+                                } else {
+                                  // User is not authenticated
+                                  if (kDebugMode) {
+                                    debugPrint(
+                                        ' User not authenticated, showing LoginOrRegister');
+                                  }
+                                  return const LoginOrRegister();
+                                }
+                              },
+                            );
                         },
                       );
               },

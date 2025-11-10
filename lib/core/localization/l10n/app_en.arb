@@ -1543,5 +1543,27 @@
   "viewedPetsHistoryDisabledMessage": "Viewed pets history is disabled. Go to settings to enable", 
   "@viewedPetsHistoryDisabledMessage": {"description": "Viewed pets history disabled message"},
   "goToSettings": "Go to Settings",
-  "@goToSettings": {"description": "Go to settings button text"}
+  "@goToSettings": {"description": "Go to settings button text"},
+  
+  "getStartedTitle1": "Welcome to Happy Pet Shop",
+  "@getStartedTitle1": {"description": "Get started first page title"},
+  "getStartedDesc1": "Discover the wonderful world of pets with us. Find the perfect companion for your family!",
+  "@getStartedDesc1": {"description": "Get started first page description"},
+  
+  "getStartedTitle2": "Easy Search & Selection",
+  "@getStartedTitle2": {"description": "Get started second page title"},
+  "getStartedDesc2": "Hundreds of diverse pet breeds with smart search system. Find your perfect pet in just a few taps!",
+  "@getStartedDesc2": {"description": "Get started second page description"},
+  
+  "getStartedTitle3": "Safe & Convenient Shopping",
+  "@getStartedTitle3": {"description": "Get started third page title"},
+  "getStartedDesc3": "Secure payment, fast delivery and 24/7 support. We're always here for you!",
+  "@getStartedDesc3": {"description": "Get started third page description"},
+  
+  "skip": "Skip",
+  "@skip": {"description": "Skip button text"},
+  "next": "Next",
+  "@next": {"description": "Next button text"},
+  "getStarted": "Get Started",
+  "@getStarted": {"description": "Get started button text"}
 }

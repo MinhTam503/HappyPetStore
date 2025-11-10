@@ -506,7 +506,7 @@ class _DetailPetState extends State<DetailPet> {
                   children: [
                     Icon(Icons.message, color: primaryColor, size: 24),
                     Text(
-                      'Chat ngay',
+                      'Liên hệ',
                       style: TextStyle(
                         fontSize: 15,
                         color: primaryColor,

@@ -456,5 +456,27 @@
   "accountExistsPleaseLogin": "Tài khoản đã tồn tại! Vui lòng đăng nhập.",
   "searchHistoryDisabledMessage": "Lịch sử tìm kiếm đã tắt. Tới trang cài đặt để mở",
   "viewedPetsHistoryDisabledMessage": "Lịch sử xem thú cưng đã tắt. Tới trang cài đặt để mở",
-  "goToSettings": "Tới cài đặt"
+  "goToSettings": "Tới cài đặt",
+  
+  "getStartedTitle1": "Chào mừng đến cửa hàng",
+  "@getStartedTitle1": {"description": "Get started first page title"},
+  "getStartedDesc1": "Khám phá thế giới thú cưng tuyệt vời cùng chúng tôi. Tìm người bạn hoàn hảo cho gia đình bạn!",
+  "@getStartedDesc1": {"description": "Get started first page description"},
+  
+  "getStartedTitle2": "Dễ dàng tìm kiếm và Lựa chọn",
+  "@getStartedTitle2": {"description": "Get started second page title"},
+  "getStartedDesc2": "Hàng trăm giống thú cưng đa dạng với hệ thống tìm kiếm thông minh. Tìm thú cưng phù hợp với bạn chỉ trong vài chạm!",
+  "@getStartedDesc2": {"description": "Get started second page description"},
+  
+  "getStartedTitle3": "Mua sắm An toàn và Tiện lợi",
+  "@getStartedTitle3": {"description": "Get started third page title"},
+  "getStartedDesc3": "Thanh toán bảo mật, giao hàng nhanh chóng và hỗ trợ 24/7. Chúng tôi luôn đồng hành cùng bạn!",
+  "@getStartedDesc3": {"description": "Get started third page description"},
+  
+  "skip": "Bỏ qua",
+  "@skip": {"description": "Skip button text"},
+  "next": "Tiếp theo",
+  "@next": {"description": "Next button text"},
+  "getStarted": "Bắt đầu",
+  "@getStarted": {"description": "Get started button text"}
 }
