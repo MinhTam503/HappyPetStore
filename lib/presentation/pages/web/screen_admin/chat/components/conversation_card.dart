@@ -107,7 +107,7 @@ class ConversationCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       // last message
                       Text(
-                        lastMessage.isEmpty ? '—' : lastMessage,
+                        lastMessage.isEmpty ? '' : lastMessage,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

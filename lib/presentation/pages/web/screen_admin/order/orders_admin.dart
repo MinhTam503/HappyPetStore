@@ -22,27 +22,28 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   // Raw status values for database operations
   static const List<String> rawStatusValues = [
     'Pending',
-    'Processing', 
+    'Processing',
     'Completed',
     'Cancelled'
   ];
-  
+
   // Platform filter options
   List<String> get platforms => [
-    AppLocalizations.of(context)!.all,
-    AppLocalizations.of(context)!.mobileApp,
-    AppLocalizations.of(context)!.webApp
-  ];
+        AppLocalizations.of(context)!.all,
+        AppLocalizations.of(context)!.mobileApp,
+        AppLocalizations.of(context)!.webApp
+      ];
   int selectedPlatformIndex = 0; // 0=All, 1=Mobile, 2=Web
 
   List<String> get statuses => [
-    AppLocalizations.of(context)!.all,
-    AppLocalizations.of(context)!.pending,
-    AppLocalizations.of(context)!.processing,
-    AppLocalizations.of(context)!.completed,
-    AppLocalizations.of(context)!.cancelled
-  ];
-  int selectedStatusIndex = 0; // 0=All, 1=Pending, 2=Processing, 3=Completed, 4=Cancelled
+        AppLocalizations.of(context)!.all,
+        AppLocalizations.of(context)!.pending,
+        AppLocalizations.of(context)!.processing,
+        AppLocalizations.of(context)!.completed,
+        AppLocalizations.of(context)!.cancelled
+      ];
+  int selectedStatusIndex =
+      0; // 0=All, 1=Pending, 2=Processing, 3=Completed, 4=Cancelled
 
   String orderSort = 'desc'; // 'desc' = mới nhất trước, 'asc' = cũ nhất trước
   bool isLoading = false;
@@ -50,24 +51,33 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   final TextEditingController _searchCtl = TextEditingController();
   String _query = '';
 
+  // Pagination
+  int _currentPage = 0;
+  static const int _itemsPerPage = 12;
+
   // Get the appropriate collection based on selected platform
   Stream<List<Map<String, dynamic>>> _getOrdersStream() {
-    if (selectedPlatformIndex == 1) { // Mobile App
+    if (selectedPlatformIndex == 1) {
+      // Mobile App
       return FirebaseFirestore.instance
           .collection('orders')
           .snapshots()
           .map(_processSnapshot);
-    } else if (selectedPlatformIndex == 2) { // Web App
+    } else if (selectedPlatformIndex == 2) {
+      // Web App
       return FirebaseFirestore.instance
           .collection('ordersWeb')
           .snapshots()
           .map(_processSnapshot);
-    } else { // All
+    } else {
+      // All
       // All - combine both collections
       return Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
-        final ordersSnapshot = await FirebaseFirestore.instance.collection('orders').get();
-        final ordersWebSnapshot = await FirebaseFirestore.instance.collection('ordersWeb').get();
-        
+        final ordersSnapshot =
+            await FirebaseFirestore.instance.collection('orders').get();
+        final ordersWebSnapshot =
+            await FirebaseFirestore.instance.collection('ordersWeb').get();
+
         List<Map<String, dynamic>> allOrders = [];
         allOrders.addAll(_processSnapshot(ordersSnapshot));
         allOrders.addAll(_processSnapshot(ordersWebSnapshot));
@@ -86,7 +96,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     }).toList();
   }
 
-  Future<void> _updateOrder(String orderId, String collection, Map<String, dynamic> newData) async {
+  Future<void> _updateOrder(
+      String orderId, String collection, Map<String, dynamic> newData) async {
     await FirebaseFirestore.instance
         .collection(collection)
         .doc(orderId)
@@ -127,7 +138,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     }
   }
 
-  Future<void> updateOrder(String orderId, String collection, Map<String, dynamic> newData) async {
+  Future<void> updateOrder(
+      String orderId, String collection, Map<String, dynamic> newData) async {
     setState(() => isLoading = true);
     await _updateOrder(orderId, collection, newData);
     setState(() => isLoading = false);
@@ -144,10 +156,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        title: Text(
-          AppLocalizations.of(context)!.manageOrders, 
-          style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor)
-        ),
+        title: Text(AppLocalizations.of(context)!.manageOrders,
+            style: TextStyle(
+                color: Theme.of(context).appBarTheme.foregroundColor)),
         actions: [
           // Flexible container for filters
           Flexible(
@@ -165,16 +176,24 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                         child: ChoiceChip(
                           label: Text(platforms[i]),
                           selected: selectedPlatformIndex == i,
-                          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(.15),
-                          backgroundColor: Theme.of(context).chipTheme.backgroundColor,
+                          selectedColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(.15),
+                          backgroundColor:
+                              Theme.of(context).chipTheme.backgroundColor,
                           labelStyle: TextStyle(
                             color: selectedPlatformIndex == i
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).textTheme.bodyMedium?.color,
                             fontSize: 12,
                           ),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          onSelected: (_) => setState(() => selectedPlatformIndex = i),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          onSelected: (_) => setState(() {
+                            selectedPlatformIndex = i;
+                            _currentPage = 0;
+                          }),
                         ),
                       ),
                     const SizedBox(width: 4),
@@ -185,16 +204,24 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                         child: ChoiceChip(
                           label: Text(statuses[i]),
                           selected: selectedStatusIndex == i,
-                          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(.15),
-                          backgroundColor: Theme.of(context).chipTheme.backgroundColor,
+                          selectedColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(.15),
+                          backgroundColor:
+                              Theme.of(context).chipTheme.backgroundColor,
                           labelStyle: TextStyle(
                             color: selectedStatusIndex == i
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).textTheme.bodyMedium?.color,
                             fontSize: 12,
                           ),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          onSelected: (_) => setState(() => selectedStatusIndex = i),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          onSelected: (_) => setState(() {
+                            selectedStatusIndex = i;
+                            _currentPage = 0;
+                          }),
                         ),
                       ),
                     const SizedBox(width: 8),
@@ -205,15 +232,22 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                         value: orderSort,
                         items: [
                           DropdownMenuItem(
-                              value: 'desc', child: Text(AppLocalizations.of(context)!.newest)),
-                          DropdownMenuItem(value: 'asc', child: Text(AppLocalizations.of(context)!.oldest)),
+                              value: 'desc',
+                              child:
+                                  Text(AppLocalizations.of(context)!.newest)),
+                          DropdownMenuItem(
+                              value: 'asc',
+                              child:
+                                  Text(AppLocalizations.of(context)!.oldest)),
                         ],
-                        onChanged: (v) => setState(() => orderSort = v ?? 'desc'),
+                        onChanged: (v) => setState(() {
+                          orderSort = v ?? 'desc';
+                          _currentPage = 0;
+                        }),
                         underline: Container(),
                         style: TextStyle(
-                          color: Theme.of(context).textTheme.bodyLarge?.color, 
-                          fontSize: 14
-                        ),
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            fontSize: 14),
                       ),
                     ),
                   ],
@@ -230,10 +264,12 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               height: 44,
               child: TextField(
                 controller: _searchCtl,
-                onChanged: (v) =>
-                    setState(() => _query = v.trim().toLowerCase()),
-                decoration: _searchInput(
-                    AppLocalizations.of(context)!.searchOrders),
+                onChanged: (v) => setState(() {
+                  _query = v.trim().toLowerCase();
+                  _currentPage = 0;
+                }),
+                decoration:
+                    _searchInput(AppLocalizations.of(context)!.searchOrders),
               ),
             ),
           ),
@@ -259,8 +295,10 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                 var orders = snapshot.data!;
 
                 // Filter by status
-                if (selectedStatusIndex != 0) { // 0 = All
-                  String statusToFilter = rawStatusValues[selectedStatusIndex - 1];
+                if (selectedStatusIndex != 0) {
+                  // 0 = All
+                  String statusToFilter =
+                      rawStatusValues[selectedStatusIndex - 1];
                   orders = orders
                       .where((d) =>
                           (d['statusOrder'] ?? '').toString() == statusToFilter)
@@ -270,9 +308,12 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                 // Search locally (orderId/email/address/status)
                 if (_query.isNotEmpty) {
                   orders = orders.where((order) {
-                    final orderId = (order['orderId'] ?? order['id'] ?? '').toString().toLowerCase();
-                    final email = (order['email'] ?? '').toString().toLowerCase();
-                    
+                    final orderId = (order['orderId'] ?? order['id'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    final email =
+                        (order['email'] ?? '').toString().toLowerCase();
+
                     // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
                     String addr = '';
                     try {
@@ -295,8 +336,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                       addr = '';
                     }
                     addr = addr.toLowerCase();
-                    
-                    final st = (order['statusOrder'] ?? '').toString().toLowerCase();
+
+                    final st =
+                        (order['statusOrder'] ?? '').toString().toLowerCase();
                     return orderId.contains(_query) ||
                         email.contains(_query) ||
                         addr.contains(_query) ||
@@ -325,267 +367,404 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                       : aTime.compareTo(bTime);
                 });
 
-                return LayoutBuilder(
-                  builder: (context, c) {
-                    final crossAxisCount =
-                        (c.maxWidth ~/ 420).clamp(1, 3); // Quay lại 420px như cũ
-                    return GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        mainAxisExtent: 160, // Tăng từ 160 lên 200 để phù hợp với text lớn hơn
+                // Pagination calculations
+                final totalItems = orders.length;
+                final totalPages =
+                    (totalItems / _itemsPerPage).ceil().clamp(0, 9999);
+                final startIndex =
+                    (_currentPage * _itemsPerPage).clamp(0, totalItems);
+                final endIndex =
+                    (startIndex + _itemsPerPage).clamp(0, totalItems);
+                final paginatedOrders = totalItems == 0
+                    ? <Map<String, dynamic>>[]
+                    : orders.sublist(startIndex, endIndex);
+
+                return CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'Tổng $totalItems đơn hàng',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                      itemCount: orders.length,
-                      itemBuilder: (context, i) {
-                        final order = orders[i];
-                        final orderId = (order['orderId'] ?? order['id'] ?? '').toString();
-                        final email = (order['email'] ?? '').toString();
-                        final total = order['totalAmount']?.toString() ?? '0';
-                        final subtotal = (order['subtotal'] ?? total).toString();
-                        final shippingFee = order['shippingFee']?.toString() ?? '0';
-                        final status = (order['statusOrder'] ?? '').toString();
-                        
-                        // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
-                        String address = '';
-                        try {
-                          if (order['shippingAddress'] != null) {
-                            address = order['shippingAddress'].toString();
-                          } else if (order['address'] != null) {
-                            address = order['address'].toString();
-                          } else if (order['deliveryInfo'] != null) {
-                            final deliveryInfo = order['deliveryInfo'];
-                            if (deliveryInfo is Map<String, dynamic>) {
-                              final name = deliveryInfo['name'] ?? '';
-                              final phone = deliveryInfo['phone'] ?? '';
-                              final addr = deliveryInfo['address'] ?? '';
-                              address = '$name • $phone\n$addr';
-                            } else if (deliveryInfo is String) {
-                              address = deliveryInfo;
-                            }
-                          }
-                        } catch (e) {
-                          address = '';
-                        }
-                        
-                        final createdAt = order['timestamp'] ?? order['createdAt'];
-                        final collection = order['collection'] ?? 'orders';
+                    ),
+                    SliverPadding(
+                      padding: EdgeInsets.zero,
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount:
+                              (MediaQuery.of(context).size.width ~/ 420)
+                                  .clamp(1, 3),
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          mainAxisExtent: 180,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) {
+                            final order = paginatedOrders[i];
+                            final orderId =
+                                (order['orderId'] ?? order['id'] ?? '')
+                                    .toString();
+                            final email = (order['email'] ?? '').toString();
+                            final total =
+                                order['totalAmount']?.toString() ?? '0';
+                            final subtotal =
+                                (order['subtotal'] ?? total).toString();
+                            final shippingFee =
+                                order['shippingFee']?.toString() ?? '0';
+                            final status =
+                                (order['statusOrder'] ?? '').toString();
 
-                        return OrderCard(
-                          orderId: orderId,
-                          email: email,
-                          total: total,
-                          subtotal: subtotal,
-                          shippingFee: shippingFee,
-                          status: status,
-                          address: address,
-                          createdAt: createdAt,
-                          statusColor: _statusColor(status),
-                          allStatuses: rawStatusValues,
-                          onTap: () => _showOrderDetailsDialog(order),
-                          onEdit: () => _showEditOrderDialog(order),
-                          onDelete: () => _confirmDeleteOrder(orderId, collection),
-                          // Inline status changer
-                          onChangeStatus: (newStatus) async {
-                            if (newStatus == null || !mounted) return;
-                            
-                            // Store ScaffoldMessenger reference early to avoid widget disposal issues
-                            final scaffoldMessenger = ScaffoldMessenger.of(context);
-                            
+                            // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
+                            String address = '';
                             try {
-                              // Store old status for notification
-                              final oldStatus = status;
-
-                              final payload = {
-                                'statusOrder': newStatus,
-                                if (newStatus == 'Completed')
-                                  'statusPayment': 'Payment Completed',
-                              };
-                              await updateOrder(orderId, collection, payload);
-                              
-                              // Check if widget is still mounted after async operation
-                              if (!mounted) return;
-
-                              // Debug order data
-                              print('🔍 Order Debug Info:');
-                              print('🔍 Order ID: $orderId');
-                              print('🔍 New Status: $newStatus');
-                              print('🔍 Address: "$address"');
-                              print('🔍 Address isEmpty: ${address.isEmpty}');
-                              print('🔍 Total: $total');
-                              print('🔍 Email: $email');
-                              print('🔍 Current tracking number: ${order['trackingNumber']}');
-
-                              // Tạo shipment khi chuyển sang Processing (chỉ nếu chưa có tracking number)
-                              if (newStatus == 'Processing' && (order['trackingNumber'] == null || order['trackingNumber'].toString().isEmpty)) {
-                                print('🚚 Status is Processing and no tracking number, creating shipment...');
-                                
-                                if (address.isEmpty) {
-                                  print('⚠️ Address is empty! Using fallback address');
-                                  address = 'Địa chỉ không xác định, TP.HCM'; // Fallback address
+                              if (order['shippingAddress'] != null) {
+                                address = order['shippingAddress'].toString();
+                              } else if (order['address'] != null) {
+                                address = order['address'].toString();
+                              } else if (order['deliveryInfo'] != null) {
+                                final deliveryInfo = order['deliveryInfo'];
+                                if (deliveryInfo is Map<String, dynamic>) {
+                                  final name = deliveryInfo['name'] ?? '';
+                                  final phone = deliveryInfo['phone'] ?? '';
+                                  final addr = deliveryInfo['address'] ?? '';
+                                  address = '$name • $phone\n$addr';
+                                } else if (deliveryInfo is String) {
+                                  address = deliveryInfo;
                                 }
-                                
+                              }
+                            } catch (e) {
+                              address = '';
+                            }
+
+                            final createdAt =
+                                order['timestamp'] ?? order['createdAt'];
+                            final collection = order['collection'] ?? 'orders';
+
+                            return OrderCard(
+                              orderId: orderId,
+                              email: email,
+                              total: total,
+                              subtotal: subtotal,
+                              shippingFee: shippingFee,
+                              status: status,
+                              address: address,
+                              createdAt: createdAt,
+                              statusColor: _statusColor(status),
+                              allStatuses: rawStatusValues,
+                              onTap: () => _showOrderDetailsDialog(order),
+                              onEdit: () => _showEditOrderDialog(order),
+                              onDelete: () =>
+                                  _confirmDeleteOrder(orderId, collection),
+                              // Inline status changer
+                              onChangeStatus: (newStatus) async {
+                                if (newStatus == null || !mounted) return;
+
+                                // Store ScaffoldMessenger reference early to avoid widget disposal issues
+                                final scaffoldMessenger =
+                                    ScaffoldMessenger.of(context);
+
                                 try {
-                                  print('🚚 Creating shipment for order: $orderId');
-                                  
-                                  // Get customer phone from order data
-                                  final customerPhone = order['phone']?.toString() ?? 
-                                                       order['deliveryInfo']?['phone']?.toString() ?? 
-                                                       '0987654321'; // Fallback phone
-                                  
-                                  // Calculate total weight (estimate 1.5kg per item)
-                                  final orderItems = (order['items'] as List?) ?? [];
-                                  final totalWeight = orderItems.isNotEmpty ? orderItems.length * 1.5 : 2.0;
-                                  
-                                  print('📞 Customer phone: "$customerPhone"');
-                                  print('📱 Order phone field: ${order['phone']}');
-                                  print('📱 DeliveryInfo phone: ${order['deliveryInfo']?['phone']}');
-                                  print('⚖️ Total weight: ${totalWeight}kg');
-                                  print('📦 Order items count: ${orderItems.length}');
-                                  
-                                  final result = await ShippingService.createShipment(
-                                    orderId: orderId,
-                                    shippingAddress: address,
-                                    customerInfo: {
-                                      'name': order['deliveryInfo']?['name']?.toString() ?? 
-                                             order['displayName']?.toString() ?? 
-                                             'Khách hàng',
-                                      'phone': customerPhone, // ✅ Required by GHN
-                                      'email': email,
-                                    },
-                                    totalValue: _limitInsuranceValue(double.tryParse(total.replaceAll('\$', '')) ?? 0),
-                                    totalWeight: totalWeight, // ✅ Required parameter
-                                    items: orderItems.isNotEmpty ? orderItems.map((item) => {
-                                      'name': item['name']?.toString() ?? 'Pet Store Item',
-                                      'quantity': item['quantity'] ?? 1,
-                                      'price': item['price'] ?? 0,
-                                      'weight': _safeWeight(item['weight']) ?? 1500, // Safe weight conversion
-                                    }).toList() : [
-                                      {
-                                        'name': 'Pet Store Order',
-                                        'quantity': 1,
-                                        'price': double.tryParse(total.replaceAll('\$', '')) ?? 0,
-                                        'weight': 2000, // 2kg in grams (like GHNTestPage)
-                                      }
-                                    ],
-                                  );
-                                  
-                                  print('🚚 Shipment creation result: ${result['success']}');
-                                  
-                                  if (result['success']) {
-                                    final trackingNumber = result['data']['trackingNumber'];
-                                    print('🚚 Tracking number: $trackingNumber');
-                                    print('📦 Shipping data keys: ${result['data'].keys.toList()}');
-                                    print('📦 Has trackingHistory: ${result['data']['trackingHistory'] != null}');
-                                    
-                                    // Lưu tracking number vào order
-                                    await updateOrder(orderId, collection, {
-                                      'trackingNumber': trackingNumber,
-                                      'shippingInfo': result['data'],
-                                    });
-                                    
-                                    print('✅ Saved to Firebase - orderId: $orderId, collection: $collection');
-                                    
-                                    // Verify data was saved by reading it back
-                                    final verifyDoc = await FirebaseFirestore.instance
-                                        .collection(collection)
-                                        .doc(orderId)
-                                        .get();
-                                    final verifyData = verifyDoc.data();
-                                    print('🔍 Verify - trackingNumber in Firebase: ${verifyData?['trackingNumber']}');
-                                    print('🔍 Verify - shippingInfo exists: ${verifyData?['shippingInfo'] != null}');
-                                    
-                                    if (mounted) {
-                                      scaffoldMessenger.showSnackBar(
-                                        SnackBar(
-                                          content: Text('✅ Đã tạo đơn giao hàng: $trackingNumber'),
-                                          backgroundColor: Colors.green,
-                                          duration: Duration(seconds: 3),
-                                        ),
-                                      );
+                                  // Store old status for notification
+                                  final oldStatus = status;
+
+                                  final payload = {
+                                    'statusOrder': newStatus,
+                                    if (newStatus == 'Completed')
+                                      'statusPayment': 'Payment Completed',
+                                  };
+                                  await updateOrder(
+                                      orderId, collection, payload);
+
+                                  // Check if widget is still mounted after async operation
+                                  if (!mounted) return;
+
+                                  // Debug order data
+                                  print('🔍 Order Debug Info:');
+                                  print('🔍 Order ID: $orderId');
+                                  print('🔍 New Status: $newStatus');
+                                  print('🔍 Address: "$address"');
+                                  print(
+                                      '🔍 Address isEmpty: ${address.isEmpty}');
+                                  print('🔍 Total: $total');
+                                  print('🔍 Email: $email');
+                                  print(
+                                      '🔍 Current tracking number: ${order['trackingNumber']}');
+
+                                  // Tạo shipment khi chuyển sang Processing (chỉ nếu chưa có tracking number)
+                                  if (newStatus == 'Processing' &&
+                                      (order['trackingNumber'] == null ||
+                                          order['trackingNumber']
+                                              .toString()
+                                              .isEmpty)) {
+                                    print(
+                                        '🚚 Status is Processing and no tracking number, creating shipment...');
+
+                                    if (address.isEmpty) {
+                                      print(
+                                          '⚠️ Address is empty! Using fallback address');
+                                      address =
+                                          'Địa chỉ không xác định, TP.HCM'; // Fallback address
                                     }
-                                  } else {
-                                    print('🚚 Shipment creation failed: ${result['message']}');
+
+                                    try {
+                                      print(
+                                          '🚚 Creating shipment for order: $orderId');
+
+                                      // Get customer phone from order data
+                                      final customerPhone =
+                                          order['phone']?.toString() ??
+                                              order['deliveryInfo']?['phone']
+                                                  ?.toString() ??
+                                              '0987654321'; // Fallback phone
+
+                                      // Calculate total weight (estimate 1.5kg per item)
+                                      final orderItems =
+                                          (order['items'] as List?) ?? [];
+                                      final totalWeight = orderItems.isNotEmpty
+                                          ? orderItems.length * 1.5
+                                          : 2.0;
+
+                                      print(
+                                          '📞 Customer phone: "$customerPhone"');
+                                      print(
+                                          '📱 Order phone field: ${order['phone']}');
+                                      print(
+                                          '📱 DeliveryInfo phone: ${order['deliveryInfo']?['phone']}');
+                                      print(
+                                          '⚖️ Total weight: ${totalWeight}kg');
+                                      print(
+                                          '📦 Order items count: ${orderItems.length}');
+
+                                      final result =
+                                          await ShippingService.createShipment(
+                                        orderId: orderId,
+                                        shippingAddress: address,
+                                        customerInfo: {
+                                          'name': order['deliveryInfo']?['name']
+                                                  ?.toString() ??
+                                              order['displayName']
+                                                  ?.toString() ??
+                                              'Khách hàng',
+                                          'phone':
+                                              customerPhone, // ✅ Required by GHN
+                                          'email': email,
+                                        },
+                                        totalValue: _limitInsuranceValue(
+                                            double.tryParse(total.replaceAll(
+                                                    '\$', '')) ??
+                                                0),
+                                        totalWeight:
+                                            totalWeight, // ✅ Required parameter
+                                        items: orderItems.isNotEmpty
+                                            ? orderItems
+                                                .map((item) => {
+                                                      'name': item['name']
+                                                              ?.toString() ??
+                                                          'Pet Store Item',
+                                                      'quantity':
+                                                          item['quantity'] ?? 1,
+                                                      'price':
+                                                          item['price'] ?? 0,
+                                                      'weight': _safeWeight(
+                                                              item['weight']) ??
+                                                          1500, // Safe weight conversion
+                                                    })
+                                                .toList()
+                                            : [
+                                                {
+                                                  'name': 'Pet Store Order',
+                                                  'quantity': 1,
+                                                  'price': double.tryParse(
+                                                          total.replaceAll(
+                                                              '\$', '')) ??
+                                                      0,
+                                                  'weight':
+                                                      2000, // 2kg in grams (like GHNTestPage)
+                                                }
+                                              ],
+                                      );
+
+                                      print(
+                                          '🚚 Shipment creation result: ${result['success']}');
+
+                                      if (result['success']) {
+                                        final trackingNumber =
+                                            result['data']['trackingNumber'];
+                                        print(
+                                            '🚚 Tracking number: $trackingNumber');
+                                        print(
+                                            '📦 Shipping data keys: ${result['data'].keys.toList()}');
+                                        print(
+                                            '📦 Has trackingHistory: ${result['data']['trackingHistory'] != null}');
+
+                                        // Lưu tracking number vào order
+                                        await updateOrder(orderId, collection, {
+                                          'trackingNumber': trackingNumber,
+                                          'shippingInfo': result['data'],
+                                        });
+
+                                        print(
+                                            '✅ Saved to Firebase - orderId: $orderId, collection: $collection');
+
+                                        // Verify data was saved by reading it back
+                                        final verifyDoc =
+                                            await FirebaseFirestore.instance
+                                                .collection(collection)
+                                                .doc(orderId)
+                                                .get();
+                                        final verifyData = verifyDoc.data();
+                                        print(
+                                            '🔍 Verify - trackingNumber in Firebase: ${verifyData?['trackingNumber']}');
+                                        print(
+                                            '🔍 Verify - shippingInfo exists: ${verifyData?['shippingInfo'] != null}');
+
+                                        if (mounted) {
+                                          scaffoldMessenger.showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  '✅ Đã tạo đơn giao hàng: $trackingNumber'),
+                                              backgroundColor: Colors.green,
+                                              duration:
+                                                  const Duration(seconds: 3),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        print(
+                                            '🚚 Shipment creation failed: ${result['message']}');
+                                        if (mounted) {
+                                          scaffoldMessenger.showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Lỗi tạo đơn giao hàng: ${result['message']}'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    } catch (e) {
+                                      print('Error creating shipment: $e');
+                                      if (mounted) {
+                                        scaffoldMessenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Lỗi tạo đơn giao hàng: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                      // Return early to avoid further processing
+                                      return;
+                                    }
+                                  } else if (newStatus == 'Processing' &&
+                                      order['trackingNumber'] != null &&
+                                      order['trackingNumber']
+                                          .toString()
+                                          .isNotEmpty) {
+                                    print(
+                                        '🚚 Order already has tracking number: ${order['trackingNumber']} - skipping shipment creation');
                                     if (mounted) {
                                       scaffoldMessenger.showSnackBar(
                                         SnackBar(
-                                          content: Text('Lỗi tạo đơn giao hàng: ${result['message']}'),
-                                          backgroundColor: Colors.red,
+                                          content: Text(
+                                              'Đơn hàng đã có mã vận chuyển: ${order['trackingNumber']}'),
+                                          backgroundColor: Colors.orange,
                                         ),
                                       );
                                     }
                                   }
+
+                                  // Gửi notification và email
+                                  if (!mounted) return;
+                                  if (orderId.isNotEmpty && email.isNotEmpty) {
+                                    final userInfo = await authService.value
+                                        .getInfoUserFromEmail(email);
+                                    if (userInfo != null && mounted) {
+                                      // Send email
+                                      sendOrderEmail(
+                                        name: (userInfo['displayName'] ?? '')
+                                            .toString(),
+                                        email: email,
+                                        orderId: orderId,
+                                        orderStatus: newStatus,
+                                      );
+
+                                      // Send in-app notification
+                                      final customerInfo =
+                                          await OrderNotificationHelper
+                                              .getCustomerInfoFromEmail(email);
+                                      if (customerInfo != null && mounted) {
+                                        await OrderNotificationHelper
+                                            .sendOrderStatusChangeNotification(
+                                          userId: customerInfo['userId'],
+                                          orderId: orderId,
+                                          newStatus: newStatus,
+                                          oldStatus: oldStatus,
+                                          customerName:
+                                              customerInfo['displayName'],
+                                          email: email,
+                                        );
+                                      }
+                                    }
+                                  }
                                 } catch (e) {
-                                  print('Error creating shipment: $e');
+                                  print('❌ Error in onChangeStatus: $e');
                                   if (mounted) {
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
-                                        content: Text('Lỗi tạo đơn giao hàng: $e'),
+                                        content:
+                                            Text('Lỗi cập nhật trạng thái: $e'),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
                                   }
-                                  // Return early to avoid further processing
-                                  return;
+                                  return; // Early return to prevent further execution
                                 }
-                              } else if (newStatus == 'Processing' && order['trackingNumber'] != null && order['trackingNumber'].toString().isNotEmpty) {
-                                print('🚚 Order already has tracking number: ${order['trackingNumber']} - skipping shipment creation');
-                                if (mounted) {
-                                  scaffoldMessenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text('Đơn hàng đã có mã vận chuyển: ${order['trackingNumber']}'),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  );
-                                }
-                              }
-
-                              // Gửi notification và email
-                              if (!mounted) return;
-                              if (orderId.isNotEmpty && email.isNotEmpty) {
-                                final userInfo = await authService.value
-                                    .getInfoUserFromEmail(email);
-                                if (userInfo != null && mounted) {
-                                  // Send email
-                                  sendOrderEmail(
-                                    name: (userInfo['displayName'] ?? '')
-                                        .toString(),
-                                    email: email,
-                                    orderId: orderId,
-                                    orderStatus: newStatus,
-                                  );
-                                  
-                                  // Send in-app notification
-                                  final customerInfo = await OrderNotificationHelper.getCustomerInfoFromEmail(email);
-                                  if (customerInfo != null && mounted) {
-                                    await OrderNotificationHelper.sendOrderStatusChangeNotification(
-                                      userId: customerInfo['userId'],
-                                      orderId: orderId,
-                                      newStatus: newStatus,
-                                      oldStatus: oldStatus,
-                                      customerName: customerInfo['displayName'],
-                                      email: email,
-                                    );
-                                  }
-                                }
-                              }
-                            } catch (e) {
-                              print('❌ Error in onChangeStatus: $e');
-                              if (mounted) {
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text('Lỗi cập nhật trạng thái: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                              return; // Early return to prevent further execution
-                            }
+                              },
+                            );
                           },
-                        );
-                      },
-                    );
-                  },
+                          childCount: paginatedOrders.length,
+                        ),
+                      ),
+                    ),
+                    if (totalPages > 1)
+                      SliverToBoxAdapter(
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 16),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                              width: 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: _PaginationControls(
+                              currentPage: _currentPage,
+                              totalPages: totalPages,
+                              onPrev: _currentPage > 0
+                                  ? () => setState(() => _currentPage--)
+                                  : null,
+                              onNext: (_currentPage + 1) < totalPages
+                                  ? () => setState(() => _currentPage++)
+                                  : null,
+                              onSelectPage: (p) =>
+                                  setState(() => _currentPage = p),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -597,9 +776,12 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
-                  SizedBox(height: 8),
-                  Text('Đang xử lý...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                  CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(height: 8),
+                  Text('Đang xử lý...',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface)),
                 ],
               ),
             ),
@@ -619,13 +801,16 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () async {
               await deleteOrder(orderId, collection);
               if (!mounted) return;
               Navigator.pop(context);
             },
-            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text('Delete',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -653,32 +838,32 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               TextField(
                   controller: emailController,
                   decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context)!.email, border: OutlineInputBorder())),
+                      labelText: AppLocalizations.of(context)!.email,
+                      border: const OutlineInputBorder())),
               const SizedBox(height: 10),
               TextField(
                 controller: totalAmountController,
                 decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)!.totalAmountLabel, border: OutlineInputBorder()),
+                    labelText: AppLocalizations.of(context)!.totalAmountLabel,
+                    border: const OutlineInputBorder()),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: selected,
-                items: rawStatusValues
-                    .map((rawStatus) {
-                      // Find index to get localized text
-                      int index = rawStatusValues.indexOf(rawStatus);
-                      String localizedText = statuses[index + 1]; // +1 because statuses includes "All"
-                      return DropdownMenuItem(
-                        value: rawStatus, 
-                        child: Text(localizedText)
-                      );
-                    })
-                    .toList(),
+                items: rawStatusValues.map((rawStatus) {
+                  // Find index to get localized text
+                  int index = rawStatusValues.indexOf(rawStatus);
+                  String localizedText =
+                      statuses[index + 1]; // +1 because statuses includes "All"
+                  return DropdownMenuItem(
+                      value: rawStatus, child: Text(localizedText));
+                }).toList(),
                 onChanged: (v) => selected = v ?? selected,
                 decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)!.statusLabel, border: OutlineInputBorder()),
+                    labelText: AppLocalizations.of(context)!.statusLabel,
+                    border: const OutlineInputBorder()),
               ),
             ],
           ),
@@ -688,7 +873,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               onPressed: () => Navigator.pop(context),
               child: Text(AppLocalizations.of(context)!.cancel)),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary),
             onPressed: () async {
               await updateOrder(orderId, collection, {
                 'email': emailController.text.trim(),
@@ -702,7 +888,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               if (!mounted) return;
               Navigator.pop(context);
             },
-            child: Text(AppLocalizations.of(context)!.save, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text(AppLocalizations.of(context)!.save,
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -718,7 +906,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     final String statusPay = (order['statusPayment'] ?? '').toString();
     final String method = (order['paymentMethod'] ?? '').toString();
     final String status = (order['statusOrder'] ?? '').toString();
-    
+
     // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
     String address = '';
     try {
@@ -740,7 +928,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     } catch (e) {
       address = '';
     }
-    
+
     final String phone = (order['phone'] ?? '').toString();
     final dynamic ts = order['timestamp'] ?? order['createdAt'];
     final List<Map<String, dynamic>> items = (order['items'] is List)
@@ -834,7 +1022,8 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                   children: [
                     Icon(Icons.circle, size: 10, color: _statusColor(status)),
                     const SizedBox(width: 6),
-                    Text(_getLocalizedStatus(status), style: TextStyle(color: _statusColor(status))),
+                    Text(_getLocalizedStatus(status),
+                        style: TextStyle(color: _statusColor(status))),
                   ],
                 ),
               ),
@@ -861,51 +1050,83 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                             children: [
                               Row(
                                 children: [
-                                  Expanded(child: _kv(AppLocalizations.of(context)!.email, email)),
+                                  Expanded(
+                                      child: _kv(
+                                          AppLocalizations.of(context)!.email,
+                                          email)),
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
                                     Expanded(
-                                        child: _kv(AppLocalizations.of(context)!.totalAmountLabel, CurrencyHelper.formatVND(total))),
+                                        child: _kv(
+                                            AppLocalizations.of(context)!
+                                                .totalAmountLabel,
+                                            CurrencyHelper.formatVND(total))),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
                               if (isNarrow)
                                 Row(children: [
                                   Expanded(
-                                      child: _kv(AppLocalizations.of(context)!.totalAmountLabel, CurrencyHelper.formatVND(total)))
+                                      child: _kv(
+                                          AppLocalizations.of(context)!
+                                              .totalAmountLabel,
+                                          CurrencyHelper.formatVND(total)))
                                 ]),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Expanded(child: _kv(AppLocalizations.of(context)!.statusPay, statusPay)),
+                                  Expanded(
+                                      child: _kv(
+                                          AppLocalizations.of(context)!
+                                              .statusPay,
+                                          statusPay)),
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
                                     Expanded(
-                                        child: _kv(AppLocalizations.of(context)!.paymentMethod, method)),
+                                        child: _kv(
+                                            AppLocalizations.of(context)!
+                                                .paymentMethod,
+                                            method)),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
                               if (isNarrow)
                                 Row(children: [
-                                  Expanded(child: _kv(AppLocalizations.of(context)!.paymentMethod, method))
+                                  Expanded(
+                                      child: _kv(
+                                          AppLocalizations.of(context)!
+                                              .paymentMethod,
+                                          method))
                                 ]),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Expanded(child: _kv(AppLocalizations.of(context)!.address, address)),
+                                  Expanded(
+                                      child: _kv(
+                                          AppLocalizations.of(context)!.address,
+                                          address)),
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
-                                    Expanded(child: _kv(AppLocalizations.of(context)!.phone, phone)),
+                                    Expanded(
+                                        child: _kv(
+                                            AppLocalizations.of(context)!.phone,
+                                            phone)),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
                               if (isNarrow)
                                 Row(children: [
-                                  Expanded(child: _kv(AppLocalizations.of(context)!.phone, phone))
+                                  Expanded(
+                                      child: _kv(
+                                          AppLocalizations.of(context)!.phone,
+                                          phone))
                                 ]),
                               const SizedBox(height: 8),
                               Row(children: [
-                                Expanded(child: _kv(AppLocalizations.of(context)!.createdAt, _fmtDate(ts)))
+                                Expanded(
+                                    child: _kv(
+                                        AppLocalizations.of(context)!.createdAt,
+                                        _fmtDate(ts)))
                               ]),
                             ],
                           );
@@ -918,18 +1139,19 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          Expanded(
+                          const Expanded(
                             child: Text('Thông tin giao hàng',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
                           TextButton.icon(
-                            icon: Icon(Icons.refresh, size: 18),
-                            label: Text('Làm mới'),
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('Làm mới'),
                             onPressed: () async {
                               // Force refresh tracking data
                               Navigator.pop(ctx);
-                              await Future.delayed(Duration(milliseconds: 100));
+                              await Future.delayed(
+                                  const Duration(milliseconds: 100));
                               _showOrderDetailsDialog(order);
                             },
                           ),
@@ -945,7 +1167,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                       // Nếu đơn đang xử lý nhưng chưa có tracking number
                       const SizedBox(height: 16),
                       Container(
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.orange.shade50,
                           borderRadius: BorderRadius.circular(8),
@@ -953,24 +1175,27 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                            SizedBox(width: 12),
-                            Expanded(
+                            const Icon(Icons.warning_amber_rounded,
+                                color: Colors.orange),
+                            const SizedBox(width: 12),
+                            const Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('Chưa tạo đơn giao hàng',
-                                      style: TextStyle(fontWeight: FontWeight.bold)),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
                                   SizedBox(height: 4),
-                                  Text('Đơn hàng đang xử lý nhưng chưa có mã vận chuyển. '
-                                       'Hãy kiểm tra lại hoặc tạo đơn giao hàng thủ công.',
-                                       style: TextStyle(fontSize: 13)),
+                                  Text(
+                                      'Đơn hàng đang xử lý nhưng chưa có mã vận chuyển. '
+                                      'Hãy kiểm tra lại hoặc tạo đơn giao hàng thủ công.',
+                                      style: TextStyle(fontSize: 13)),
                                 ],
                               ),
                             ),
                             ElevatedButton.icon(
-                              icon: Icon(Icons.local_shipping, size: 16),
-                              label: Text('Tạo đơn'),
+                              icon: const Icon(Icons.local_shipping, size: 16),
+                              label: const Text('Tạo đơn'),
                               onPressed: () async {
                                 // Tạo shipment thủ công
                                 await _createShipmentManually(order);
@@ -986,7 +1211,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(AppLocalizations.of(context)!.items,
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                     const SizedBox(height: 8),
@@ -995,7 +1220,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                     SizedBox(
                       height: 300,
                       child: items.isEmpty
-                          ? Center(child: Text(AppLocalizations.of(context)!.noItems))
+                          ? Center(
+                              child:
+                                  Text(AppLocalizations.of(context)!.noItems))
                           : ListView.separated(
                               primary: false,
                               shrinkWrap: true,
@@ -1035,9 +1262,11 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                   title: Text(name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis),
-                                  subtitle: Text('Giá: ${CurrencyHelper.formatVND(price)}'),
+                                  subtitle: Text(
+                                      'Giá: ${CurrencyHelper.formatVND(price)}'),
                                   trailing: Text(
-                                    CurrencyHelper.formatVND(_safeMul(price, qty)),
+                                    CurrencyHelper.formatVND(
+                                        _safeMul(price, qty)),
                                     style: const TextStyle(
                                         color: primaryColor,
                                         fontWeight: FontWeight.w600),
@@ -1081,15 +1310,15 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   int? _safeWeight(dynamic weight) {
     try {
       if (weight == null) return null;
-      
+
       if (weight is int) return weight;
       if (weight is double) return weight.toInt();
-      
+
       if (weight is String) {
         final parsed = double.tryParse(weight);
         if (parsed != null) return parsed.toInt();
       }
-      
+
       return null;
     } catch (e) {
       print('❌ Error converting weight: $weight ($e)');
@@ -1101,7 +1330,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   Future<void> _createShipmentManually(Map<String, dynamic> order) async {
     final orderId = (order['orderId'] ?? order['id'] ?? '').toString();
     final collection = order['collection'] ?? 'orders';
-    
+
     // Get address
     String address = '';
     try {
@@ -1121,26 +1350,26 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     } catch (e) {
       address = '';
     }
-    
+
     if (address.isEmpty) {
       address = 'Địa chỉ không xác định, TP.HCM';
     }
-    
+
     final email = (order['email'] ?? '').toString();
     final total = (order['totalAmount'] ?? '0').toString();
-    
+
     try {
       setState(() => isLoading = true);
-      
+
       // Get customer phone
-      final customerPhone = order['phone']?.toString() ?? 
-                           order['deliveryInfo']?['phone']?.toString() ?? 
-                           '0987654321';
-      
+      final customerPhone = order['phone']?.toString() ??
+          order['deliveryInfo']?['phone']?.toString() ??
+          '0987654321';
+
       // Calculate weight
       final orderItems = (order['items'] as List?) ?? [];
       final totalWeight = orderItems.isNotEmpty ? orderItems.length * 1.5 : 2.0;
-      
+
       // Prefer precise coordinates from deliveryInfo if available
       double? destLat;
       double? destLng;
@@ -1160,31 +1389,36 @@ class _OrdersAdminState extends State<OrdersAdmin> {
         orderId: orderId,
         shippingAddress: address,
         customerInfo: {
-          'name': order['deliveryInfo']?['name']?.toString() ?? 
-                 order['displayName']?.toString() ?? 
-                 'Khách hàng',
+          'name': order['deliveryInfo']?['name']?.toString() ??
+              order['displayName']?.toString() ??
+              'Khách hàng',
           'phone': customerPhone,
           'email': email,
         },
-        totalValue: _limitInsuranceValue(double.tryParse(total.replaceAll('\$', '')) ?? 0),
+        totalValue: _limitInsuranceValue(
+            double.tryParse(total.replaceAll('\$', '')) ?? 0),
         totalWeight: totalWeight,
-        items: orderItems.isNotEmpty ? orderItems.map((item) => {
-          'name': item['name']?.toString() ?? 'Pet Store Item',
-          'quantity': item['quantity'] ?? 1,
-          'price': item['price'] ?? 0,
-          'weight': _safeWeight(item['weight']) ?? 1500,
-        }).toList() : [
-          {
-            'name': 'Pet Store Order',
-            'quantity': 1,
-            'price': double.tryParse(total.replaceAll('\$', '')) ?? 0,
-            'weight': 2000,
-          }
-        ],
+        items: orderItems.isNotEmpty
+            ? orderItems
+                .map((item) => {
+                      'name': item['name']?.toString() ?? 'Pet Store Item',
+                      'quantity': item['quantity'] ?? 1,
+                      'price': item['price'] ?? 0,
+                      'weight': _safeWeight(item['weight']) ?? 1500,
+                    })
+                .toList()
+            : [
+                {
+                  'name': 'Pet Store Order',
+                  'quantity': 1,
+                  'price': double.tryParse(total.replaceAll('\$', '')) ?? 0,
+                  'weight': 2000,
+                }
+              ],
         destinationLat: destLat,
         destinationLng: destLng,
       );
-      
+
       if (result['success']) {
         final shipmentData = Map<String, dynamic>.from(result['data']);
         final trackingNumber = shipmentData['trackingNumber'];
@@ -1197,12 +1431,12 @@ class _OrdersAdminState extends State<OrdersAdmin> {
             'lng': destLng,
           };
         }
-        
+
         await updateOrder(orderId, collection, {
           'trackingNumber': trackingNumber,
           'shippingInfo': shipmentData,
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1210,9 +1444,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
               backgroundColor: Colors.green,
             ),
           );
-          
+
           // Reload dialog
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
           _showOrderDetailsDialog(order);
         }
       } else {
@@ -1240,5 +1474,104 @@ class _OrdersAdminState extends State<OrdersAdmin> {
         setState(() => isLoading = false);
       }
     }
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  final int currentPage; // zero-based
+  final int totalPages; // 0 means none
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final ValueChanged<int>? onSelectPage;
+
+  const _PaginationControls({
+    required this.currentPage,
+    required this.totalPages,
+    this.onPrev,
+    this.onNext,
+    this.onSelectPage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (totalPages <= 1) return const SizedBox.shrink();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: onPrev,
+          tooltip: 'Trang trước',
+          icon: const Icon(Icons.chevron_left),
+          style: IconButton.styleFrom(
+            backgroundColor: onPrev != null
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+        ...List.generate(totalPages > 7 ? 7 : totalPages, (index) {
+          int pageNum;
+          if (totalPages <= 7) {
+            pageNum = index;
+          } else {
+            if (currentPage < 3) {
+              pageNum = index;
+            } else if (currentPage > totalPages - 4) {
+              pageNum = totalPages - 7 + index;
+            } else {
+              pageNum = currentPage - 3 + index;
+            }
+          }
+          if (pageNum >= totalPages) return const SizedBox.shrink();
+          final isSelected = pageNum == currentPage;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: InkWell(
+              onTap: onSelectPage != null ? () => onSelectPage!(pageNum) : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).dividerColor,
+                    width: 1.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${pageNum + 1}',
+                  style: TextStyle(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: onNext,
+          tooltip: 'Trang sau',
+          icon: const Icon(Icons.chevron_right),
+          style: IconButton.styleFrom(
+            backgroundColor: onNext != null
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                : null,
+          ),
+        ),
+      ],
+    );
   }
 }

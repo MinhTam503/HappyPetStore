@@ -19,6 +19,10 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
   String _selectedCategory = 'All';
   String _priceSortOrder = 'none'; // none | asc | desc
   final TextEditingController _searchController = TextEditingController();
+  
+  // Pagination
+  int _currentPage = 0;
+  static const int _itemsPerPage = 12;
 
   @override
   void initState() {
@@ -82,7 +86,10 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
       working.sort((a, b) => _priceOf(b).compareTo(_priceOf(a)));
     }
 
-    setState(() => _filteredPets = working);
+    setState(() {
+      _filteredPets = working;
+      _currentPage = 0; // reset page whenever filters/search change
+    });
   }
 
   double _priceOf(Map<String, dynamic> pet) {
@@ -149,6 +156,15 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
     final gap = _gapForWidth(width);
     final pad = _pagePadding(width);
     final aspect = _aspectForCross(cross);
+    
+    // Pagination calculations
+    final totalItems = _filteredPets.length;
+    final totalPages = (totalItems / _itemsPerPage).ceil().clamp(0, 9999);
+    final startIndex = (_currentPage * _itemsPerPage).clamp(0, totalItems);
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, totalItems);
+    final paginatedPets = totalItems == 0
+        ? <Map<String, dynamic>>[]
+        : _filteredPets.sublist(startIndex, endIndex);
 
     return Scaffold(
       backgroundColor: secondaryColor,
@@ -212,18 +228,6 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
                             _applyFilters();
                           },
                         ),
-                        SizedBox(height: gap),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            'Tìm thấy ${_filteredPets.length} thú cưng',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade700,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
                         _filteredPets.isEmpty
                             ? Center(
                                 child: Padding(
@@ -250,7 +254,7 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
                             : GridView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _filteredPets.length,
+                                itemCount: paginatedPets.length,
                                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: cross,
                                   crossAxisSpacing: gap,
@@ -258,7 +262,7 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
                                   childAspectRatio: aspect,
                                 ),
                                 itemBuilder: (context, index) {
-                                  final pet = _filteredPets[index];
+                                  final pet = paginatedPets[index];
                                   final petId = pet['id']?.toString() ?? '';
                                   return PetCardWebUser(
                                     pet: pet,
@@ -266,6 +270,33 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
                                   );
                                 },
                               ),
+                        if (_filteredPets.isNotEmpty && totalPages > 1) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: _PaginationControls(
+                                currentPage: _currentPage,
+                                totalPages: totalPages,
+                                onPrev: _currentPage > 0
+                                    ? () => setState(() => _currentPage--)
+                                    : null,
+                                onNext: (_currentPage + 1) < totalPages
+                                    ? () => setState(() => _currentPage++)
+                                    : null,
+                                onSelectPage: (p) => setState(() => _currentPage = p),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -312,6 +343,106 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
+    );
+  }
+}
+
+class _PaginationControls extends StatelessWidget {
+  final int currentPage; // zero-based
+  final int totalPages; // 0 means none
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final ValueChanged<int>? onSelectPage;
+
+  const _PaginationControls({
+    required this.currentPage,
+    required this.totalPages,
+    this.onPrev,
+    this.onNext,
+    this.onSelectPage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (totalPages <= 1) return const SizedBox.shrink();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: onPrev,
+          tooltip: 'Trang trước',
+          icon: const Icon(Icons.chevron_left),
+          style: IconButton.styleFrom(
+            backgroundColor: onPrev != null
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Page numbers (max 7)
+        ...List.generate(totalPages > 7 ? 7 : totalPages, (index) {
+          int pageNum;
+          if (totalPages <= 7) {
+            pageNum = index;
+          } else {
+            if (currentPage < 3) {
+              pageNum = index;
+            } else if (currentPage > totalPages - 4) {
+              pageNum = totalPages - 7 + index;
+            } else {
+              pageNum = currentPage - 3 + index;
+            }
+          }
+
+          if (pageNum >= totalPages) return const SizedBox.shrink();
+          final isSelected = pageNum == currentPage;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: InkWell(
+              onTap: onSelectPage != null ? () => onSelectPage!(pageNum) : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).dividerColor,
+                    width: 1.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${pageNum + 1}',
+                  style: TextStyle(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: onNext,
+          tooltip: 'Trang sau',
+          icon: const Icon(Icons.chevron_right),
+          style: IconButton.styleFrom(
+            backgroundColor: onNext != null
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                : null,
+          ),
+        ),
+      ],
     );
   }
 }
