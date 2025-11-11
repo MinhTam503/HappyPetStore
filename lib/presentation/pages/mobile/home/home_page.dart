@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+// Removed LocalizationHelper after migration to AppLocalizations
 import 'package:pet_shop/presentation/pages/mobile/search/search_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
@@ -121,7 +121,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() {
         userName = userInfo['displayName']?.isNotEmpty == true
             ? userInfo['displayName']
-            : LocalizationHelper.getLocalizedText(context, 'you');
+            : (AppLocalizations.of(context)?.you ?? 'You');
         userId = FirebaseAuth.instance.currentUser?.uid;
       });
     }
@@ -270,7 +270,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            LocalizationHelper.getLocalizedText(context, 'searchPetsPlaceholder'),
+                            l10n?.searchPetsPlaceholder ?? 'Search for pets',
                             style: const TextStyle(
                               color: Colors.black45,
                               fontSize: 14,
@@ -337,14 +337,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 fontSize: 23,
               ),
               children: [
-                TextSpan(text: "${LocalizationHelper.getLocalizedText(context, 'hello')}, "),
+                TextSpan(text: "${l10n?.hello ?? 'Hello'}, "),
                 TextSpan(
                   text: "$userName\n",
                   style: const TextStyle(color: primaryColor),
                 ),
                 TextSpan(
-                  text: l10n?.welcomeToHappyPets ??
-                      LocalizationHelper.getLocalizedText(context, 'welcomeToHappyPets'),
+                  text: l10n?.welcomeToHappyPets ?? 'Welcome to Happy Pets Shop!',
                   style: const TextStyle(
                     fontSize: 17,
                     color: Colors.black38,
@@ -358,8 +357,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 10),
           Text(
-            l10n?.findPerfectCompanion ??
-                LocalizationHelper.getLocalizedText(context, 'findPerfectCompanion'),
+            l10n?.findPerfectCompanion ?? 'Find the perfect companion for your family',
             style: const TextStyle(
               fontSize: 28,
               color: Colors.black,
@@ -409,7 +407,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(
                 width: 300,
                 child: Text(
-                  l10n?.searchPetsPlaceholder ?? LocalizationHelper.getLocalizedText(context, 'searchPetsPlaceholder'),
+                  l10n?.searchPetsPlaceholder ?? 'Search for pets',
                   style: const TextStyle(
                     color: Colors.black45,
                     fontSize: 14,
@@ -441,17 +439,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Row(
           children: [
             TabIndicator(
-              title: l10n?.forYou ?? 'Dành cho bạn',
+              title: l10n?.forYou ?? 'For You',
               isSelected: _selectedTabIndex == 0,
               onTap: () => _tabController.animateTo(0),
             ),
             TabIndicator(
-              title: l10n?.popular ?? 'Phổ biến',
+              title: l10n?.popular ?? 'Popular',
               isSelected: _selectedTabIndex == 1,
               onTap: () => _tabController.animateTo(1),
             ),
             TabIndicator(
-              title: l10n?.allPets ?? 'Tất cả',
+              title: l10n?.allPets ?? 'All',
               isSelected: _selectedTabIndex == 2,
               onTap: () => _tabController.animateTo(2),
             ),

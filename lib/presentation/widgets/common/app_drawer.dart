@@ -12,6 +12,7 @@ import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart'
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/notification/nofi_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -64,7 +65,8 @@ class _AppDrawerState extends State<AppDrawer> {
     if (userInfo?['email'] != null) {
       return userInfo!['email'].toString().split('@')[0];
     }
-    return 'Người dùng';
+    // Localized fallback display name
+    return AppLocalizations.of(context)?.user ?? 'User';
   }
 
   String _getEmailDisplay() {
@@ -130,8 +132,8 @@ class _AppDrawerState extends State<AppDrawer> {
                 const SizedBox(height: 20),
 
                 // Title
-                const Text(
-                  'Đăng xuất',
+                Text(
+                  AppLocalizations.of(context)!.logout,
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -141,8 +143,8 @@ class _AppDrawerState extends State<AppDrawer> {
                 const SizedBox(height: 12),
 
                 // Message
-                const Text(
-                  'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
+                Text(
+                  AppLocalizations.of(context)!.logoutConfirm,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -165,8 +167,8 @@ class _AppDrawerState extends State<AppDrawer> {
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        child: const Text(
-                          'Hủy',
+                        child: Text(
+                          AppLocalizations.of(context)!.cancel,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -191,8 +193,8 @@ class _AppDrawerState extends State<AppDrawer> {
                           ),
                           elevation: 0,
                         ),
-                        child: const Text(
-                          'Đăng xuất',
+                        child: Text(
+                          AppLocalizations.of(context)!.logout,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -212,7 +214,7 @@ class _AppDrawerState extends State<AppDrawer> {
 
   Future<void> _logout() async {
     try {
-      DialogHelper.showLoadingDialog(context, message: 'Đang đăng xuất...');
+      DialogHelper.showLoadingDialog(context, message: AppLocalizations.of(context)!.loggingOut);
       await authService.value.signOut();
 
       // Clear UserManager data
@@ -222,8 +224,8 @@ class _AppDrawerState extends State<AppDrawer> {
       if (mounted) {
         NotificationHelper.showSuccess(
           context,
-          'Đăng xuất thành công',
-          'Hẹn gặp lại bạn!',
+          AppLocalizations.of(context)!.logoutSuccessTitle,
+          AppLocalizations.of(context)!.logoutSuccessMessage,
         );
 
         Navigator.of(context).pushAndRemoveUntil(
@@ -235,8 +237,8 @@ class _AppDrawerState extends State<AppDrawer> {
       if (mounted) {
         NotificationHelper.showError(
           context,
-          'Lỗi đăng xuất',
-          'Không thể đăng xuất. Vui lòng thử lại.',
+          AppLocalizations.of(context)!.logoutErrorTitle,
+          AppLocalizations.of(context)!.logoutErrorMessage,
         );
       }
     } finally {
@@ -345,7 +347,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _DrawerItem(
                   icon: Icons.notifications_outlined,
                   activeIcon: Icons.notifications,
-                  title: 'Thông báo',
+                  title: AppLocalizations.of(context)!.notificationTitle,
                   onTap: () {
                     Navigator.pop(context);
                     if (userIdentifier != null) {
@@ -362,7 +364,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _DrawerItem(
                   icon: Icons.home_outlined,
                   activeIcon: Icons.home,
-                  title: 'Cửa hàng',
+                  title: AppLocalizations.of(context)!.store,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -376,7 +378,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _DrawerItem(
                   icon: Icons.shopping_bag_outlined,
                   activeIcon: Icons.shopping_bag,
-                  title: 'Đơn hàng của tôi',
+                  title: AppLocalizations.of(context)!.yourOrders,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -390,7 +392,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _DrawerItem(
                   icon: Icons.favorite_border,
                   activeIcon: Icons.favorite,
-                  title: 'Thú cưng yêu thích',
+                  title: AppLocalizations.of(context)!.favorites,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.pushReplacement(
@@ -405,7 +407,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _DrawerItem(
                   icon: Icons.shopping_cart_outlined,
                   activeIcon: Icons.shopping_cart,
-                  title: 'Giỏ hàng',
+                  title: AppLocalizations.of(context)!.cart,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.pushReplacement(
@@ -421,7 +423,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _DrawerItem(
                   icon: Icons.settings_outlined,
                   activeIcon: Icons.settings,
-                  title: 'Cài đặt',
+                  title: AppLocalizations.of(context)!.settings,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -435,7 +437,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _DrawerItem(
                   icon: Icons.logout_outlined,
                   activeIcon: Icons.logout,
-                  title: 'Đăng xuất',
+                  title: AppLocalizations.of(context)!.logout,
                   isDestructive: true,
                   onTap: () {
                     Navigator.pop(context);

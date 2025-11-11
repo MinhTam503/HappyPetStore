@@ -1668,6 +1668,105 @@
   "cameraPermissionDenied": "Camera permission denied",
   "@cameraPermissionDenied": {"description": "Camera permission denied message"},
   "pleaseAllowCamera": "Please allow camera access to scan QR codes",
-  "@pleaseAllowCamera": {"description": "Please allow camera permission message"}
+  "@pleaseAllowCamera": {"description": "Please allow camera permission message"},
+  "addFavoritePetsMessage": "Add some pets to your favorites list!",
+  "@addFavoritePetsMessage": {"description": "Prompt encouraging user to add favorite pets"},
+  "loginRequired": "You need to login first.",
+  "sendingOtp": "Sending OTP...",
+  "otpSendFailed": "Failed to send OTP",
+  "otpSent": "OTP sent",
+  "enter6Digits": "Please enter 6 digits",
+  "verifying": "Verifying...",
+  "verificationErrorRetry": "Verification error. Please try again.",
+  "incorrectOtp": "Incorrect OTP",
+  "invalidSession": "Invalid verification session",
+  "checkout": "Checkout",
+  "shippingAddress": "Shipping Address",
+  "noShippingAddress": "No shipping address",
+  "tapToAddAddress": "Tap to add address",
+  "payNow": "Pay Now"
+  ,
+  "yourAddresses": "Your Addresses",
+  "noAddresses": "No addresses yet",
+  "addAddressToContinueOrdering": "Add an address to continue ordering",
+  "addAddress": "Add Address",
+  "defaultLabel": "Default",
+  "setDefault": "Set as default",
+  "success": "Success",
+  "error": "Error",
+  "confirmDeleteAddress": "Are you sure you want to delete this address?"
+  ,
+  "passwordChangeInfoBlurb": "To protect your account, choose a strong and unique password different from other sites.",
+  "oldPassword": "Old Password",
+  "newPassword": "New Password",
+  "enterOldPassword": "Enter old password",
+  "enterNewPassword": "Enter new password",
+  "reenterNewPassword": "Re-enter new password",
+  "pleaseEnterOldPassword": "Please enter old password",
+  "pleaseEnterNewPassword": "Please enter new password",
+  "pleaseConfirmPassword": "Please confirm your password",
+  "cannotMatchOldPassword": "Cannot be the same as old password",
+  "passwordChangeSuccess": "Password changed successfully!",
+  "incorrectOldPassword": "Incorrect old password",
+  "loggingOut": "Logging out...",
+  "logoutSuccessTitle": "Logout successful",
+  "logoutSuccessMessage": "See you again!",
+  "logoutErrorTitle": "Logout error",
+  "logoutErrorMessage": "Unable to logout. Please try again.",
+  "passwordStrengthVeryWeak": "Very weak",
+  "passwordStrengthWeak": "Weak",
+  "passwordStrengthMedium": "Medium",
+  "passwordStrengthGood": "Good",
+  "passwordStrengthStrong": "Strong"
+  ,
+  "forgotPasswordTitle": "Forgot Password",
+  "forgotPasswordHeading": "Forgot your password?",
+  "forgotPasswordSubtitle": "Enter your email or phone number to reset your password",
+  "emailOrPhoneHint": "Email or phone number",
+  "sendRequestButton": "Send request",
+  "rememberPassword": "Remember your password? ",
+  "loginNow": "Login now",
+  "enterEmailOrPhone": "Please enter your email or phone number",
+  "checkingEmail": "Checking email...",
+  "emailNotExist": "This email is not registered",
+  "resetEmailSent": "Password reset email sent",
+  "checkEmailInstructions": "Please check your email for reset instructions",
+  "sendEmailFailed": "Failed to send reset email",
+  "checkingPhone": "Checking phone number...",
+  "phoneNotRegistered": "This phone number is not registered!",
+  "phoneCheckError": "Phone check error: {error}",
+  "@phoneCheckError": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Timeout"
+      }
+    }
+  },
+  "instructions": "Instructions:",
+  "instructionsEmailBullet": "• Email: Receive a password reset link via email",
+  "instructionsPhoneBullet": "• Phone: Verify OTP and receive instructions",
+  "passwordResetGuideTitle": "Password reset guide",
+  "phoneVerifiedMessage": "Phone {phone} has been verified successfully!",
+  "@phoneVerifiedMessage": {
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "+84123456789"
+      }
+    }
+  },
+  "passwordResetStepsIntro": "To reset your password, please:",
+  "passwordResetStep1": "1. Contact admin via support email",
+  "passwordResetStep2": "2. Or login using Google/Facebook",
+  "passwordResetStep3": "3. Then update a new password in account settings",
+  "passwordResetNote": "Note: SMS-based password reset is not supported yet.",
+  "gotIt": "Got it",
+  "ok": "OK"
+  ,
+  "you": "you"
+  ,
+  "somethingWentWrong": "Something went wrong",
+  "loginButton": "LOGIN"
 }
 

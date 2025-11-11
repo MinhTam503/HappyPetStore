@@ -11,7 +11,6 @@ import 'package:pet_shop/core/config/vnpay_config.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
@@ -402,7 +401,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         backgroundColor: secondaryColor,
         elevation: 0,
         centerTitle: true,
-        title: Text(LocalizationHelper.getLocalizedText(context, 'checkout')),
+  title: const Text('Thanh toán'),
       ),
       body: BlocListener<VnpayBloc, VnpayState>(
         listener: (context, state) async {
@@ -525,7 +524,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                LocalizationHelper.getLocalizedText(context, 'shippingAddress'),
+                                'Địa chỉ giao hàng',
                                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: primaryColor),
                               ),
                               const SizedBox(height: 4),
@@ -543,11 +542,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 ),
                               ] else ...[
                                 Text(
-                                  LocalizationHelper.getLocalizedText(context, 'noShippingAddress'),
+                                  'Chưa có địa chỉ giao hàng',
                                   style: const TextStyle(fontSize: 14, color: Colors.orange, fontWeight: FontWeight.w500),
                                 ),
                                 Text(
-                                  LocalizationHelper.getLocalizedText(context, 'tapToAddAddress'),
+                                  'Chạm để thêm địa chỉ',
                                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                                 ),
                               ],
@@ -688,7 +687,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Text(LocalizationHelper.getLocalizedText(context, 'payNow')),
+                      child: const Text('Thanh toán ngay'),
                     ),
                   ),
                 ],

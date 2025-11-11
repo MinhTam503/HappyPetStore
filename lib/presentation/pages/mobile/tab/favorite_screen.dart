@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
@@ -44,22 +44,22 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
     }
   }
 
-  int _computeCrossAxisCount(double width) {
-    if (width < 500) return 2; // phone
-    if (width < 800) return 2; // small tablet
-    if (width < 1200) return 3; // large tablet / small desktop
-    return 4; // desktop
-    // Tùy dự án, bạn có thể tinh chỉnh breakpoints này.
-  }
+  // int _computeCrossAxisCount(double width) {
+  //   if (width < 500) return 2; // phone
+  //   if (width < 800) return 2; // small tablet
+  //   if (width < 1200) return 3; // large tablet / small desktop
+  //   return 4; // desktop
+  //   // Tùy dự án, bạn có thể tinh chỉnh breakpoints này.
+  // }
 
-  double _computeChildAspectRatio(int crossAxisCount, double width) {
-    // Với 1 cột: card dạng hàng ngang => rộng : cao ≈ 3.6
-    // Nhiều cột: card gần như vuông đứng hơn
-    if (crossAxisCount == 1) return 3.6;
-    if (crossAxisCount == 2) return 2.0;
-    if (crossAxisCount == 3) return 1.6;
-    return 1.4;
-  }
+  // double _computeChildAspectRatio(int crossAxisCount, double width) {
+  //   // Với 1 cột: card dạng hàng ngang => rộng : cao ≈ 3.6
+  //   // Nhiều cột: card gần như vuông đứng hơn
+  //   if (crossAxisCount == 1) return 3.6;
+  //   if (crossAxisCount == 2) return 2.0;
+  //   if (crossAxisCount == 3) return 1.6;
+  //   return 1.4;
+  // }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
@@ -78,7 +78,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
         backgroundColor: secondaryColor,
         elevation: 0,
         title: Text(
-          LocalizationHelper.getLocalizedText(context, 'favorites'),
+          AppLocalizations.of(context)!.favorites,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -99,16 +99,14 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                           size: 56, color: Colors.black26),
                       const SizedBox(height: 10),
                       Text(
-                        LocalizationHelper.getLocalizedText(
-                            context, 'noFavoriteYet'),
+                        AppLocalizations.of(context)!.noFavoriteYet,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        LocalizationHelper.getLocalizedText(
-                            context, 'addFavoritePetsMessage'),
+                        AppLocalizations.of(context)!.addFavoritePetsMessage,
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: Colors.black54),
                       ),
@@ -119,10 +117,11 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
 
               return LayoutBuilder(
                 builder: (context, constraints) {
-                  final width = constraints.maxWidth;
-                  final crossAxisCount = _computeCrossAxisCount(width);
-                  final aspect =
-                      _computeChildAspectRatio(crossAxisCount, width);
+                  // final width = constraints.maxWidth;
+                  // final crossAxisCount = _computeCrossAxisCount(width);
+
+                  // final aspect =
+                  //     _computeChildAspectRatio(crossAxisCount, width);
 
                   return GridView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -131,7 +130,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: 0.72, // tỷ lệ phù hợp card dạng dọc
+                      childAspectRatio: 0.72, // responsive card ratio
                     ),
                     itemCount: favoriteItems.length,
                     itemBuilder: (context, index) {
@@ -180,8 +179,8 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                       content: Text(
-                                          LocalizationHelper.getLocalizedText(
-                                              context, 'errorOccurred'))),
+                                          AppLocalizations.of(context)!
+                                              .errorOccurred(''))),
                                 );
                               }
                             },
@@ -196,8 +195,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
               return Center(child: Text("Error: ${state.message}"));
             } else {
               return Center(
-                  child: Text(LocalizationHelper.getLocalizedText(
-                      context, 'unknownState')));
+                  child: Text(AppLocalizations.of(context)!.unknownState));
             }
           },
         ),

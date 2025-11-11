@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
@@ -191,11 +191,11 @@ class _RemoveButton extends StatelessWidget {
         final userManager = UserManager();
         final userIdentifier = await userManager.getUserIdentifier();
         if (userIdentifier == null) {
+          final l10n = AppLocalizations.of(context);
           NotificationHelper.showWarning(
             context,
-            LocalizationHelper.getLocalizedText(context, 'notificationTitle'),
-            LocalizationHelper.getLocalizedText(
-                context, 'pleaseLoginToContinue'),
+            l10n?.notificationTitle ?? 'Thông báo',
+            l10n?.pleaseLoginToContinue ?? 'Vui lòng đăng nhập để tiếp tục',
           );
           return;
         }

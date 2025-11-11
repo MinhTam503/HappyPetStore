@@ -7,7 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/order_success.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/checkout_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
@@ -729,7 +729,7 @@ class _CartScreenState extends State<CartScreen> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          LocalizationHelper.getLocalizedText(context, 'myCart'),
+          AppLocalizations.of(context)?.myCart ?? 'Giỏ hàng của tôi',
           style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -922,8 +922,7 @@ class _CartScreenState extends State<CartScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              LocalizationHelper.getLocalizedText(
-                                  context, 'Chọn tất cả'),
+                AppLocalizations.of(context)?.selectAll ?? 'Chọn tất cả',
                               style:
                                   const TextStyle(fontWeight: FontWeight.w600),
                             ),
@@ -931,7 +930,7 @@ class _CartScreenState extends State<CartScreen> {
                           Chip(
                             backgroundColor: Colors.black12,
                             label: Text(
-                              '${LocalizationHelper.getLocalizedText(context, 'Đã chọn')}: $selectedCount',
+                              '${AppLocalizations.of(context)?.selected ?? 'Đã chọn'}: $selectedCount',
                               style: const TextStyle(color: Colors.black87),
                             ),
                           ),
@@ -1043,8 +1042,7 @@ class _CartScreenState extends State<CartScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  LocalizationHelper.getLocalizedText(
-                                      context, 'total'),
+                  AppLocalizations.of(context)?.totalLabel ?? 'Tổng',
                                   style: const TextStyle(
                                       fontSize: 14, color: Colors.black87),
                                 ),
@@ -1103,8 +1101,7 @@ class _CartScreenState extends State<CartScreen> {
                                 ),
                               ),
                               child: Text(
-                                LocalizationHelper.getLocalizedText(
-                                    context, 'checkout'),
+                AppLocalizations.of(context)?.confirm ?? 'Thanh toán',
                                 style: const TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.w600),
                               ),

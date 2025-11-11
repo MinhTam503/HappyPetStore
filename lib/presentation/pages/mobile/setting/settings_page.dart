@@ -246,7 +246,7 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (_) => const BottomNavigator(initialIndex: 3),
+              builder: (_) => const BottomNavigator(initialIndex: 4),
             ),
             (route) => false,
           ),

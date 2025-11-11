@@ -6,7 +6,7 @@ import 'package:pet_shop/presentation/widgets/components/my_button.dart';
 import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
 import 'package:pet_shop/helpers/phone_utils.dart';
 
@@ -67,12 +67,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     String account = _accountController.text.trim();
 
     if (account.isEmpty) {
-      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'enterEmailOrPhone'));
+      _showSnackbar(AppLocalizations.of(context)!.enterEmailOrPhone);
       return;
     }
 
     if (!_isEmail(account) && !_isPhoneNumber(account)) {
-      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone'));
+      _showSnackbar(AppLocalizations.of(context)!.invalidEmailOrPhone);
       return;
     }
 
@@ -84,7 +84,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   }
 
   Future<void> _resetPasswordWithEmail(String email) async {
-    DialogHelper.showLoadingDialog(context, message: LocalizationHelper.getLocalizedText(context, 'checkingEmail'));
+  DialogHelper.showLoadingDialog(context, message: AppLocalizations.of(context)!.checkingEmail);
 
     try {
       // Check if email exists in Firestore
@@ -96,7 +96,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       if (emailQuery.docs.isEmpty) {
         await DialogHelper.hideLoadingDialog(context);
         if (mounted) {
-          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'emailNotExist'));
+          _showSnackbar(AppLocalizations.of(context)!.emailNotExist);
         }
         return;
       }
@@ -107,24 +107,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       await DialogHelper.hideLoadingDialog(context);
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         _showSuccessDialog(
-          LocalizationHelper.getLocalizedText(context, 'resetEmailSent'),
-          "${LocalizationHelper.getLocalizedText(context, 'checkEmailInstructions')} ($email)",
+          l10n.resetEmailSent,
+          "${l10n.checkEmailInstructions} ($email)",
         );
       }
     } on FirebaseAuthException catch (e) {
       await DialogHelper.hideLoadingDialog(context);
       
-      String errorMessage = LocalizationHelper.getLocalizedText(context, 'sendEmailFailed');
+      String errorMessage = AppLocalizations.of(context)!.sendEmailFailed;
       switch (e.code) {
         case 'user-not-found':
-          errorMessage = LocalizationHelper.getLocalizedText(context, 'emailNotExist');
+          errorMessage = AppLocalizations.of(context)!.emailNotExist;
           break;
         case 'invalid-email':
-          errorMessage = LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone');
+          errorMessage = AppLocalizations.of(context)!.invalidEmailOrPhone;
           break;
         default:
-          errorMessage = "Lỗi gửi email: ${e.message}";
+          errorMessage = "${AppLocalizations.of(context)!.errorOccurred(e.message ?? '')}";
       }
       
       if (mounted) {
@@ -133,7 +134,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     } catch (e) {
       await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
-        _showSnackbar("Lỗi gửi email: $e");
+        _showSnackbar(AppLocalizations.of(context)!.errorOccurred(e.toString()));
       }
     }
   }
@@ -141,7 +142,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   Future<void> _resetPasswordWithPhone(String phone) async {
     String formattedPhone = _formatPhoneNumber(phone);
     
-    DialogHelper.showLoadingDialog(context, message: "Đang kiểm tra số điện thoại...");
+  DialogHelper.showLoadingDialog(context, message: AppLocalizations.of(context)!.checkingPhone);
 
     try {
       // Check if phone exists in Firestore (check both fields and legacy 09 format)
@@ -155,7 +156,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       if (q1.docs.isEmpty && q2.docs.isEmpty && q3.docs.isEmpty && q4.docs.isEmpty) {
         await DialogHelper.hideLoadingDialog(context);
         if (mounted) {
-          _showSnackbar("Số điện thoại chưa được đăng ký!");
+          _showSnackbar(AppLocalizations.of(context)!.phoneNotRegistered);
         }
         return;
       }
@@ -186,7 +187,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     } catch (e) {
       await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
-        _showSnackbar("Lỗi kiểm tra số điện thoại: $e");
+        _showSnackbar(AppLocalizations.of(context)!.phoneCheckError(e.toString()));
       }
     }
   }
@@ -201,7 +202,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
             children: [
               Icon(Icons.info, color: Colors.blue.shade600),
               const SizedBox(width: 10),
-              const Text("Hướng dẫn đặt lại mật khẩu"),
+              Text(AppLocalizations.of(context)!.passwordResetGuideTitle),
             ],
           ),
           content: Column(
@@ -209,15 +210,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Số điện thoại $phone đã được xác thực thành công!",
+                AppLocalizations.of(context)!.phoneVerifiedMessage(phone),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 15),
-              const Text("Để đặt lại mật khẩu, vui lòng:"),
+              Text(AppLocalizations.of(context)!.passwordResetStepsIntro),
               const SizedBox(height: 10),
-              const Text("1. Liên hệ với admin qua email hỗ trợ"),
-              const Text("2. Hoặc sử dụng tính năng đăng nhập bằng Google/Facebook"),
-              const Text("3. Sau đó cập nhật mật khẩu mới trong phần cài đặt tài khoản"),
+              Text(AppLocalizations.of(context)!.passwordResetStep1),
+              Text(AppLocalizations.of(context)!.passwordResetStep2),
+              Text(AppLocalizations.of(context)!.passwordResetStep3),
               const SizedBox(height: 15),
               Container(
                 padding: const EdgeInsets.all(10),
@@ -225,8 +226,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                   color: Colors.yellow.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  "Lưu ý: Hiện tại hệ thống chưa hỗ trợ đặt lại mật khẩu trực tiếp qua SMS.",
+                child: Text(
+                  AppLocalizations.of(context)!.passwordResetNote,
                   style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
               ),
@@ -238,7 +239,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 Navigator.of(context).pop();
                 Navigator.of(context).pop(); // Go back to login
               },
-              child: const Text("Đã hiểu"),
+              child: Text(AppLocalizations.of(context)!.gotIt),
             ),
           ],
         );
@@ -266,7 +267,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 Navigator.of(context).pop();
                 Navigator.of(context).pop(); // Go back to login
               },
-              child: const Text("OK"),
+              child: Text(AppLocalizations.of(context)!.ok),
             ),
           ],
         );
@@ -296,8 +297,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          "Quên mật khẩu",
+        title: Text(
+          AppLocalizations.of(context)!.forgotPasswordTitle,
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -391,16 +392,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                       ),
                     ),
                     const SizedBox(height: 40),
-                    const Text(
-                      "Quên mật khẩu?",
+                    Text(
+                      AppLocalizations.of(context)!.forgotPasswordHeading,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      "Nhập email hoặc số điện thoại để đặt lại mật khẩu",
+                    Text(
+                      AppLocalizations.of(context)!.forgotPasswordSubtitle,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w300,
@@ -410,25 +411,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                     ),
                     const SizedBox(height: 40),
                     MyTextField(
-                      hintText: LocalizationHelper.getLocalizedText(context, 'emailOrPhoneHint'),
+                      hintText: AppLocalizations.of(context)!.emailOrPhoneHint,
                       icon: const Icon(Icons.contact_mail_outlined),
                       controller: _accountController,
                       obsecureText: false,
                     ),
                     const SizedBox(height: 30),
                     MyButton(
-                      text: LocalizationHelper.getLocalizedText(context, 'sendRequestButton'),
+                      text: AppLocalizations.of(context)!.sendRequestButton,
                       onPressed: _resetPassword,
                     ),
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Nhớ mật khẩu? "),
+                        Text(AppLocalizations.of(context)!.rememberPassword),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Text(
-                            "Đăng nhập ngay",
+                            AppLocalizations.of(context)!.loginNow,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.pink.shade300,
@@ -451,19 +452,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                               Icon(Icons.info_outline, 
                                 color: Colors.blue.shade600, size: 20),
                               const SizedBox(width: 10),
-                              const Expanded(
+                              Expanded(
                                 child: Text(
-                                  "Hướng dẫn:",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  AppLocalizations.of(context)!.instructions,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          const Text(
-                            "• Email: Nhận liên kết đặt lại mật khẩu qua email\n"
-                            "• Số điện thoại: Xác thực OTP và nhận hướng dẫn",
-                            style: TextStyle(fontSize: 14),
+                          Text(
+                            "${AppLocalizations.of(context)!.instructionsEmailBullet}\n${AppLocalizations.of(context)!.instructionsPhoneBullet}",
+                            style: const TextStyle(fontSize: 14),
                           ),
                         ],
                       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'address_edit_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -41,7 +42,8 @@ class _AddressListPageState extends State<AddressListPage> {
       _hasInteracted = true;
       ctx.read<AddressBloc>().add(SetDefaultAddress(index));
     } catch (e) {
-      NotificationHelper.showError(ctx, 'Lỗi', 'Không thể cập nhật địa chỉ mặc định: $e');
+      final l10n = AppLocalizations.of(ctx)!;
+      NotificationHelper.showError(ctx, l10n.error, 'Không thể cập nhật địa chỉ mặc định: $e');
     }
   }
 
@@ -49,16 +51,19 @@ class _AddressListPageState extends State<AddressListPage> {
     final confirmed = await showDialog<bool>(
       context: ctx,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận xóa'),
-        content: const Text('Bạn có chắc chắn muốn xóa địa chỉ này?'),
+        title: Text(AppLocalizations.of(context)!.confirmDeleteTitle),
+        content: Text(AppLocalizations.of(context)!.confirmDeleteAddress),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -71,7 +76,8 @@ class _AddressListPageState extends State<AddressListPage> {
       _hasInteracted = true;
       ctx.read<AddressBloc>().add(DeleteAddress(index));
     } catch (e) {
-      NotificationHelper.showError(ctx, 'Lỗi', 'Không thể xóa địa chỉ: $e');
+      final l10n = AppLocalizations.of(ctx)!;
+      NotificationHelper.showError(ctx, l10n.error, 'Không thể xóa địa chỉ: $e');
     }
   }
 
@@ -105,16 +111,16 @@ class _AddressListPageState extends State<AddressListPage> {
           }
           // Show overlay for operations after initial load or after any user interaction
           if (state.isLoading && (_hasCompletedInitialLoad || _hasInteracted)) {
-            DialogHelper.showLoadingDialog(context, message: 'Đang xử lý...');
+            DialogHelper.showLoadingDialog(context, message: AppLocalizations.of(context)!.processing);
           } else if (!state.isLoading) {
             DialogHelper.safeHideLoadingDialog();
           }
 
           if (state.infoMessage != null && state.infoMessage!.isNotEmpty) {
-            NotificationHelper.showSuccess(context, 'Thành công', state.infoMessage!);
+            NotificationHelper.showSuccess(context, AppLocalizations.of(context)!.success, state.infoMessage!);
           }
           if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
-            NotificationHelper.showError(context, 'Lỗi', state.errorMessage!);
+            NotificationHelper.showError(context, AppLocalizations.of(context)!.error, state.errorMessage!);
           }
           addresses = state.addresses;
           isLoading = state.isLoading;
@@ -126,8 +132,8 @@ class _AddressListPageState extends State<AddressListPage> {
         backgroundColor: secondaryColor,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'Địa chỉ của bạn',
+        title: Text(
+          AppLocalizations.of(context)!.yourAddresses,
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -151,7 +157,7 @@ class _AddressListPageState extends State<AddressListPage> {
                       Icon(Icons.location_off, size: 64, color: Colors.grey.shade400),
                       const SizedBox(height: 16),
                       Text(
-                        'Chưa có địa chỉ nào',
+                        AppLocalizations.of(context)!.noAddresses,
                         style: TextStyle(
                           fontSize: 18,
                           color: Colors.grey.shade600,
@@ -160,7 +166,7 @@ class _AddressListPageState extends State<AddressListPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Thêm địa chỉ để tiếp tục đặt hàng',
+                        AppLocalizations.of(context)!.addAddressToContinueOrdering,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,
@@ -170,7 +176,7 @@ class _AddressListPageState extends State<AddressListPage> {
                       ElevatedButton.icon(
                         onPressed: () => _navigateToEdit(context),
                         icon: const Icon(Icons.add),
-                        label: const Text('Thêm địa chỉ'),
+                        label: Text(AppLocalizations.of(context)!.addAddress),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
@@ -230,8 +236,8 @@ class _AddressListPageState extends State<AddressListPage> {
                                         color: primaryColor,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: const Text(
-                                        'Mặc định',
+                                      child: Text(
+                                        AppLocalizations.of(context)!.defaultLabel,
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
@@ -263,19 +269,19 @@ class _AddressListPageState extends State<AddressListPage> {
                                   if (!isDefault)
                                     TextButton(
                                       onPressed: () => _setDefaultAddress(context, index),
-                                      child: const Text('Đặt mặc định'),
+                                      child: Text(AppLocalizations.of(context)!.setDefault),
                                     ),
                                   const Spacer(),
                                   TextButton(
                                     onPressed: () => _navigateToEdit(context, address, index),
-                                    child: const Text('Sửa'),
+                                    child: Text(AppLocalizations.of(context)!.edit),
                                   ),
                                   TextButton(
                                     onPressed: () => _deleteAddress(context, index),
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.red,
                                     ),
-                                    child: const Text('Xóa'),
+                                    child: Text(AppLocalizations.of(context)!.delete),
                                   ),
                                 ],
                               ),

@@ -9,7 +9,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class PetItems extends StatefulWidget {
   final Map<String, dynamic> pet;
@@ -200,7 +200,7 @@ class _PetItemsState extends State<PetItems> {
     
     if (userIdentifier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocalizationHelper.getLocalizedText(context, 'loginRequired'))),
+        SnackBar(content: Text(AppLocalizations.of(context)!.loginRequired)),
       );
       return;
     }
@@ -224,7 +224,7 @@ class _PetItemsState extends State<PetItems> {
     
     if (userIdentifier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LocalizationHelper.getLocalizedText(context, 'loginRequired'))),
+        SnackBar(content: Text(AppLocalizations.of(context)!.loginRequired)),
       );
       return;
     }

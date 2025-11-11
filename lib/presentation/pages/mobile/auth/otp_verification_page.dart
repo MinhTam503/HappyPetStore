@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OtpVerificationPage extends StatefulWidget {
@@ -87,8 +87,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
   void _sendOTP() async {
     if (!mounted) return;
 
-    DialogHelper.showLoadingDialog(context,
-        message: LocalizationHelper.getLocalizedText(context, 'sendingOtp'));
+  final l10n = AppLocalizations.of(context);
+  DialogHelper.showLoadingDialog(context,
+    message: l10n?.otpError ?? 'Đang gửi OTP...'); // fallback until key generated
 
     try {
       await authService.value.verifyPhoneNumber(
@@ -102,8 +103,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
         verificationFailed: (FirebaseAuthException e) async {
           if (mounted) {
             DialogHelper.hideLoadingDialog(context);
-            _showSnackbar(
-                "${LocalizationHelper.getLocalizedText(context, 'otpSendFailed')}: ${e.message}");
+      _showSnackbar(
+        "${l10n?.verificationFailed ?? 'Gửi OTP thất bại'}: ${e.message}");
           }
         },
         codeSent: (String verificationId, int? resendToken) async {
@@ -112,8 +113,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
             setState(() {
               _verificationId = verificationId;
             });
-            _showSnackbar(
-                LocalizationHelper.getLocalizedText(context, 'otpSent'));
+            _showSnackbar(l10n?.verifyButton ?? 'Đã gửi OTP');
           }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
@@ -127,8 +127,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     } catch (e) {
       if (mounted) {
         DialogHelper.hideLoadingDialog(context);
-        _showSnackbar(
-            "${LocalizationHelper.getLocalizedText(context, 'otpError')}: $e");
+  _showSnackbar("${l10n?.otpError ?? 'Lỗi gửi OTP'}: $e");
       }
     }
   }
@@ -142,14 +141,15 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
 
   Future<void> _verifyOTP(PhoneAuthCredential? credential) async {
     if (_currentOTP.length != 6 && credential == null) {
-      _showSnackbar(
-          LocalizationHelper.getLocalizedText(context, 'enter6Digits'));
+  final l10n = AppLocalizations.of(context);
+  _showSnackbar(l10n?.verificationFailed ?? 'Vui lòng nhập 6 chữ số');
       return;
     }
 
     if (!mounted) return;
-    DialogHelper.showLoadingDialog(context,
-        message: LocalizationHelper.getLocalizedText(context, 'verifying'));
+  final l10n = AppLocalizations.of(context);
+  DialogHelper.showLoadingDialog(context,
+    message: l10n?.verificationFailed ?? 'Đang xác thực...');
 
     try {
       PhoneAuthCredential finalCredential;
@@ -160,8 +160,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
         if (_verificationId == null) {
           if (mounted) {
             DialogHelper.hideLoadingDialog(context);
-            _showSnackbar(LocalizationHelper.getLocalizedText(
-                context, 'verificationErrorRetry'));
+            _showSnackbar(l10n?.verificationFailed ?? 'Lỗi xác thực. Vui lòng thử lại.');
           }
           return;
         }
@@ -185,25 +184,20 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         DialogHelper.hideLoadingDialog(context);
-        String errorMessage =
-            LocalizationHelper.getLocalizedText(context, 'verificationFailed');
+    String errorMessage = l10n?.verificationFailed ?? 'Xác thực thất bại';
 
         switch (e.code) {
           case 'invalid-verification-code':
-            errorMessage =
-                LocalizationHelper.getLocalizedText(context, 'incorrectOtp');
+            errorMessage = l10n?.verificationFailed ?? 'OTP không chính xác';
             break;
           case 'invalid-verification-id':
-            errorMessage =
-                LocalizationHelper.getLocalizedText(context, 'invalidSession');
+            errorMessage = l10n?.sessionExpired ?? 'Phiên xác thực không hợp lệ';
             break;
           case 'session-expired':
-            errorMessage =
-                LocalizationHelper.getLocalizedText(context, 'sessionExpired');
+            errorMessage = l10n?.sessionExpired ?? 'Phiên xác thực đã hết hạn!';
             break;
           default:
-            errorMessage =
-                "${LocalizationHelper.getLocalizedText(context, 'authError')}: ${e.message}";
+            errorMessage = "${l10n?.authError ?? 'Lỗi xác thực'}: ${e.message}";
         }
 
         _showSnackbar(errorMessage);
@@ -211,8 +205,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     } catch (e) {
       if (mounted) {
         DialogHelper.hideLoadingDialog(context);
-        _showSnackbar(
-            "${LocalizationHelper.getLocalizedText(context, 'unknownErrorOccurred')}: $e");
+    _showSnackbar("${l10n?.unknownErrorOccurred ?? 'Lỗi không xác định'}: $e");
       }
     }
   }
@@ -221,8 +214,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     try {
       if (widget.registrationData == null) {
         await DialogHelper.hideLoadingDialog(context);
-        _showSnackbar(LocalizationHelper.getLocalizedText(
-            context, 'missingRegistrationInfo'));
+    final l10n = AppLocalizations.of(context);
+    _showSnackbar(l10n?.missingRegistrationInfo ?? 'Thiếu thông tin đăng ký!');
         return;
       }
 
@@ -266,8 +259,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     } catch (e) {
       if (mounted) {
         DialogHelper.hideLoadingDialog(context);
-        _showSnackbar(
-            "${LocalizationHelper.getLocalizedText(context, 'registrationError')}: $e");
+    final l10n = AppLocalizations.of(context);
+    _showSnackbar("${l10n?.registrationError ?? 'Lỗi đăng ký'}: $e");
       }
     }
   }
@@ -284,8 +277,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     } catch (e) {
       await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
-        _showSnackbar(
-            "${LocalizationHelper.getLocalizedText(context, 'loginFailed')}: $e");
+    final l10n = AppLocalizations.of(context);
+    _showSnackbar("${l10n?.loginFailed ?? 'Đăng nhập thất bại'}: $e");
       }
     }
   }
@@ -300,23 +293,20 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     } catch (e) {
       await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
-        _showSnackbar(
-            "${LocalizationHelper.getLocalizedText(context, 'verificationError')}: $e");
+    final l10n = AppLocalizations.of(context);
+    _showSnackbar("${l10n?.verificationError ?? 'Lỗi xác thực'}: $e");
       }
     }
   }
 
   String _getPageTitle() {
     if (widget.isRegistration) {
-      return LocalizationHelper.getLocalizedText(
-          context, 'verificationRegistrationTitle');
+    return AppLocalizations.of(context)?.verificationRegistrationTitle ?? 'Xác thực đăng ký';
     } else if (widget.registrationData != null &&
         widget.registrationData!['resetPassword'] == true) {
-      return LocalizationHelper.getLocalizedText(
-          context, 'forgotPasswordVerificationTitle');
+    return AppLocalizations.of(context)?.forgotPasswordVerificationTitle ?? 'Xác thực quên mật khẩu';
     } else {
-      return LocalizationHelper.getLocalizedText(
-          context, 'loginVerificationTitle');
+    return AppLocalizations.of(context)?.loginVerificationTitle ?? 'Xác thực đăng nhập';
     }
   }
 
@@ -375,11 +365,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
               ),
               const SizedBox(height: 30),
               Text(
-                widget.isRegistration
-                    ? LocalizationHelper.getLocalizedText(
-                        context, 'verifyPhoneNumberTitle')
-                    : LocalizationHelper.getLocalizedText(
-                        context, 'loginWithOtpTitle'),
+        widget.isRegistration
+          ? AppLocalizations.of(context)?.verifyPhoneNumberTitle ?? 'Xác thực số điện thoại'
+          : AppLocalizations.of(context)?.loginWithOtpTitle ?? 'Đăng nhập với OTP',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -388,7 +376,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
               ),
               const SizedBox(height: 10),
               Text(
-                "${LocalizationHelper.getLocalizedText(context, 'otpSentTo')}\n${widget.phoneNumber}",
+                "${AppLocalizations.of(context)?.otpSentTo ?? 'Mã xác thực đã được gửi đến'}\n${widget.phoneNumber}",
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey.shade600,
@@ -441,8 +429,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
                     ),
                   ),
                   child: Text(
-                    LocalizationHelper.getLocalizedText(
-                        context, 'verifyButton'),
+          AppLocalizations.of(context)?.verifyButton ?? 'XÁC THỰC',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -455,15 +442,13 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(LocalizationHelper.getLocalizedText(
-                      context, 'didNotReceiveCode')),
+          Text(AppLocalizations.of(context)?.didNotReceiveCode ?? 'Không nhận được mã? '),
                   GestureDetector(
                     onTap: _canResend ? _resendOTP : null,
                     child: Text(
                       _canResend
-                          ? LocalizationHelper.getLocalizedText(
-                              context, 'resendButton')
-                          : "${LocalizationHelper.getLocalizedText(context, 'resendButtonTimer')} ($_resendTokenDuration)",
+              ? AppLocalizations.of(context)?.resendButton ?? 'Gửi lại'
+              : "${AppLocalizations.of(context)?.resendButtonTimer ?? 'Gửi lại'} ($_resendTokenDuration)",
                       style: TextStyle(
                         color: _canResend ? Colors.pink.shade300 : Colors.grey,
                         fontWeight: FontWeight.bold,

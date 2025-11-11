@@ -577,6 +577,105 @@
   "cameraPermissionDenied": "Quyền truy cập camera bị từ chối",
   "@cameraPermissionDenied": {"description": "Camera permission denied message"},
   "pleaseAllowCamera": "Vui lòng cấp quyền truy cập camera để quét mã QR",
-  "@pleaseAllowCamera": {"description": "Please allow camera permission message"}
+  "@pleaseAllowCamera": {"description": "Please allow camera permission message"},
+  "addFavoritePetsMessage": "Hãy thêm vài thú cưng vào danh sách yêu thích nhé!",
+  "@addFavoritePetsMessage": {"description": "Nhắc người dùng thêm thú cưng vào danh sách yêu thích"},
+  "loginRequired": "Bạn cần đăng nhập trước.",
+  "sendingOtp": "Đang gửi OTP...",
+  "otpSendFailed": "Gửi OTP thất bại",
+  "otpSent": "Đã gửi OTP",
+  "enter6Digits": "Vui lòng nhập 6 chữ số",
+  "verifying": "Đang xác thực...",
+  "verificationErrorRetry": "Lỗi xác thực. Vui lòng thử lại.",
+  "incorrectOtp": "OTP không chính xác",
+  "invalidSession": "Phiên xác thực không hợp lệ",
+  "checkout": "Thanh toán",
+  "shippingAddress": "Địa chỉ giao hàng",
+  "noShippingAddress": "Chưa có địa chỉ giao hàng",
+  "tapToAddAddress": "Chạm để thêm địa chỉ",
+  "payNow": "Thanh toán ngay"
+  ,
+  "yourAddresses": "Địa chỉ của bạn",
+  "noAddresses": "Chưa có địa chỉ nào",
+  "addAddressToContinueOrdering": "Thêm địa chỉ để tiếp tục đặt hàng",
+  "addAddress": "Thêm địa chỉ",
+  "defaultLabel": "Mặc định",
+  "setDefault": "Đặt mặc định",
+  "success": "Thành công",
+  "error": "Lỗi",
+  "confirmDeleteAddress": "Bạn có chắc chắn muốn xóa địa chỉ này?"
+  ,
+  "passwordChangeInfoBlurb": "Để bảo vệ tài khoản, hãy chọn mật khẩu mạnh và khác với những nơi khác.",
+  "oldPassword": "Mật khẩu cũ",
+  "newPassword": "Mật khẩu mới",
+  "enterOldPassword": "Nhập mật khẩu cũ",
+  "enterNewPassword": "Nhập mật khẩu mới",
+  "reenterNewPassword": "Nhập lại mật khẩu mới",
+  "pleaseEnterOldPassword": "Vui lòng nhập mật khẩu cũ",
+  "pleaseEnterNewPassword": "Vui lòng nhập mật khẩu mới",
+  "pleaseConfirmPassword": "Vui lòng xác nhận mật khẩu",
+  "cannotMatchOldPassword": "Không thể trùng mật khẩu cũ",
+  "passwordChangeSuccess": "Đổi mật khẩu thành công!",
+  "incorrectOldPassword": "Mật khẩu cũ không chính xác",
+  "loggingOut": "Đang đăng xuất...",
+  "logoutSuccessTitle": "Đăng xuất thành công",
+  "logoutSuccessMessage": "Hẹn gặp lại bạn!",
+  "logoutErrorTitle": "Lỗi đăng xuất",
+  "logoutErrorMessage": "Không thể đăng xuất. Vui lòng thử lại.",
+  "passwordStrengthVeryWeak": "Rất yếu",
+  "passwordStrengthWeak": "Yếu",
+  "passwordStrengthMedium": "Trung bình",
+  "passwordStrengthGood": "Khá",
+  "passwordStrengthStrong": "Mạnh"
+  ,
+  "forgotPasswordTitle": "Quên mật khẩu",
+  "forgotPasswordHeading": "Quên mật khẩu?",
+  "forgotPasswordSubtitle": "Nhập email hoặc số điện thoại để đặt lại mật khẩu",
+  "emailOrPhoneHint": "Email hoặc số điện thoại",
+  "sendRequestButton": "Gửi yêu cầu",
+  "rememberPassword": "Nhớ mật khẩu? ",
+  "loginNow": "Đăng nhập ngay",
+  "enterEmailOrPhone": "Vui lòng nhập email hoặc số điện thoại",
+  "checkingEmail": "Đang kiểm tra email...",
+  "emailNotExist": "Email này chưa được đăng ký",
+  "resetEmailSent": "Đã gửi email đặt lại mật khẩu",
+  "checkEmailInstructions": "Vui lòng kiểm tra email để nhận hướng dẫn đặt lại",
+  "sendEmailFailed": "Gửi email đặt lại thất bại",
+  "checkingPhone": "Đang kiểm tra số điện thoại...",
+  "phoneNotRegistered": "Số điện thoại chưa được đăng ký!",
+  "phoneCheckError": "Lỗi kiểm tra số điện thoại: {error}",
+  "@phoneCheckError": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Timeout"
+      }
+    }
+  },
+  "instructions": "Hướng dẫn:",
+  "instructionsEmailBullet": "• Email: Nhận liên kết đặt lại mật khẩu qua email",
+  "instructionsPhoneBullet": "• Số điện thoại: Xác thực OTP và nhận hướng dẫn",
+  "passwordResetGuideTitle": "Hướng dẫn đặt lại mật khẩu",
+  "phoneVerifiedMessage": "Số điện thoại {phone} đã được xác thực thành công!",
+  "@phoneVerifiedMessage": {
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "+84123456789"
+      }
+    }
+  },
+  "passwordResetStepsIntro": "Để đặt lại mật khẩu, vui lòng:",
+  "passwordResetStep1": "1. Liên hệ với admin qua email hỗ trợ",
+  "passwordResetStep2": "2. Hoặc sử dụng đăng nhập bằng Google/Facebook",
+  "passwordResetStep3": "3. Sau đó cập nhật mật khẩu mới trong cài đặt tài khoản",
+  "passwordResetNote": "Lưu ý: Hiện hệ thống chưa hỗ trợ đặt lại mật khẩu qua SMS.",
+  "gotIt": "Đã hiểu",
+  "ok": "OK",
+  "you": "bạn"
+  ,
+  "somethingWentWrong": "Đã xảy ra lỗi",
+  "loginButton": "ĐĂNG NHẬP"
 }
+
 

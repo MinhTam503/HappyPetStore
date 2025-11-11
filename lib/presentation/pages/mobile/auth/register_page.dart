@@ -4,7 +4,7 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/presentation/widgets/components/my_button.dart';
 import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/VerifyEmailPage.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -82,17 +82,17 @@ class _RegisterPageNewState extends State<RegisterPageNew>
 
     // Validation
     if (account.isEmpty || password.isEmpty || confirmPassword.isEmpty || name.isEmpty) {
-      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'fillAllFields'));
+      _showSnackbar(AppLocalizations.of(context)!.fillAllFields);
       return;
     }
 
     if (password.length < 6) {
-      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'passwordMinLength'));
+      _showSnackbar(AppLocalizations.of(context)!.passwordMinLength);
       return;
     }
 
     if (password != confirmPassword) {
-      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'passwordMismatch'));
+      _showSnackbar(AppLocalizations.of(context)!.passwordMismatch);
       return;
     }
 
@@ -114,7 +114,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
     } catch (e) {
       await DialogHelper.hideLoadingDialog(context);
       if (mounted) {
-        _showSnackbar("${LocalizationHelper.getLocalizedText(context, 'registrationError')}: $e");
+        _showSnackbar("${AppLocalizations.of(context)!.registrationError}: $e");
       }
     }
   }
@@ -129,10 +129,10 @@ class _RegisterPageNewState extends State<RegisterPageNew>
           .where("email", isEqualTo: email)
           .get();
 
-      if (emailQuery.docs.isNotEmpty) {
+        if (emailQuery.docs.isNotEmpty) {
         await DialogHelper.hideLoadingDialog(context);
         if (mounted) {
-          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'emailAlreadyUsed'));
+          _showSnackbar(AppLocalizations.of(context)!.emailAlreadyUsed);
         }
         return;
       }
@@ -150,7 +150,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
 
         if (!mounted) return;
 
-        _showSnackbar(LocalizationHelper.getLocalizedText(context, 'verificationEmailSent'));
+  _showSnackbar(AppLocalizations.of(context)!.verificationEmailSent);
 
         // Navigate to verification page
         bool emailVerified = await Navigator.push(
@@ -180,13 +180,13 @@ class _RegisterPageNewState extends State<RegisterPageNew>
           // Sign out to prevent auto-login
           await authService.value.signOut();
 
-          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'registrationSuccess'));
+          _showSnackbar(AppLocalizations.of(context)!.registrationSuccess);
           _clearForm();
         } else {
           // Email not verified, delete the account
           debugPrint('❌ Email not verified, deleting account...');
           await user.delete();
-          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'emailNotVerified'));
+          _showSnackbar(AppLocalizations.of(context)!.emailNotVerified);
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -260,8 +260,8 @@ class _RegisterPageNewState extends State<RegisterPageNew>
       }
     } catch (e) {
       await DialogHelper.hideLoadingDialog(context);
-      if (mounted) {
-        _showSnackbar("${LocalizationHelper.getLocalizedText(context, 'phoneRegistrationError')}: $e");
+        if (mounted) {
+          _showSnackbar("${AppLocalizations.of(context)!.phoneRegistrationError}: $e");
       }
     }
   }
@@ -284,7 +284,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
 
         if (userQuery.docs.isNotEmpty) {
           // User already exists - this is registration, not login
-          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'accountExistsPleaseLogin'));
+          _showSnackbar(AppLocalizations.of(context)!.accountExistsPleaseLogin);
           // Sign out the user since they should login instead
           await authService.value.signOut();
           return;
@@ -363,7 +363,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
 
         if (userQuery.docs.isNotEmpty) {
           // User already exists - this is registration, not login
-          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'accountExistsPleaseLogin'));
+          _showSnackbar(AppLocalizations.of(context)!.accountExistsPleaseLogin);
           // Sign out the user since they should login instead
           await authService.value.signOut();
           return;
@@ -580,46 +580,46 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                       ),
                       const SizedBox(height: 30),
                       MyTextField(
-                        hintText: LocalizationHelper.getLocalizedText(context, 'fullNameHint'),
+                        hintText: AppLocalizations.of(context)!.fullNameHint,
                         icon: const Icon(Icons.person_outline),
                         controller: _nameController,
                         obsecureText: false,
                       ),
                       const SizedBox(height: 10),
                       MyTextField(
-                        hintText: LocalizationHelper.getLocalizedText(context, 'accountHint'),
+                        hintText: AppLocalizations.of(context)!.accountHint,
                         icon: const Icon(Icons.account_circle_outlined),
                         controller: _accountController,
                         obsecureText: false,
                       ),
                       const SizedBox(height: 10),
                       MyTextField(
-                        hintText: LocalizationHelper.getLocalizedText(context, 'passwordHint'),
+                        hintText: AppLocalizations.of(context)!.passwordHint,
                         icon: const Icon(Icons.lock_outline),
                         controller: _passwordController,
                         obsecureText: true,
                       ),
                       const SizedBox(height: 10),
                       MyTextField(
-                        hintText: LocalizationHelper.getLocalizedText(context, 'confirmPasswordHint'),
+                        hintText: AppLocalizations.of(context)!.confirmPasswordHint,
                         icon: const Icon(Icons.lock_outline),
                         controller: _confirmPasswordController,
                         obsecureText: true,
                       ),
                       const SizedBox(height: 25),
                       MyButton(
-                        text: LocalizationHelper.getLocalizedText(context, 'registerButton'),
+                        text: AppLocalizations.of(context)!.registerButton,
                         onPressed: () => _register(context),
                       ),
                       const SizedBox(height: 15),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(LocalizationHelper.getLocalizedText(context, 'alreadyHaveAccount')),
+                          Text(AppLocalizations.of(context)!.alreadyHaveAccount),
                           GestureDetector(
                             onTap: widget.onTap,
                             child: Text(
-                              LocalizationHelper.getLocalizedText(context, 'loginNow'),
+                              AppLocalizations.of(context)!.loginNow,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.pink.shade300,
@@ -631,7 +631,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                       const SizedBox(height: 20),
                       Center(
                         child: Text(
-                          LocalizationHelper.getLocalizedText(context, 'orRegisterWith'),
+                          AppLocalizations.of(context)!.orRegisterWith,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

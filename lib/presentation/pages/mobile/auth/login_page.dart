@@ -7,7 +7,7 @@ import 'package:pet_shop/presentation/widgets/components/my_button.dart';
 import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/home/home_page_admin.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/forgot_password_page.dart';
@@ -77,11 +77,11 @@ class _LoginPageNewState extends State<LoginPageNew>
     String password = _passwordController.text.trim();
 
     if (account.isEmpty || password.isEmpty) {
-      _showSnackbar(LocalizationHelper.getLocalizedText(context, 'incompleteInformation'));
+      _showSnackbar(AppLocalizations.of(context)!.incompleteInformation);
       return;
     }
 
-    DialogHelper.showLoadingDialog(context, message: LocalizationHelper.getLocalizedText(context, 'processing'));
+    DialogHelper.showLoadingDialog(context, message: AppLocalizations.of(context)!.processing);
 
     try {
       UserCredential userCredential;
@@ -126,7 +126,7 @@ class _LoginPageNewState extends State<LoginPageNew>
 
         if (phoneQuery.docs.isEmpty) {
           await DialogHelper.hideLoadingDialog(context);
-          _showSnackbar(LocalizationHelper.getLocalizedText(context, 'accountNotExists'));
+          _showSnackbar(AppLocalizations.of(context)!.accountNotExists);
           return;
         }
 
@@ -163,7 +163,7 @@ class _LoginPageNewState extends State<LoginPageNew>
         );
       } else {
         await DialogHelper.hideLoadingDialog(context);
-        _showSnackbar(LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone'));
+        _showSnackbar(AppLocalizations.of(context)!.invalidEmailOrPhone);
         return;
       }
 
@@ -217,21 +217,21 @@ class _LoginPageNewState extends State<LoginPageNew>
     } on FirebaseAuthException catch (e) {
       await DialogHelper.hideLoadingDialog(context);
 
-      String errorMessage = LocalizationHelper.getLocalizedText(context, 'unknownError');
+      String errorMessage = AppLocalizations.of(context)!.unknownError;
       switch (e.code) {
         case 'user-not-found':
-          errorMessage = LocalizationHelper.getLocalizedText(context, 'accountNotExists');
+          errorMessage = AppLocalizations.of(context)!.accountNotExists;
           break;
         case 'wrong-password':
-          errorMessage = LocalizationHelper.getLocalizedText(context, 'incorrectInformation');
+          errorMessage = AppLocalizations.of(context)!.incorrectInformation;
           break;
         case 'invalid-email':
-          errorMessage = LocalizationHelper.getLocalizedText(context, 'invalidEmailOrPhone');
+          errorMessage = AppLocalizations.of(context)!.invalidEmailOrPhone;
           break;
         case 'invalid-credential':
         case 'invalid-login-credentials':
           errorMessage = phonePasswordAttempt
-              ? LocalizationHelper.getLocalizedText(context, 'incorrectInformation')
+              ? AppLocalizations.of(context)!.incorrectInformation
               : "Thông tin đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra và thử lại.";
           break;
         case 'user-disabled':
@@ -510,7 +510,7 @@ class _LoginPageNewState extends State<LoginPageNew>
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            LocalizationHelper.getLocalizedText(context, 'pleaseLoginToContinue'),
+                            AppLocalizations.of(context)!.pleaseLoginToContinue,
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w300,
@@ -518,14 +518,14 @@ class _LoginPageNewState extends State<LoginPageNew>
                           ),
                           const SizedBox(height: 50),
                           MyTextField(
-                            hintText: LocalizationHelper.getLocalizedText(context, 'accountHint'),
+                            hintText: AppLocalizations.of(context)!.accountHint,
                             icon: const Icon(Icons.account_circle_outlined),
                             controller: _accountController,
                             obsecureText: false,
                           ),
                           const SizedBox(height: 10),
                           MyTextField(
-                            hintText: LocalizationHelper.getLocalizedText(context, 'passwordHint'),
+                            hintText: AppLocalizations.of(context)!.passwordHint,
                             icon: const Icon(Icons.lock_outline),
                             controller: _passwordController,
                             obsecureText: true,
@@ -544,7 +544,7 @@ class _LoginPageNewState extends State<LoginPageNew>
                                   );
                                 },
                                 child: Text(
-                                  LocalizationHelper.getLocalizedText(context, 'forgotPassword'),
+                                  AppLocalizations.of(context)!.forgotPassword,
                                   style: const TextStyle(
                                     color: Colors.red,
                                     fontWeight: FontWeight.bold,
@@ -555,7 +555,7 @@ class _LoginPageNewState extends State<LoginPageNew>
                           ),
                           const SizedBox(height: 25),
                           MyButton(
-                            text: LocalizationHelper.getLocalizedText(context, 'loginButton'),
+                            text: AppLocalizations.of(context)!.loginButton,
                             onPressed: () => _login(context),
                           ),
                           const SizedBox(height: 15),
@@ -578,7 +578,7 @@ class _LoginPageNewState extends State<LoginPageNew>
                           const SizedBox(height: 20),
                           Center(
                             child: Text(
-                              LocalizationHelper.getLocalizedText(context, 'orLoginWith'),
+                              AppLocalizations.of(context)!.orLoginWith,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,

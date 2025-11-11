@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/core/constants/app_constants.dart'; // Chứa primaryColor, secondaryColor
-import 'package:pet_shop/core/utils/localization_helper.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/dashboard/dashboard_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/notification/notification_management_panel.dart';
@@ -409,7 +408,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       // Fallback UI in case of any layout errors
       return Scaffold(
         appBar: AppBar(
-          title: Text(LocalizationHelper.getLocalizedText(context, 'admin_panel')),
+          title: Text(AppLocalizations.of(context)!.adminPanel),
         ),
         body: Center(
           child: Column(
@@ -418,7 +417,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
-                LocalizationHelper.getLocalizedText(context, 'something_went_wrong'),
+                AppLocalizations.of(context)!.somethingWentWrong,
                 style: const TextStyle(fontSize: 18),
               ),
               const SizedBox(height: 16),
@@ -428,7 +427,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                     _selectedIndex = 0;
                   });
                 },
-                child: Text(LocalizationHelper.getLocalizedText(context, 'retry')),
+                child: Text(AppLocalizations.of(context)!.retry),
               ),
             ],
           ),

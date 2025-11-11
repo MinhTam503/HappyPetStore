@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pet_shop/core/utils/localization_helper.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 
@@ -41,14 +41,18 @@ class HistoryDisabledMessage extends StatelessWidget {
             color: iconColor,
           ),
           const SizedBox(height: 16),
-          Text(
-            LocalizationHelper.getLocalizedText(context, messageKey),
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          Builder(builder: (ctx){
+            final l10n = AppLocalizations.of(ctx);
+            // Fallback to messageKey if not found (during migration)
+            return Text(
+              _resolveMessage(l10n, messageKey),
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            );
+          }),
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: () {
@@ -61,7 +65,7 @@ class HistoryDisabledMessage extends StatelessWidget {
             },
             icon: const Icon(Icons.settings_outlined),
             label: Text(
-              LocalizationHelper.getLocalizedText(context, 'goToSettings'),
+              AppLocalizations.of(context)?.goToSettings ?? 'Đi tới cài đặt',
             ),
             style: OutlinedButton.styleFrom(
               foregroundColor: primaryColor,
@@ -74,5 +78,18 @@ class HistoryDisabledMessage extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+String _resolveMessage(AppLocalizations? l10n, String key){
+  if(l10n == null) return key;
+  // Map legacy keys to new localization getters. Extend as migration progresses.
+  switch(key){
+    case 'searchHistoryDisabledMessage':
+      return l10n.searchHistoryDisabledMessage;
+    case 'viewedPetsHistoryDisabledMessage':
+      return l10n.viewedPetsHistoryDisabledMessage;
+    default:
+      return key; // fallback to key for missing mapping
   }
 }
