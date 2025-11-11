@@ -478,6 +478,10 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                     'statusOrder': newStatus,
                                     if (newStatus == 'Completed')
                                       'statusPayment': 'Payment Completed',
+                                    if (newStatus == 'Completed')
+                                      'completedAt': FieldValue.serverTimestamp(),
+                                    if (newStatus == 'Cancelled')
+                                      'cancelledAt': FieldValue.serverTimestamp(),
                                   };
                                   await updateOrder(
                                       orderId, collection, payload);

@@ -4,8 +4,11 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
-import 'package:pet_shop/core/utils/currency_helper.dart';
-import 'package:pet_shop/presentation/pages/web/screen_admin/order/orders_admin.dart';
+// currency_helper and orders_admin no longer used directly here; kept in widgets
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'widgets/recent_orders_section.dart';
+import 'package:pet_shop/presentation/bloc/recentOrders/recent_orders_bloc.dart';
+import 'package:pet_shop/presentation/bloc/recentOrders/recent_orders_event.dart';
 import 'widgets/loading_skeleton.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -19,7 +22,7 @@ class DashboardPage extends StatefulWidget {
 class _OptimizedDashboardPageState extends State<DashboardPage>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   // Loading states
-  bool _loading = true;
+  // bool _loading = true; // removed unused loading flag
   bool _revenueLoading = false;
   bool _statsLoading = false;
 
@@ -39,7 +42,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     'Processing': 0,
     'Cancelled': 0,
   };
-  List<Map<String, dynamic>> _recentOrders = [];
+  // Recent orders moved to Cubit
 
   // UI State
   String _timeRange = '7days';
@@ -81,15 +84,14 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
 
   // Load only essential data first for quick display
   Future<void> _loadEssentialData() async {
-    setState(() => _loading = true);
+  // initial quick load (no global loading flag needed)
 
     try {
       await Future.wait([
         _loadStatsData(),
-        _loadRecentOrders(),
       ]);
 
-      setState(() => _loading = false);
+  // animations after initial snapshot
 
       // Start animations
       _fadeController.forward();
@@ -98,17 +100,11 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       // Load charts data in background
       _loadChartsData();
     } catch (e) {
-      print('Error loading essential data: $e');
-      setState(() => _loading = false);
+  print('Error loading essential data: $e');
     }
   }
 
-  double _getTodayRevenue() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todayKey = '${today.day}/${today.month}';
-    return _revenueData[todayKey] ?? 0.0; // already scaled to unit
-  }
+  // Removed unused _getTodayRevenue
 
   // Get total revenue for the current time period
   double _getTotalRevenue() {
@@ -123,10 +119,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
   }
 
   // Format today revenue with proper unit
-  String _getTodayRevenueFormatted() {
-    final convertedValue = _getTodayRevenue();
-    return '${_formatChartCurrency(convertedValue)} ${_getChartUnit()}';
-  }
+  // Removed unused _getTodayRevenueFormatted
 
   Future<void> _loadChartsData() async {
     await Future.wait([
@@ -163,147 +156,13 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     }
   }
 
-  Future<void> _loadRecentOrders() async {
-    try {
-      print('🔍 Loading recent orders (one time)...');
-
-      // Try without orderBy first to avoid index issues
-      final ordersQuery =
-          FirebaseFirestore.instance.collection('orders').limit(10);
-
-      final ordersWebQuery =
-          FirebaseFirestore.instance.collection('ordersWeb').limit(10);
-
-      final results = await Future.wait([
-        ordersQuery.get(),
-        ordersWebQuery.get(),
-      ]);
-
-      print('📦 Found ${results[0].docs.length} mobile orders');
-      print('🌐 Found ${results[1].docs.length} web orders');
-
-      final allOrders = <Map<String, dynamic>>[];
-
-      // Process mobile orders
-      for (final doc in results[0].docs) {
-        final data = doc.data();
-
-        // Handle different timestamp formats
-        dynamic rawTimestamp = data['timestamp'];
-        Timestamp timestamp;
-
-        if (rawTimestamp is Timestamp) {
-          timestamp = rawTimestamp;
-        } else if (rawTimestamp is String) {
-          try {
-            // Parse string timestamp to DateTime then convert to Timestamp
-            final dateTime = DateTime.parse(rawTimestamp);
-            timestamp = Timestamp.fromDate(dateTime);
-          } catch (e) {
-            print('⚠️ Invalid timestamp format: $rawTimestamp');
-            timestamp = Timestamp.now();
-          }
-        } else {
-          timestamp = Timestamp.now();
-        }
-
-        final totalAmount = _parseDouble(data['totalAmount']);
-
-        final order = {
-          'id': doc.id,
-          'customerName':
-              data['fullName'] ?? data['name'] ?? 'Unknown Customer',
-          'totalAmount': totalAmount,
-          'status': data['statusOrder'] ?? 'Pending',
-          'timestamp': timestamp,
-          'source': 'Mobile',
-        };
-        allOrders.add(order);
-        print(
-            '📱 Mobile order: ${order['customerName']} - \$${order['totalAmount']}');
-      }
-
-      // Process web orders
-      for (final doc in results[1].docs) {
-        final data = doc.data();
-
-        // Handle different timestamp formats
-        dynamic rawTimestamp = data['timestamp'];
-        Timestamp timestamp;
-
-        if (rawTimestamp is Timestamp) {
-          timestamp = rawTimestamp;
-        } else if (rawTimestamp is String) {
-          try {
-            // Parse string timestamp to DateTime then convert to Timestamp
-            final dateTime = DateTime.parse(rawTimestamp);
-            timestamp = Timestamp.fromDate(dateTime);
-          } catch (e) {
-            print('⚠️ Invalid timestamp format: $rawTimestamp');
-            timestamp = Timestamp.now();
-          }
-        } else {
-          timestamp = Timestamp.now();
-        }
-
-        final totalAmount = _parseDouble(data['totalAmount']);
-
-        final order = {
-          'id': doc.id,
-          'customerName':
-              data['fullName'] ?? data['name'] ?? 'Unknown Customer',
-          'totalAmount': totalAmount,
-          'status': data['statusOrder'] ?? 'Pending',
-          'timestamp': timestamp,
-          'source': 'Web',
-        };
-        allOrders.add(order);
-        print(
-            '🌐 Web order: ${order['customerName']} - \$${order['totalAmount']}');
-      }
-
-      // Sort by timestamp (newest first)
-      try {
-        allOrders.sort((a, b) {
-          final aTime = a['timestamp'] as Timestamp;
-          final bTime = b['timestamp'] as Timestamp;
-          return bTime.compareTo(aTime);
-        });
-      } catch (e) {
-        print('⚠️ Error sorting orders: $e');
-        // If sorting fails, just use the orders as-is
-      }
-
-      // Prefer Completed orders; fallback to any if none
-      List<Map<String, dynamic>> ordered = List.from(allOrders);
-      ordered.sort((a, b) {
-        final at = a['timestamp'] as Timestamp;
-        final bt = b['timestamp'] as Timestamp;
-        return bt.compareTo(at);
-      });
-      final completed = ordered.where((o) => (o['status'] ?? '') == 'Completed').toList();
-      final recentOrders = (completed.isNotEmpty ? completed : ordered).take(5).toList();
-      print('📋 Recent orders to display: ${recentOrders.length}');
-
-      if (mounted) {
-        setState(() => _recentOrders = recentOrders);
-      }
-    } catch (e) {
-      print('❌ Error loading recent orders: $e');
-      // Set empty list on error
-      if (mounted) {
-        setState(() => _recentOrders = []);
-      }
-    }
-  }
-
   Future<void> _loadRevenueData() async {
     if (_revenueLoading) return; // Prevent multiple simultaneous calls
 
     setState(() => _revenueLoading = true);
 
     try {
-      print('🔍 Loading revenue data for $_timeRange...');
+      // Determine date range
       final now = DateTime.now();
       DateTime startDate;
       DateTime endDate;
@@ -311,7 +170,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         // Previous full calendar month
         final prevMonth = DateTime(now.year, now.month - 1, 1);
         startDate = prevMonth;
-        endDate = DateTime(prevMonth.year, prevMonth.month + 1, 0); // last day prev month
+        endDate = DateTime(prevMonth.year, prevMonth.month + 1, 0);
       } else {
         // trailing 7 days including today
         endDate = DateTime(now.year, now.month, now.day);
@@ -322,272 +181,196 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         return !nd.isBefore(startDate) && !nd.isAfter(endDate);
       }
 
-      // Simplified queries without complex where clauses
-      final ordersQuery =
-          FirebaseFirestore.instance.collection('orders').limit(200);
-
-      final ordersWebQuery =
-          FirebaseFirestore.instance.collection('ordersWeb').limit(200);
-
+      // Fetch data
       final results = await Future.wait([
-        ordersQuery.get(),
-        ordersWebQuery.get(),
+        FirebaseFirestore.instance.collection('orders').limit(200).get(),
+        FirebaseFirestore.instance.collection('ordersWeb').limit(200).get(),
       ]);
 
-      print('📦 Orders found: ${results[0].docs.length}');
-      print('🌐 Web orders found: ${results[1].docs.length}');
-
       final revenue = <String, double>{};
+
+      void addAmount(DateTime date, double amount) {
+        final key = '${date.day}/${date.month}';
+        revenue.update(key, (v) => v + amount, ifAbsent: () => amount);
+      }
 
       // Process mobile orders
       for (final doc in results[0].docs) {
         final data = doc.data();
-        final rawTimestamp = data['timestamp'];
         final amount = _parseDouble(data['totalAmount']);
-        final status = data['statusOrder'] ?? 'Pending';
-
-        if (status == 'Completed' && amount > 0) {
-          // Debug: log large amounts but don't skip them
-          if (amount > 1000000) {
-            print(
-                '💰 Large amount detected: \$${amount} for mobile order ${doc.id}');
-            print(
-                '💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
-          }
-
-          DateTime? date;
-
-          if (rawTimestamp is Timestamp) {
-            date = rawTimestamp.toDate();
-          } else if (rawTimestamp is String) {
-            try {
-              date = DateTime.parse(rawTimestamp);
-            } catch (e) {
-              print('⚠️ Invalid timestamp in mobile order: $rawTimestamp');
-              continue;
+        final status = (data['statusOrder'] ?? data['status'] ?? 'Pending') as String;
+        // Determine completion date: prefer completedAt, fallback to shippingInfo actualDeliveryTime/deliveredAt or delivered event, then createdAt/timestamp
+        DateTime? date;
+        // completedAt on order
+        final rawCompleted = data['completedAt'];
+        if (rawCompleted is Timestamp) {
+          date = rawCompleted.toDate();
+        } else if (rawCompleted is int) {
+          date = DateTime.fromMillisecondsSinceEpoch(rawCompleted);
+        } else if (rawCompleted is String) {
+          date = DateTime.tryParse(rawCompleted);
+        }
+        // derive from shippingInfo if still null
+        if (date == null && data['shippingInfo'] is Map) {
+          try {
+            final si = Map<String, dynamic>.from(data['shippingInfo']);
+            final actual = si['actualDeliveryTime'] ?? si['deliveredAt'];
+            if (actual is String) {
+              date = DateTime.tryParse(actual);
             }
+            if (date == null && si['trackingHistory'] is List) {
+              final hist = List.from(si['trackingHistory']);
+              for (final item in hist.reversed) {
+                if (item is Map && (item['status']?.toString() == 'delivered')) {
+                  final t = item['timestamp'];
+                  if (t is String) {
+                    date = DateTime.tryParse(t);
+                  }
+                  break;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+        // fallback to createdAt/timestamp for legacy data
+        if (date == null) {
+          final rawTs = data['timestamp'] ?? data['createdAt'];
+          if (rawTs is Timestamp) {
+            date = rawTs.toDate();
+          } else if (rawTs is int) {
+            date = DateTime.fromMillisecondsSinceEpoch(rawTs);
+          } else if (rawTs is String) {
+            date = DateTime.tryParse(rawTs);
           }
-
-          if (date != null && inRange(date)) {
-            final dateKey = '${date.day}/${date.month}';
-            revenue[dateKey] = (revenue[dateKey] ?? 0) + amount;
-            print('💰 Mobile order: $dateKey = $amount');
-          }
+        }
+        if (date != null && inRange(date) && status == 'Completed' && amount > 0) {
+          addAmount(date, amount);
         }
       }
 
       // Process web orders
       for (final doc in results[1].docs) {
         final data = doc.data();
-        final rawTimestamp = data['timestamp'];
-        final amount = _parseDouble(data['totalAmount']);
-        final status = data['statusOrder'] ?? 'Pending';
-
-        if (status == 'Completed' && amount > 0) {
-          // Debug: log large amounts but don't skip them
-          if (amount > 1000000) {
-            print(
-                '💰 Large amount detected: \$${amount} for web order ${doc.id}');
-            print(
-                '💰 Will display as: ${(amount / 1000000).toStringAsFixed(1)}M');
-          }
-
-          DateTime? date;
-
-          if (rawTimestamp is Timestamp) {
-            date = rawTimestamp.toDate();
-          } else if (rawTimestamp is String) {
-            try {
-              date = DateTime.parse(rawTimestamp);
-            } catch (e) {
-              print('⚠️ Invalid timestamp in web order: $rawTimestamp');
-              continue;
+        final amount = _parseDouble(data['totalAmount'] ?? data['total']);
+        final status = (data['statusOrder'] ?? data['status'] ?? 'Pending') as String;
+        // Determine completion date: prefer completedAt, fallback to shippingInfo actualDeliveryTime/deliveredAt or delivered event, then createdAt/timestamp
+        DateTime? date;
+        final rawCompleted = data['completedAt'];
+        if (rawCompleted is Timestamp) {
+          date = rawCompleted.toDate();
+        } else if (rawCompleted is int) {
+          date = DateTime.fromMillisecondsSinceEpoch(rawCompleted);
+        } else if (rawCompleted is String) {
+          date = DateTime.tryParse(rawCompleted);
+        }
+        if (date == null && data['shippingInfo'] is Map) {
+          try {
+            final si = Map<String, dynamic>.from(data['shippingInfo']);
+            final actual = si['actualDeliveryTime'] ?? si['deliveredAt'];
+            if (actual is String) {
+              date = DateTime.tryParse(actual);
             }
+            if (date == null && si['trackingHistory'] is List) {
+              final hist = List.from(si['trackingHistory']);
+              for (final item in hist.reversed) {
+                if (item is Map && (item['status']?.toString() == 'delivered')) {
+                  final t = item['timestamp'];
+                  if (t is String) {
+                    date = DateTime.tryParse(t);
+                  }
+                  break;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+        if (date == null) {
+          final rawTs = data['timestamp'] ?? data['createdAt'];
+          if (rawTs is Timestamp) {
+            date = rawTs.toDate();
+          } else if (rawTs is int) {
+            date = DateTime.fromMillisecondsSinceEpoch(rawTs);
+          } else if (rawTs is String) {
+            date = DateTime.tryParse(rawTs);
           }
-
-          if (date != null && inRange(date)) {
-            final dateKey = '${date.day}/${date.month}';
-            revenue[dateKey] = (revenue[dateKey] ?? 0) + amount;
-            print('💰 Web order: $dateKey = $amount');
-          }
+        }
+        if (date != null && inRange(date) && status == 'Completed' && amount > 0) {
+          addAmount(date, amount);
         }
       }
 
-      print('📊 Total revenue data points: ${revenue.length}');
-      print('💵 Revenue summary: $revenue');
-
-      // Convert large numbers to smaller units for chart rendering
-      final convertedRevenue = <String, double>{};
-      double maxValue = revenue.values.isNotEmpty
-          ? revenue.values.reduce((a, b) => a > b ? a : b)
-          : 0.0;
-
-      if (maxValue >= 1000000) {
-        // Convert to millions for chart rendering
-        print('📊 Converting to millions for chart rendering...');
-        _revenueUnit = 'triệu';
-        for (final entry in revenue.entries) {
-          convertedRevenue[entry.key] =
-              entry.value / 1000000; // Convert to millions
-        }
-        print('📊 Converted revenue (millions): $convertedRevenue');
-      } else if (maxValue >= 1000) {
-        // Convert to thousands for chart rendering
-        print('📊 Converting to thousands for chart rendering...');
-        _revenueUnit = 'nghìn';
-        for (final entry in revenue.entries) {
-          convertedRevenue[entry.key] =
-              entry.value / 1000; // Convert to thousands
-        }
-        print('📊 Converted revenue (thousands): $convertedRevenue');
+      // Decide unit and scale values
+      double maxVal = revenue.values.isEmpty
+          ? 0
+          : revenue.values.reduce((a, b) => a > b ? a : b);
+      String unit;
+      double divisor;
+      if (maxVal >= 1000000) {
+        unit = 'triệu';
+        divisor = 1000000.0;
+      } else if (maxVal >= 100000) {
+        unit = 'nghìn';
+        divisor = 1000.0;
       } else {
-        // Use original values
-        _revenueUnit = '₫';
-        convertedRevenue.addAll(revenue);
+        unit = '₫';
+        divisor = 1.0;
       }
 
-      if (convertedRevenue.isEmpty) {
-        print('📊 No revenue found in range $startDate -> $endDate');
+      // Preserve chronological order by date range
+      final orderedKeys = <String>[];
+      for (int i = 0; i <= endDate.difference(startDate).inDays; i++) {
+        final d = DateTime(startDate.year, startDate.month, startDate.day + i);
+        orderedKeys.add('${d.day}/${d.month}');
+      }
+      final scaled = <String, double>{};
+      for (final k in orderedKeys) {
+        final v = revenue[k] ?? 0.0;
+        scaled[k] = v / divisor;
       }
 
-      // Build full chronological window with zero-fill for missing days
-      final sortedMap = <String, double>{};
-      DateTime cursor = startDate;
-      while (!cursor.isAfter(endDate)) {
-        final key = '${cursor.day}/${cursor.month}';
-        sortedMap[key] = convertedRevenue[key] ?? 0.0;
-        cursor = cursor.add(const Duration(days: 1));
-      }
-
-      if (mounted) {
-        setState(() => _revenueData = sortedMap);
-      }
+      setState(() {
+        _revenueUnit = unit;
+        _revenueData = scaled;
+      });
     } catch (e) {
-      print('❌ Error loading revenue: $e');
-      if (mounted) {
-        setState(() => _revenueData = {});
-      }
+      // Fallback to empty chart on errors
+      setState(() {
+        _revenueData = {};
+      });
+      debugPrint('Error loading revenue data: $e');
     } finally {
-      if (mounted) {
-        setState(() => _revenueLoading = false);
-      }
+      if (mounted) setState(() => _revenueLoading = false);
     }
   }
 
   Future<void> _loadOrderStatusData() async {
     try {
-      final orders = await FirebaseFirestore.instance
+      final snapshot = await FirebaseFirestore.instance
           .collection('orders')
-          .limit(200)
+          .limit(300)
           .get();
-
-      final ordersWeb = await FirebaseFirestore.instance
-          .collection('ordersWeb')
-          .limit(200)
-          .get();
-
-      final statusData = <String, int>{
+      final counts = <String, int>{
         'Completed': 0,
         'Pending': 0,
         'Processing': 0,
         'Cancelled': 0,
       };
-
-      for (final doc in orders.docs) {
-        final status = doc.data()['statusOrder'] ?? 'Pending';
-        if (statusData.containsKey(status)) {
-          statusData[status] = statusData[status]! + 1;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final status = (data['statusOrder'] ?? data['status'] ?? 'Pending') as String;
+        if (counts.containsKey(status)) {
+          counts[status] = counts[status]! + 1;
+        } else {
+          // Bucket unknowns into Pending
+          counts['Pending'] = counts['Pending']! + 1;
         }
       }
-
-      for (final doc in ordersWeb.docs) {
-        final status = doc.data()['statusOrder'] ?? 'Pending';
-        if (statusData.containsKey(status)) {
-          statusData[status] = statusData[status]! + 1;
-        }
+      if (mounted) {
+        setState(() => _orderStatusData = counts);
       }
-
-      setState(() => _orderStatusData = statusData);
     } catch (e) {
-      print('Error loading order status: $e');
+      debugPrint('Error loading order status data: $e');
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-
-    final isSmallScreen = MediaQuery.of(context).size.width < 1200;
-
-    if (_loading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).shadowColor.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: Theme.of(context).primaryColor,
-                    strokeWidth: 3,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                AppLocalizations.of(context)!.dashboard,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppLocalizations.of(context)!.preparingAnalytics,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(isSmallScreen ? 16.0 : 24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildStatsCards(),
-            const SizedBox(height: 24),
-            isSmallScreen ? _buildMobileChartsSection() : _buildChartsSection(),
-            const SizedBox(height: 24),
-            _buildRecentOrdersSection(),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildHeader() {
@@ -1367,226 +1150,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     );
   }
 
-  Widget _buildRecentOrdersSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                AppLocalizations.of(context)!.recentOrders,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).textTheme.headlineSmall?.color,
-                ),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  if (widget.onNavigateToTab != null) {
-                    widget.onNavigateToTab!(4); // Orders tab index in HomePageAdmin
-                  } else {
-                    // fallback push
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const OrdersAdmin()),
-                    );
-                  }
-                },
-                child: Text(AppLocalizations.of(context)!.viewAll),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          if (_recentOrders.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Text(AppLocalizations.of(context)!.noDataAvailable,
-                    style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyMedium?.color)),
-              ),
-            )
-          else
-            Column(
-              children:
-                  _recentOrders.map((order) => _buildOrderRow(order)).toList(),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderRow(Map<String, dynamic> order) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  primaryColor.withOpacity(0.1),
-                  primaryColor.withOpacity(0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.shopping_bag_outlined,
-              color: primaryColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      order['customerName'],
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: order['source'] == 'Mobile'
-                            ? (Theme.of(context).brightness == Brightness.dark
-                                ? Colors.blue.withOpacity(0.2)
-                                : Colors.blue.withOpacity(0.1))
-                            : (Theme.of(context).brightness == Brightness.dark
-                                ? Colors.purple.withOpacity(0.2)
-                                : Colors.purple.withOpacity(0.1)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        order['source'],
-                        style: TextStyle(
-                          color: order['source'] == 'Mobile'
-                              ? (Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.lightBlueAccent
-                                  : Colors.blue[700])
-                              : (Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.purpleAccent
-                                  : Colors.purple[700]),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.receipt_long,
-                      size: 14,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Order #${order['id'].toString().substring(0, 8)}',
-                      style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: order['status'] == 'Completed'
-                      ? (Theme.of(context).brightness == Brightness.dark
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.green.withOpacity(0.1))
-                      : order['status'] == 'Pending'
-                          ? (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.orange.withOpacity(0.2)
-                              : Colors.orange.withOpacity(0.1))
-                          : (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.blue.withOpacity(0.2)
-                              : Colors.blue.withOpacity(0.1)),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  order['status'],
-                  style: TextStyle(
-                    color: order['status'] == 'Completed'
-                        ? (Theme.of(context).brightness == Brightness.dark
-                            ? Colors.lightGreenAccent
-                            : Colors.green[700])
-                        : order['status'] == 'Pending'
-                            ? (Theme.of(context).brightness == Brightness.dark
-                                ? Colors.orangeAccent
-                                : Colors.orange[700])
-                            : (Theme.of(context).brightness == Brightness.dark
-                                ? Colors.lightBlueAccent
-                                : Colors.blue[700]),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                CurrencyHelper.formatVND(order['totalAmount']),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // Recent orders UI moved to widgets/recent_orders_section.dart and logic to bloc/recent_orders_cubit.dart
 
   double _parseDouble(dynamic value) {
     if (value == null) return 0.0;
@@ -1653,5 +1217,33 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
     
     // For very long periods, show every 5th day
     return index % 5 == 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final isSmallScreen = MediaQuery.of(context).size.width < 900;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 24),
+          _buildStatsCards(),
+          const SizedBox(height: 24),
+          isSmallScreen ? _buildMobileChartsSection() : _buildChartsSection(),
+          const SizedBox(height: 24),
+          BlocProvider(
+            // Only 'orders' collection as requested
+            create: (_) => RecentOrdersBloc()..add(const LoadRecentOrders(limit: 6, mobileOnly: true)),
+            child: RecentOrdersSection(
+              onNavigateToTab: widget.onNavigateToTab,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

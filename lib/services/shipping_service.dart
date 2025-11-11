@@ -596,8 +596,12 @@ class ShippingService {
             if (newStatus == 'delivered') {
               orderUpdate['statusOrder'] = 'Completed';
               orderUpdate['statusPayment'] = 'Payment Completed';
+              // Stamp completion time for dashboard ordering
+              orderUpdate['completedAt'] = FieldValue.serverTimestamp();
             } else if (newStatus == 'failed' || newStatus == 'returned') {
               orderUpdate['statusOrder'] = 'Cancelled';
+              // Stamp cancellation time for audit
+              orderUpdate['cancelledAt'] = FieldValue.serverTimestamp();
             }
             
             await doc.reference.update(orderUpdate);
@@ -656,8 +660,12 @@ class ShippingService {
               if (newStatus == 'delivered') {
                 orderUpdate['statusOrder'] = 'Completed';
                 orderUpdate['statusPayment'] = 'Payment Completed';
+                // Stamp completion time for dashboard ordering
+                orderUpdate['completedAt'] = FieldValue.serverTimestamp();
               } else if (newStatus == 'failed' || newStatus == 'returned') {
                 orderUpdate['statusOrder'] = 'Cancelled';
+                // Stamp cancellation time for audit
+                orderUpdate['cancelledAt'] = FieldValue.serverTimestamp();
               }
               
               await doc.reference.update(orderUpdate);

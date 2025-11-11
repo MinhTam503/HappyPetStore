@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -85,14 +86,14 @@ class ThemeProvider extends ChangeNotifier {
     
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xffe7fae7), // secondaryColor
+      fillColor: Colors.white, // secondaryColor
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderSide: const BorderSide(color:Color.fromARGB(255, 206, 250, 206)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),

@@ -558,6 +558,7 @@ class _PetsState extends State<PetsAdmin> {
                             Expanded(
                               child: Column(
                                 children: [
+                                  const SizedBox(height: 5),
                                   TextFormField(
                                     controller: nameController,
                                     decoration: _input(l10n.name,
