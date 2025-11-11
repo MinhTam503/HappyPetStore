@@ -16,8 +16,9 @@ class QRPrintService {
     try {
       final pdf = pw.Document();
 
-      // Tạo QR data với format JSON
-      final qrData = 'PET:$petId';
+  // Tạo QR data với URL đầy đủ theo chuẩn mới: /home/pet/:id trên domain production
+  const baseDomain = 'https://adopt-pet-d1c88.web.app';
+  final qrData = '$baseDomain/home/pet/$petId';
 
       pdf.addPage(
         pw.Page(
@@ -160,7 +161,8 @@ class QRPrintService {
                           final petId = pet['id'] ?? '';
                           final petName = pet['name'] ?? 'Unknown';
                           final petBreed = pet['breed'] ?? '';
-                          final qrData = 'PET:$petId';
+                          const baseDomain = 'https://adopt-pet-d1c88.web.app';
+                          final qrData = '$baseDomain/home/pet/$petId';
 
                           return pw.Container(
                             padding: const pw.EdgeInsets.all(16),

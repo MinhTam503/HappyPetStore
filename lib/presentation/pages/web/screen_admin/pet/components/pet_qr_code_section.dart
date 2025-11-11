@@ -21,6 +21,10 @@ class PetQRCodeSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+  // Tạo URL đầy đủ theo chuẩn mới để quét: /home/pet/:id trên domain production
+  // NOTE: Nếu thay domain, đổi BASE_DOMAIN bên dưới.
+  const baseDomain = 'https://adopt-pet-d1c88.web.app';
+  final qrUrl = '$baseDomain/home/pet/$petId';
 
     return Center(
       child: Column(
@@ -47,7 +51,7 @@ class PetQRCodeSection extends StatelessWidget {
               ),
             ),
             child: QrImageView(
-              data: 'PET:$petId',
+              data: qrUrl,
               version: QrVersions.auto,
               size: 180,
               backgroundColor: Colors.white,
@@ -59,6 +63,14 @@ class PetQRCodeSection extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            qrUrl,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade500,
             ),
           ),
           const SizedBox(height: 16),

@@ -42,11 +42,32 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         throw Exception(l10n.invalidQRCode);
       }
 
-      // Parse QR code - support both "PET:xxx" format and plain "xxx" format
+  // Parse QR code - support multiple formats:
+  // 1. New full URL: https://adopt-pet-d1c88.web.app/home/pet/123
+  // 2. Legacy URL: https://happypet.com/pet/123
+  // 3. Old text format: PET:123
+  // 4. Plain ID: 123
       String petId = code;
-      if (code.startsWith('PET:')) {
-        petId = code.substring(4); // Remove "PET:" prefix
+      
+      // Check if it's a URL
+      final uri = Uri.tryParse(code);
+      if (uri != null && uri.pathSegments.isNotEmpty) {
+        final segs = uri.pathSegments;
+        // New pattern: /home/pet/:id
+        if (segs.length >= 3 && segs[0] == 'home' && segs[1] == 'pet') {
+          petId = segs[2];
+        } else {
+          // Legacy: /pet/:id
+          final petIndex = segs.indexOf('pet');
+          if (petIndex >= 0 && petIndex < segs.length - 1) {
+            petId = segs[petIndex + 1];
+          }
+        }
+      } else if (code.startsWith('PET:')) {
+        // Old format: PET:xxx
+        petId = code.substring(4);
       }
+      // Otherwise, assume it's a plain pet ID
 
       // Validate petId is not empty after parsing
       if (petId.isEmpty) {

@@ -43,8 +43,9 @@ import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_adm
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/ChatDetailPage.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
-import 'package:pet_shop/presentation/pages/web_user/screens/home_page_web_user.dart';
+import 'package:pet_shop/presentation/pages/web_user/screens/home/home_page_web_user.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/payment_success_screen.dart';
+import 'package:pet_shop/presentation/pages/web_user/screens/details/pet_detail_screen_web.dart';
 import 'package:pet_shop/presentation/pages/web/web_app_wrapper.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -201,6 +202,28 @@ class MyApp extends StatelessWidget {
                       PaymentSuccessScreen(sessionId: sessionId),
                   settings: settings,
                 );
+              }
+
+              // Web User deep links
+              if (kIsWeb && settings.name != null) {
+                final uri = Uri.parse(settings.name!);
+                final segs = uri.pathSegments;
+                // Preferred: /home/pet/:id
+                if (segs.length >= 3 && segs[0] == 'home' && segs[1] == 'pet') {
+                  final petId = segs[2];
+                  return MaterialPageRoute(
+                    builder: (_) => PetDetailScreenWeb(petId: petId),
+                    settings: settings,
+                  );
+                }
+                // Backward-compat: /pet/:id
+                if (segs.length >= 2 && segs[0] == 'pet') {
+                  final petId = segs[1];
+                  return MaterialPageRoute(
+                    builder: (_) => PetDetailScreenWeb(petId: petId),
+                    settings: settings,
+                  );
+                }
               }
 
               // Web Admin deep links: /admin/*
