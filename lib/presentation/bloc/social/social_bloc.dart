@@ -498,13 +498,21 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
     Emitter<SocialState> emit,
   ) async {
     try {
-      emit(SocialLoading());
+      // Use refresh indicator instead of loading state to preserve other tab's data
+      if (event.refresh && state is SocialLoaded) {
+        emit((state as SocialLoaded).copyWith(isRefreshing: true));
+      } else if (state is! SocialLoaded) {
+        emit(SocialLoading());
+      }
 
       final userId = await _getUserId();
       final exploreFeed = await _repository.getExplorePosts(excludeUserId: userId);
 
       if (state is SocialLoaded) {
-        emit((state as SocialLoaded).copyWith(exploreFeed: exploreFeed));
+        emit((state as SocialLoaded).copyWith(
+          exploreFeed: exploreFeed,
+          isRefreshing: false,
+        ));
       } else {
         emit(SocialLoaded(exploreFeed: exploreFeed));
       }
@@ -716,6 +724,7 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         userName: userName,
         userAvatarUrl: userAvatarUrl,
         text: event.text,
+        parentId: event.parentId, // Pass parentId for replies
       );
 
       // Don't emit success that might clear screen, just reload comments

@@ -34,7 +34,7 @@ class ExploreGrid extends StatelessWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<SocialBloc>().add(const LoadExploreFeed());
+              context.read<SocialBloc>().add(const LoadExploreFeed(refresh: true));
             },
             child: GridView.builder(
               padding: const EdgeInsets.all(4),

@@ -83,6 +83,8 @@ class SocialCommentModel extends SocialComment {
     required super.text,
     required super.likes,
     required super.timestamp,
+    super.parentId,
+    super.replies,
   });
 
   factory SocialCommentModel.fromMap(Map<String, dynamic> map) {
@@ -95,6 +97,10 @@ class SocialCommentModel extends SocialComment {
       text: map['text'] ?? '',
       likes: List<String>.from(map['likes'] ?? []),
       timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      parentId: map['parentId'],
+      replies: (map['replies'] as List<dynamic>?)
+          ?.map((r) => SocialCommentModel.fromMap(r as Map<String, dynamic>))
+          .toList() ?? const [],
     );
   }
 }

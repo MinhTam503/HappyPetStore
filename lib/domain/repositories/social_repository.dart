@@ -102,6 +102,7 @@ abstract class SocialRepository {
     required String userName,
     required String userAvatarUrl,
     required String text,
+    String? parentId, // For nested replies
   });
   
   /// Delete a comment

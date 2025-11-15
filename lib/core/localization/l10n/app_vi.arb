@@ -825,7 +825,16 @@
   "deleteConversationConfirm": "Bạn có chắc chắn muốn xóa cuộc trò chuyện này?",
   "userPosts": "Bài viết",
   "userFollowers": "Người theo dõi",
-  "userFollowing": "Đang theo dõi"
+  "userFollowing": "Đang theo dõi",
+  "recentSearches": "Tìm kiếm gần đây",
+  "clearAll": "Xóa tất cả",
+  "trending": "Xu hướng",
+  "searchTips": "Mẹo tìm kiếm",
+  "searchByPetName": "Tìm theo tên thú cưng",
+  "searchByBreed": "Tìm theo giống",
+  "searchByTag": "Tìm theo thẻ",
+  "noResults": "Không tìm thấy kết quả",
+  "tryDifferentKeywords": "Thử từ khóa khác"
 }
 
 

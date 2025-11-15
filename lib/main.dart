@@ -32,6 +32,7 @@ import 'package:pet_shop/data/repositories/social_repository_impl.dart';
 import 'package:pet_shop/data/repositories/user_chat_repository_impl.dart';
 import 'package:pet_shop/domain/entities/social_pet_profile.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/create_post_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/social_search_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/social_profile_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/edit_social_profile_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/followers_list_page.dart';
@@ -330,6 +331,13 @@ class MyApp extends StatelessWidget {
               if (settings.name == '/social/create-post') {
                 return MaterialPageRoute(
                   builder: (_) => const CreatePostPage(),
+                  settings: settings,
+                );
+              }
+              
+              if (settings.name == '/social/search') {
+                return MaterialPageRoute(
+                  builder: (_) => const SocialSearchPage(),
                   settings: settings,
                 );
               }

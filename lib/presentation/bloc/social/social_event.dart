@@ -133,7 +133,12 @@ class LoadFeed extends SocialEvent {
 }
 
 class LoadExploreFeed extends SocialEvent {
-  const LoadExploreFeed();
+  final bool refresh;
+
+  const LoadExploreFeed({this.refresh = false});
+
+  @override
+  List<Object?> get props => [refresh];
 }
 
 class LoadPetPosts extends SocialEvent {
@@ -202,11 +207,12 @@ class UnlikePost extends SocialEvent {
 class AddComment extends SocialEvent {
   final String postId;
   final String text;
+  final String? parentId; // For replies
 
-  const AddComment(this.postId, this.text);
+  const AddComment(this.postId, this.text, {this.parentId});
 
   @override
-  List<Object?> get props => [postId, text];
+  List<Object?> get props => [postId, text, parentId];
 }
 
 class DeleteComment extends SocialEvent {

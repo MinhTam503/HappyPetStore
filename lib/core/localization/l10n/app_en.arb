@@ -1917,7 +1917,16 @@
   "deleteConversationConfirm": "Are you sure you want to delete this conversation?",
   "userPosts": "Posts",
   "userFollowers": "Followers",
-  "userFollowing": "Following"
+  "userFollowing": "Following",
+  "recentSearches": "Recent Searches",
+  "clearAll": "Clear All",
+  "trending": "Trending",
+  "searchTips": "Search Tips",
+  "searchByPetName": "Search by pet name",
+  "searchByBreed": "Search by breed",
+  "searchByTag": "Search by tag",
+  "noResults": "No results found",
+  "tryDifferentKeywords": "Try different keywords"
 }
 
 

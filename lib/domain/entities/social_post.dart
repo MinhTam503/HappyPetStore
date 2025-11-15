@@ -74,6 +74,8 @@ class SocialComment {
   final String text;
   final List<String> likes;
   final DateTime timestamp;
+  final String? parentId; // Parent comment ID for replies (null for top-level)
+  final List<SocialComment> replies; // Nested replies (only 1 level deep)
 
   SocialComment({
     required this.id,
@@ -84,6 +86,8 @@ class SocialComment {
     required this.text,
     required this.likes,
     required this.timestamp,
+    this.parentId,
+    this.replies = const [],
   });
 
   bool isLikedBy(String userId) => likes.contains(userId);
@@ -98,6 +102,8 @@ class SocialComment {
     String? text,
     List<String>? likes,
     DateTime? timestamp,
+    String? parentId,
+    List<SocialComment>? replies,
   }) {
     return SocialComment(
       id: id ?? this.id,
@@ -108,6 +114,8 @@ class SocialComment {
       text: text ?? this.text,
       likes: likes ?? this.likes,
       timestamp: timestamp ?? this.timestamp,
+      parentId: parentId ?? this.parentId,
+      replies: replies ?? this.replies,
     );
   }
 }

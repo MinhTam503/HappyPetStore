@@ -36,12 +36,12 @@ class _SocialHomePageState extends State<SocialHomePage>
 
   Future<void> _loadData() async {
     _currentUserId = await UserManager().getUserIdForOperations();
-    
+
     // Ensure user profile exists (auto-sync from Users collection)
     if (_currentUserId != null) {
       context.read<SocialBloc>().add(EnsureUserProfile(_currentUserId!));
     }
-    
+
     context.read<SocialBloc>().add(const LoadFeed());
     context.read<SocialBloc>().add(const LoadExploreFeed());
     context.read<SocialBloc>().add(const LoadTrendingTags());
@@ -74,7 +74,9 @@ class _SocialHomePageState extends State<SocialHomePage>
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
-            onPressed: () => _showSearchDialog(context),
+            onPressed: () {
+              Navigator.pushNamed(context, '/social/search');
+            },
             tooltip: l10n?.search ?? 'Search',
           ),
           IconButton(
@@ -167,41 +169,6 @@ class _SocialHomePageState extends State<SocialHomePage>
           );
         },
       ),
-    );
-  }
-
-  void _showSearchDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        String query = '';
-        return AlertDialog(
-          title: const Text('Search Pets'),
-          content: TextField(
-            onChanged: (value) => query = value,
-            decoration: const InputDecoration(
-              hintText: 'Enter pet name or breed',
-              prefixIcon: Icon(Icons.search),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (query.isNotEmpty) {
-                  context.read<SocialBloc>().add(SearchPets(query));
-                  Navigator.pop(context);
-                  // Navigate to search results page
-                }
-              },
-              child: const Text('Search'),
-            ),
-          ],
-        );
-      },
     );
   }
 

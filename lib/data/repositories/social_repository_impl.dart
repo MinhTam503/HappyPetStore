@@ -622,6 +622,7 @@ class SocialRepositoryImpl implements SocialRepository {
     required String userName,
     required String userAvatarUrl,
     required String text,
+    String? parentId, // For replies
   }) async {
     try {
       final comment = SocialCommentModel(
@@ -633,20 +634,44 @@ class SocialRepositoryImpl implements SocialRepository {
         text: text,
         likes: [],
         timestamp: DateTime.now(),
+        parentId: parentId,
       );
 
-      await _postsRef.doc(postId).update({
-        'comments': FieldValue.arrayUnion([{
-          'id': comment.id,
-          'postId': comment.postId,
-          'userId': comment.userId,
-          'userName': comment.userName,
-          'userAvatarUrl': comment.userAvatarUrl,
-          'text': comment.text,
-          'likes': comment.likes,
-          'timestamp': Timestamp.fromDate(comment.timestamp),
-        }]),
-      });
+      final commentMap = {
+        'id': comment.id,
+        'postId': comment.postId,
+        'userId': comment.userId,
+        'userName': comment.userName,
+        'userAvatarUrl': comment.userAvatarUrl,
+        'text': comment.text,
+        'likes': comment.likes,
+        'timestamp': Timestamp.fromDate(comment.timestamp),
+        if (parentId != null) 'parentId': parentId,
+      };
+
+      // If this is a reply, add it to parent's replies array
+      if (parentId != null) {
+        final doc = await _postsRef.doc(postId).get();
+        final data = doc.data() as Map<String, dynamic>;
+        final comments = List<Map<String, dynamic>>.from(data['comments'] ?? []);
+        
+        // Find parent comment and add reply
+        for (var i = 0; i < comments.length; i++) {
+          if (comments[i]['id'] == parentId) {
+            final replies = List<Map<String, dynamic>>.from(comments[i]['replies'] ?? []);
+            replies.add(commentMap);
+            comments[i]['replies'] = replies;
+            break;
+          }
+        }
+        
+        await _postsRef.doc(postId).update({'comments': comments});
+      } else {
+        // Top-level comment
+        await _postsRef.doc(postId).update({
+          'comments': FieldValue.arrayUnion([commentMap]),
+        });
+      }
 
       // Update pet profile stats
       final doc = await _postsRef.doc(postId).get();
@@ -750,17 +775,36 @@ class SocialRepositoryImpl implements SocialRepository {
     try {
       final queryLower = query.toLowerCase();
       
-      // Search by name
+      // Search by name, displayName, and breed
       final nameResults = await _profilesRef
           .where('isPublic', isEqualTo: true)
           .get();
 
       final profiles = nameResults.docs
           .map((doc) => SocialPetProfileModel.fromFirestore(doc))
-          .where((profile) =>
-              profile.petName.toLowerCase().contains(queryLower) ||
-              profile.breed.toLowerCase().contains(queryLower))
+          .where((profile) {
+            final petNameMatch = profile.petName.toLowerCase().contains(queryLower);
+            final breedMatch = profile.breed.toLowerCase().contains(queryLower);
+            final displayNameMatch = (profile.displayName?.toLowerCase().contains(queryLower) ?? false);
+            final bioMatch = (profile.bio.toLowerCase().contains(queryLower));
+            
+            return petNameMatch || breedMatch || displayNameMatch || bioMatch;
+          })
           .toList();
+
+      // Sort by relevance: exact matches first, then partial matches
+      profiles.sort((a, b) {
+        final aExact = a.petName.toLowerCase() == queryLower || 
+                       (a.displayName?.toLowerCase() == queryLower);
+        final bExact = b.petName.toLowerCase() == queryLower || 
+                       (b.displayName?.toLowerCase() == queryLower);
+        
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        
+        // Sort by follower count
+        return b.stats.followers.compareTo(a.stats.followers);
+      });
 
       return profiles;
     } catch (e) {

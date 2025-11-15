@@ -4,13 +4,15 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/domain/entities/social_post.dart';
 
-/// Modern comment widget with like functionality
+/// Modern comment widget with like functionality and nested replies
 class CommentWidget extends StatelessWidget {
   final SocialComment comment;
   final String? currentUserId;
   final VoidCallback? onLike;
   final VoidCallback? onReply;
   final VoidCallback? onDelete;
+  final bool isReply; // True if this is a reply (indented)
+  final Function(String commentId)? onReplyToReply; // Callback for replying to a reply
 
   const CommentWidget({
     Key? key,
@@ -19,6 +21,8 @@ class CommentWidget extends StatelessWidget {
     this.onLike,
     this.onReply,
     this.onDelete,
+    this.isReply = false,
+    this.onReplyToReply,
   }) : super(key: key);
 
   @override
@@ -28,154 +32,177 @@ class CommentWidget extends StatelessWidget {
     final isLiked = currentUserId != null && comment.likes.contains(currentUserId);
     final isOwner = currentUserId == comment.userId;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
-            backgroundImage: comment.userAvatarUrl.isNotEmpty
-                ? NetworkImage(comment.userAvatarUrl)
-                : null,
-            child: comment.userAvatarUrl.isEmpty
-                ? Icon(
-                    Icons.person,
-                    size: 20,
-                    color: isDark ? darkPrimaryColor : primaryColor,
-                  )
-                : null,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Main comment
+        Padding(
+          padding: EdgeInsets.only(
+            left: isReply ? 48.0 : 16.0, // Indent replies
+            right: 16.0,
+            top: 8.0,
+            bottom: 8.0,
           ),
-          const SizedBox(width: 12),
-          
-          // Comment content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Comment bubble
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.grey[800]
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Username
-                      Text(
-                        comment.userName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: isDark ? darkPrimaryColor : primaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      
-                      // Comment text
-                      Text(
-                        comment.text,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.4,
-                          color: theme.textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 6),
-                
-                // Actions row
-                Row(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: isReply ? 16 : 18, // Smaller avatar for replies
+                backgroundColor: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
+                backgroundImage: comment.userAvatarUrl.isNotEmpty
+                    ? NetworkImage(comment.userAvatarUrl)
+                    : null,
+                child: comment.userAvatarUrl.isEmpty
+                    ? Icon(
+                        Icons.person,
+                        size: isReply ? 18 : 20,
+                        color: isDark ? darkPrimaryColor : primaryColor,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              
+              // Comment content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Timestamp
-                    Text(
-                      _formatTimestamp(comment.timestamp),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                    // Comment bubble
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                    ),
-                    
-                    const SizedBox(width: 16),
-                    
-                    // Like button
-                    GestureDetector(
-                      onTap: onLike,
-                      child: Row(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.grey[800]
+                            : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Username
                           Text(
-                            AppLocalizations.of(context)!.like,
+                            comment.userName,
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isLiked ? FontWeight.bold : FontWeight.normal,
-                              color: isLiked
-                                  ? (isDark ? darkPrimaryColor : primaryColor)
-                                  : Colors.grey[600],
+                              fontWeight: FontWeight.bold,
+                              fontSize: isReply ? 13 : 14,
+                              color: isDark ? darkPrimaryColor : primaryColor,
                             ),
                           ),
-                          if (comment.likes.isNotEmpty) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              '${comment.likes.length}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
+                          const SizedBox(height: 4),
+                          
+                          // Comment text
+                          Text(
+                            comment.text,
+                            style: TextStyle(
+                              fontSize: isReply ? 13 : 14,
+                              height: 1.4,
+                              color: theme.textTheme.bodyLarge?.color,
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
                     
-                    const SizedBox(width: 16),
+                    const SizedBox(height: 6),
                     
-                    // Reply button
-                    if (onReply != null)
-                      GestureDetector(
-                        onTap: onReply,
-                        child: Text(
-                          AppLocalizations.of(context)!.reply,
+                    // Actions row
+                    Row(
+                      children: [
+                        // Timestamp
+                        Text(
+                          _formatTimestamp(comment.timestamp),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
-                    
-                    const Spacer(),
-                    
-                    // Delete button (only for owner)
-                    if (isOwner && onDelete != null)
-                      IconButton(
-                        icon: Icon(
-                          Icons.delete_outline,
-                          size: 18,
-                          color: Colors.red[400],
+                        
+                        const SizedBox(width: 16),
+                        
+                        // Like button
+                        GestureDetector(
+                          onTap: onLike,
+                          child: Row(
+                            children: [
+                              Text(
+                                AppLocalizations.of(context)!.like,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isLiked ? FontWeight.bold : FontWeight.normal,
+                                  color: isLiked
+                                      ? (isDark ? darkPrimaryColor : primaryColor)
+                                      : Colors.grey[600],
+                                ),
+                              ),
+                              if (comment.likes.isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${comment.likes.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: onDelete,
-                      ),
+                        
+                        const SizedBox(width: 16),
+                        
+                        // Reply button (only show for top-level comments or allow one level deep)
+                        if (onReply != null && !isReply)
+                          GestureDetector(
+                            onTap: onReply,
+                            child: Text(
+                              AppLocalizations.of(context)!.reply,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        
+                        const Spacer(),
+                        
+                        // Delete button (only for owner)
+                        if (isOwner && onDelete != null)
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: Colors.red[400],
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: onDelete,
+                          ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        
+        // Nested replies (only 1 level deep)
+        if (comment.replies.isNotEmpty && !isReply)
+          ...comment.replies.map((reply) => CommentWidget(
+                comment: reply,
+                currentUserId: currentUserId,
+                isReply: true,
+                onLike: onReplyToReply != null ? () => onReplyToReply!(reply.id) : null,
+                onDelete: reply.userId == currentUserId && onDelete != null
+                    ? () => onDelete!()
+                    : null,
+              )),
+      ],
     );
   }
 
