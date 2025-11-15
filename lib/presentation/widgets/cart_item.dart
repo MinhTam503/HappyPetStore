@@ -107,6 +107,8 @@ class _MetaRow extends StatefulWidget {
 class _MetaRowState extends State<_MetaRow> {
   String? _breed;
   String? _color;
+  bool _isSold = false;
+  bool _isAvailable = true;
 
   @override
   void initState() {
@@ -121,6 +123,10 @@ class _MetaRowState extends State<_MetaRow> {
         (widget.cart.grocery['gender'] ?? widget.cart.grocery['sex'])
             ?.toString();
     String? color = widget.cart.grocery['color']?.toString();
+    
+    // Check if pet is sold or not available
+    bool isSold = false;
+    bool isAvailable = true;
 
     if ((breed == null || breed.isEmpty) ||
         (gender == null || gender.isEmpty) ||
@@ -140,6 +146,11 @@ class _MetaRowState extends State<_MetaRow> {
             gender = gender?.isNotEmpty == true ? gender : g?.toString();
             color =
                 color?.isNotEmpty == true ? color : data?['color']?.toString();
+            
+            // Check status
+            final status = data?['status']?.toString().toLowerCase() ?? '';
+            isSold = status == 'sold';
+            isAvailable = data?['isAvailable'] ?? true;
           }
         } catch (_) {
           // ignore fetch error silently
@@ -150,8 +161,9 @@ class _MetaRowState extends State<_MetaRow> {
     if (mounted) {
       setState(() {
         _breed = breed;
-
         _color = color;
+        _isSold = isSold;
+        _isAvailable = isAvailable;
       });
     }
   }
@@ -165,6 +177,33 @@ class _MetaRowState extends State<_MetaRow> {
         .where((e) => e != null && e.toString().isNotEmpty)
         .map((e) => e!)
         .toList();
+    
+    // Show sold status if pet is sold
+    if (_isSold || !_isAvailable) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red.shade300),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline, size: 14, color: Colors.red.shade700),
+            const SizedBox(width: 4),
+            Text(
+              'Đã bán',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (parts.isEmpty) {
       // Show nothing to keep UI clean; could show a small placeholder if wanted

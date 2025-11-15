@@ -454,6 +454,28 @@ class _CartScreenState extends State<CartScreen> {
 
     await orderRef.set(orderData);
 
+    // Update pet status to sold and mark as unavailable
+    for (var item in cartItems) {
+      final petId = item.grocery["productId"] ?? item.grocery["id"];
+      if (petId != null) {
+        try {
+          final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId.toString());
+          final docSnap = await docRef.get();
+          if (docSnap.exists) {
+            await docRef.update({
+              "status": "sold",
+              "isAvailable": false,
+            });
+            print("✅ Pet $petId marked as sold");
+          } else {
+            print("⚠️ Pet with id $petId not found in Firestore.");
+          }
+        } catch (e) {
+          print("❌ Error updating pet $petId status: $e");
+        }
+      }
+    }
+
     // NOTE: Shipment will be created by admin when order status changes to "Processing"
     // This ensures proper workflow: Order → Admin Review → Create Shipment
     print('✅ Order created successfully: ${orderRef.id}');

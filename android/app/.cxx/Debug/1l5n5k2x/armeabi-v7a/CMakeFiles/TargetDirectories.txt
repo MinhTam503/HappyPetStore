@@ -1,2 +1,0 @@
-D:/DoAnChuyenNganh/code/pet_shop/android/app/.cxx/Debug/1l5n5k2x/armeabi-v7a/CMakeFiles/edit_cache.dir
-D:/DoAnChuyenNganh/code/pet_shop/android/app/.cxx/Debug/1l5n5k2x/armeabi-v7a/CMakeFiles/rebuild_cache.dir

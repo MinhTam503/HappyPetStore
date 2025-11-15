@@ -46,6 +46,11 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
           ...data,
           'id': doc.id,
         };
+      }).where((pet) {
+        // Only show available pets (not sold)
+        final isAvailable = pet['isAvailable'] ?? true;
+        final status = pet['status']?.toString().toLowerCase() ?? '';
+        return isAvailable && status != 'sold';
       }).toList();
       setState(() {
         _allPets = pets;

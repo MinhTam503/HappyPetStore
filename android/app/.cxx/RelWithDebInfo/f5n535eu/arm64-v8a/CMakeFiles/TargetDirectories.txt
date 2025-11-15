@@ -1,2 +1,0 @@
-D:/Subjects/FinalReport/project/pet_shop/android/app/.cxx/RelWithDebInfo/f5n535eu/arm64-v8a/CMakeFiles/edit_cache.dir
-D:/Subjects/FinalReport/project/pet_shop/android/app/.cxx/RelWithDebInfo/f5n535eu/arm64-v8a/CMakeFiles/rebuild_cache.dir

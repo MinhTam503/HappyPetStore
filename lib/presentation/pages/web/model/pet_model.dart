@@ -15,6 +15,7 @@ class Pet {
   final dynamic price; // could be number or string in Firestore
   final String? color; // Màu sắc thú cưng (nullable vì dữ liệu cũ chưa có)
   final bool isAvailable;
+  final String? status; // Trạng thái bán (sold, available, etc.)
 
   Pet({
     required this.id,
@@ -29,6 +30,7 @@ class Pet {
     required this.price,
     this.color, // Nullable field
     this.isAvailable = false,
+    this.status, // Nullable field
   });
 
   factory Pet.fromDocument(DocumentSnapshot doc) {
@@ -47,6 +49,7 @@ class Pet {
       price: data['price'],
       color: data['color'], // Nullable field từ Firestore
       isAvailable: data['isAvailable'] ?? false,
+      status: data['status'], // Nullable field từ Firestore
     );
   }
 }

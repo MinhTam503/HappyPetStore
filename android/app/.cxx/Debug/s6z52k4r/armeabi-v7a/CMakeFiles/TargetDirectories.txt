@@ -1,0 +1,2 @@
+/Volumes/mintam/Subjects/HappyPetStore/android/app/.cxx/Debug/s6z52k4r/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Volumes/mintam/Subjects/HappyPetStore/android/app/.cxx/Debug/s6z52k4r/armeabi-v7a/CMakeFiles/rebuild_cache.dir

@@ -5,6 +5,8 @@ import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/components/breed_performance_chart.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/components/pet_status_chart.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/pet/components/pet_details_dialog.dart';
+import 'package:pet_shop/presentation/pages/web/model/pet_model.dart';
 
 class PetAnalyticsPage extends StatefulWidget {
   const PetAnalyticsPage({super.key});
@@ -472,92 +474,122 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
   }
 
   Widget _buildPetCard(Map<String, dynamic> data, String id) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              data['imageUrl'] ?? '',
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+    return InkWell(
+      onTap: () => _showPetDetails(data, id),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                data['imageUrl'] ?? '',
                 width: 60,
                 height: 60,
-                color: Colors.grey[300],
-                child: const Icon(Icons.pets),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.pets),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data['name'] ?? 'Chưa rõ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${AppLocalizations.of(context)!.breeds}: ${data['breed'] ?? 'Chưa rõ'}',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                  Text(
+                    'Tuổi: ${data['age'] ?? 'Chưa rõ'} năm',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  data['name'] ?? 'Chưa rõ',
+                  CurrencyHelper.formatVND(data['price']),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    color: Color(0xff08A045),
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${AppLocalizations.of(context)!.breeds}: ${data['breed'] ?? 'Chưa rõ'}',
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                Text(
-                  'Tuổi: ${data['age'] ?? 'Chưa rõ'} năm',
-                  style: const TextStyle(color: Colors.grey),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: data['status'] == 'sold' ? Colors.orange : Colors.blue,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    data['status'] == 'sold' ? 'Sold' : 'Available',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                CurrencyHelper.formatVND(data['price']),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xff08A045),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: data['status'] == 'sold' ? Colors.orange : Colors.blue,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  data['status'] == 'sold' ? 'Sold' : 'Available',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+          ],
+        ),
       ),
+    );
+  }
+
+  void _showPetDetails(Map<String, dynamic> data, String id) {
+    // Convert data to Pet model
+    final pet = Pet(
+      id: id,
+      name: data['name'] ?? 'Unknown',
+      category: data['category'] ?? 'Unknown',
+      imageUrl: data['imageUrl'] ?? '',
+      age: data['age']?.toString() ?? '0',
+      breed: data['breed'] ?? 'Unknown',
+      about: data['about'] ?? 'No description',
+      gender: data['sex'] ?? 'Unknown',
+      weight: data['weight']?.toString() ?? '0',
+      price: data['price'],
+      color: data['color'],
+      isAvailable: data['isAvailable'] ?? false,
+      status: data['status'],
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => PetDetailsDialog(pet: pet),
     );
   }
 

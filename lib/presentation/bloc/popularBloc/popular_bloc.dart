@@ -79,7 +79,21 @@ class PopularBloc extends Bloc<PopularEvent, PopularState> {
           .collection('Pets')
           .where('breed', whereIn: topBreeds)
           .get();
-      final pets = petsSnapshot.docs.map((d) => d.data()).toList();
+      
+      // Filter to only show available pets (not sold)
+      final pets = petsSnapshot.docs
+          .where((doc) {
+            final data = doc.data();
+            final isAvailable = data['isAvailable'] ?? true;
+            final status = data['status']?.toString().toLowerCase() ?? '';
+            return isAvailable && status != 'sold';
+          })
+          .map((d) {
+            final data = d.data();
+            data['id'] = d.id; // Ensure id field exists
+            return data;
+          })
+          .toList();
 
       emit(PopularLoaded(pets, topBreeds));
     } catch (e) {

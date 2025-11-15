@@ -36,6 +36,11 @@ class _AllPetsTabState extends State<AllPetsTab> {
             // ensure id field exists for downstream detail fetch
             data['id'] = doc.id;
             return data;
+          }).where((pet) {
+            // Only show available pets (not sold)
+            final isAvailable = pet['isAvailable'] ?? true;
+            final status = pet['status']?.toString().toLowerCase() ?? '';
+            return isAvailable && status != 'sold';
           }).toList();
           isLoading = false;
         });

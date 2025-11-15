@@ -55,7 +55,16 @@ class _AllPetState extends State<AllPet> {
           await FirebaseFirestore.instance.collection("Pets").get();
 
       setState(() {
-        groceryItems = snapshot.docs.map((docs) => docs.data()).toList();
+        groceryItems = snapshot.docs.map((docs) {
+          final data = docs.data();
+          data['id'] = docs.id;
+          return data;
+        }).where((pet) {
+          // Only show available pets (not sold)
+          final isAvailable = pet['isAvailable'] ?? true;
+          final status = pet['status']?.toString().toLowerCase() ?? '';
+          return isAvailable && status != 'sold';
+        }).toList();
         filterItems = groceryItems;
       });
     } catch (e) {

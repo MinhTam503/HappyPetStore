@@ -89,6 +89,12 @@ class _PetDetailScreenWebState extends State<PetDetailScreenWeb> {
         if (doc.id == currentId) continue;
         final data = doc.data();
         data['id'] = doc.id;
+        
+        // Only show available pets (not sold)
+        final isAvailable = data['isAvailable'] ?? true;
+        final status = data['status']?.toString().toLowerCase() ?? '';
+        if (!isAvailable || status == 'sold') continue;
+        
         if (breed != null && breed.toString().isNotEmpty && data['breed'] == breed) {
           sameBreed.add(data);
         } else {

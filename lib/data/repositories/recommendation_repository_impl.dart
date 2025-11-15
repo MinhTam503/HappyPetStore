@@ -28,6 +28,13 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
     return 0.0;
   }
 
+  /// Helper function to check if a pet is available (not sold)
+  bool _isPetAvailable(Map<String, dynamic> petData) {
+    final isAvailable = petData['isAvailable'] ?? true;
+    final status = petData['status']?.toString().toLowerCase() ?? '';
+    return isAvailable && status != 'sold';
+  }
+
   @override
   Future<UserProfile> getUserProfile(String userId) async {
     return UserProfile.empty(userId);
@@ -160,6 +167,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               for (final doc in breedSnapshot.docs) {
                 if (addedIds.contains(doc.id)) continue;
                 final data = doc.data();
+                
+                // Only include available pets (not sold)
+                if (!_isPetAvailable(data)) continue;
+                
                 items.add(RecommendationItem(
                   petId: doc.id,
                   name: data['name'] ?? 'Unknown Pet',
@@ -198,6 +209,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
             for (final doc in snapshot.docs) {
               if (addedIds.contains(doc.id)) continue;
               final data = doc.data();
+              
+              // Only include available pets (not sold)
+              if (!_isPetAvailable(data)) continue;
+              
               items.add(RecommendationItem(
                 petId: doc.id,
                 name: data['name'] ?? 'Unknown Pet',
@@ -231,6 +246,10 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
 
         for (final doc in snapshot.docs) {
           final data = doc.data();
+          
+          // Only include available pets (not sold)
+          if (!_isPetAvailable(data)) continue;
+          
           final item = RecommendationItem(
             petId: doc.id,
             name: data['name'] ?? 'Unknown Pet',

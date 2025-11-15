@@ -208,6 +208,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     await orderRef.set(orderData);
 
+    // Update pet status to sold and mark as unavailable
+    if (isPaid) {
+      for (var item in cartItems) {
+        final petId = item.grocery["productId"] ?? item.grocery["id"];
+        if (petId != null) {
+          try {
+            final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId.toString());
+            final docSnap = await docRef.get();
+            if (docSnap.exists) {
+              await docRef.update({
+                "status": "sold",
+                "isAvailable": false,
+              });
+              debugPrint("✅ Pet $petId marked as sold");
+            } else {
+              debugPrint("⚠️ Pet with id $petId not found in Firestore.");
+            }
+          } catch (e) {
+            debugPrint("❌ Error updating pet $petId status: $e");
+          }
+        }
+      }
+    }
+
     final orderUserId = orderData['userId']?.toString();
     final orderUserName = orderData['displayName']?.toString();
     if (orderUserId != null && orderUserId.isNotEmpty) {
@@ -317,9 +341,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   await DialogHelper.safeHideLoadingDialog();
   await Stripe.instance.presentPaymentSheet();
 
-  // Save order and get purchased breeds for Apriori
-  DialogHelper.showLoadingDialog(context, message: 'Đang lưu đơn hàng...');
-  final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
+      // Save order and get purchased breeds for Apriori
+      DialogHelper.showLoadingDialog(context, message: 'Đang lưu đơn hàng...');
+      final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
+
+      // Update pet status to sold (already done in saveOrderToFirestore, but ensure it's called)
 
       // Remove purchased items from cart (directly update Firestore)
       try {

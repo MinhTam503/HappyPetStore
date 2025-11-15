@@ -31,13 +31,21 @@ class PetBloc extends Bloc<PetEvent, PetState> {
     emit(const PetLoading());
     try {
       final snapshot = await _petsCollection.get();
-      final pets = snapshot.docs
+      final allPets = snapshot.docs
           .map((doc) => Pet.fromDocument(doc))
           .toList();
+      
+      // Filter to show only available pets (not sold)
+      final availablePets = allPets.where((pet) {
+        // Consider both isAvailable and status
+        // A pet is shown if isAvailable is true AND status is not 'sold'
+        return pet.isAvailable != false && 
+               (pet.status == null || pet.status?.toLowerCase() != 'sold');
+      }).toList();
 
       emit(PetLoaded(
-        pets: pets,
-        filteredPets: pets,
+        pets: availablePets,
+        filteredPets: availablePets,
       ));
     } catch (e) {
       emit(PetError('Lỗi load pets: $e'));
