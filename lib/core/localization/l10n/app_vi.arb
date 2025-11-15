@@ -672,10 +672,162 @@
   "passwordResetNote": "Lưu ý: Hiện hệ thống chưa hỗ trợ đặt lại mật khẩu qua SMS.",
   "gotIt": "Đã hiểu",
   "ok": "OK",
-  "you": "bạn"
-  ,
+  "you": "bạn",
   "somethingWentWrong": "Đã xảy ra lỗi",
-  "loginButton": "ĐĂNG NHẬP"
+  "loginButton": "ĐĂNG NHẬP",
+  "socialNetwork": "Mạng xã hội thú cưng",
+  "following": "Đang theo dõi",
+  "explore": "Khám phá",
+  "search": "Tìm kiếm",
+  "searchPets": "Tìm kiếm thú cưng...",
+  "createPost": "Tạo bài viết",
+  "newPost": "Bài viết mới",
+  "selectPhotos": "Chọn ảnh",
+  "selectPet": "Chọn thú cưng",
+  "writeCaption": "Viết chú thích...",
+  "addLocation": "Thêm vị trí",
+  "location": "Vị trí",
+  "post": "Đăng",
+  "posting": "Đang đăng...",
+  "cancel": "Hủy",
+  "selectAtLeastOnePhoto": "Vui lòng chọn ít nhất 1 ảnh",
+  "selectPetFirst": "Vui lòng chọn thú cưng trước",
+  "postCreatedSuccessfully": "Đã đăng bài viết thành công!",
+  "errorCreatingPost": "Lỗi khi tạo bài viết",
+  "likes": "{count} lượt thích",
+  "@likes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "comments": "{count} bình luận",
+  "@comments": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewAllComments": "Xem tất cả {count} bình luận",
+  "@viewAllComments": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addComment": "Thêm bình luận...",
+  "writeComment": "Viết bình luận...",
+  "reply": "Trả lời",
+  "delete": "Xóa",
+  "edit": "Chỉnh sửa",
+  "share": "Chia sẻ",
+  "follow": "Theo dõi",
+  "unfollow": "Bỏ theo dõi",
+  "followers": "{count} người theo dõi",
+  "@followers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "posts": "{count} bài viết",
+  "@posts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noPostsYet": "Chưa có bài viết nào",
+  "startFollowing": "Bắt đầu theo dõi các thú cưng để xem bài viết của họ",
+  "noPetsFound": "Không tìm thấy thú cưng",
+  "uploadingImages": "Đang tải ảnh lên...",
+  "processingPost": "Đang xử lý bài viết...",
+  "selectFromGallery": "Chọn từ thư viện",
+  "takePhoto": "Chụp ảnh",
+  "maxPhotosReached": "Tối đa 10 ảnh",
+  "photosSelected": "{count} ảnh đã chọn",
+  "@photosSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removePhoto": "Xóa ảnh",
+  "petProfile": "Hồ sơ thú cưng",
+  "bio": "Giới thiệu",
+  "editProfile": "Chỉnh sửa hồ sơ",
+  "noCommentsYet": "Chưa có bình luận",
+  "beFirstToComment": "Hãy là người đầu tiên bình luận!",
+  "like": "Thích",
+  "deleteComment": "Xóa bình luận",
+  "deleteCommentConfirm": "Bạn có chắc chắn muốn xóa bình luận này?",
+  "commentDeleted": "Đã xóa bình luận",
+  "replyingTo": "Đang trả lời {name}",
+  "@replyingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "justNow": "Vừa xong",
+  "viewComment": "Xem 1 bình luận",
+  "sendComment": "Gửi",
+  "profile": "Trang cá nhân",
+  "myProfile": "Trang của tôi",
+  "editSocialProfile": "Chỉnh sửa trang cá nhân",
+  "website": "Website",
+  "email": "Email",
+  "phone": "Số điện thoại",
+  "savingProfile": "Đang lưu...",
+  "saveProfile": "Lưu thay đổi",
+  "profileUpdated": "Đã cập nhật trang cá nhân",
+  "followersList": "Người theo dõi",
+  "followingList": "Đang theo dõi",
+  "noFollowers": "Chưa có người theo dõi",
+  "noFollowing": "Chưa theo dõi ai",
+  "message": "Nhắn tin",
+  "messages": "Tin nhắn",
+  "conversations": "Cuộc trò chuyện",
+  "noConversations": "Chưa có cuộc trò chuyện nào",
+  "startConversation": "Bắt đầu trò chuyện với người dùng khác",
+  "typeMessage": "Nhập tin nhắn...",
+  "send": "Gửi",
+  "noMessages": "Chưa có tin nhắn",
+  "noMessagesYet": "Chưa có tin nhắn",
+  "sendFirstMessage": "Gửi tin nhắn đầu tiên!",
+  "retry": "Thử lại",
+  "online": "Đang hoạt động",
+  "offline": "Không hoạt động",
+  "lastSeen": "Hoạt động {time}",
+  "@lastSeen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatWith": "Trò chuyện với {name}",
+  "@chatWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteConversation": "Xóa cuộc trò chuyện",
+  "deleteConversationConfirm": "Bạn có chắc chắn muốn xóa cuộc trò chuyện này?",
+  "userPosts": "Bài viết",
+  "userFollowers": "Người theo dõi",
+  "userFollowing": "Đang theo dõi"
 }
+
+
 
 

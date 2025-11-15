@@ -26,6 +26,17 @@ import 'package:pet_shop/presentation/bloc/popularBloc/popular_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/bloc/vnpay/vnpay_bloc.dart';
+import 'package:pet_shop/presentation/bloc/social/social_bloc.dart';
+import 'package:pet_shop/presentation/bloc/chat/chat_bloc.dart';
+import 'package:pet_shop/data/repositories/social_repository_impl.dart';
+import 'package:pet_shop/data/repositories/user_chat_repository_impl.dart';
+import 'package:pet_shop/domain/entities/social_pet_profile.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/create_post_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/social_profile_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/edit_social_profile_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/followers_list_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/chat_list_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/chat_room_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/get_started/get_started_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -170,6 +181,11 @@ class MyApp extends StatelessWidget {
             ..add(LoadRecentPets()),
         ),
         BlocProvider(create: (_) => getIt<RecommendationBloc>()),
+        BlocProvider(create: (_) => SocialBloc(repository: SocialRepositoryImpl())),
+        BlocProvider(create: (_) => ChatBloc(
+          chatRepository: UserChatRepositoryImpl(),
+          socialRepository: SocialRepositoryImpl(),
+        )),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
@@ -308,6 +324,61 @@ class MyApp extends StatelessWidget {
                           settings: settings);
                   }
                 }
+              }
+              
+              // Social Network routes
+              if (settings.name == '/social/create-post') {
+                return MaterialPageRoute(
+                  builder: (_) => const CreatePostPage(),
+                  settings: settings,
+                );
+              }
+              
+              if (settings.name == '/social/profile') {
+                final userId = settings.arguments as String;
+                return MaterialPageRoute(
+                  builder: (_) => SocialProfilePage(userId: userId),
+                  settings: settings,
+                );
+              }
+              
+              if (settings.name == '/social/edit-profile') {
+                final profile = settings.arguments as SocialPetProfile;
+                return MaterialPageRoute(
+                  builder: (_) => EditSocialProfilePage(profile: profile),
+                  settings: settings,
+                );
+              }
+              
+              if (settings.name == '/social/followers') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (_) => FollowersListPage(
+                    userId: args['userId'],
+                    isFollowersMode: args['isFollowersMode'],
+                  ),
+                  settings: settings,
+                );
+              }
+              
+              if (settings.name == '/social/chat') {
+                return MaterialPageRoute(
+                  builder: (_) => const ChatListPage(),
+                  settings: settings,
+                );
+              }
+              
+              if (settings.name == '/social/chat/room') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (_) => ChatRoomPage(
+                    conversationId: args['conversationId'],
+                    otherUserId: args['otherUserId'],
+                    otherUserName: args['otherUserName'],
+                    otherUserAvatar: args['otherUserAvatar'],
+                  ),
+                  settings: settings,
+                );
               }
 
               // Default routes

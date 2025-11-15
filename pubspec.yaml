@@ -83,6 +83,7 @@ dependencies:
   mobile_scanner: ^6.0.2
   printing: ^5.13.3
   pdf: ^3.11.1
+  cached_network_image: ^3.4.1
   # vnpay_flutter: ^2.0.0  # Removed - có vấn đề AndroidX compatibility
 
 

@@ -8,6 +8,7 @@ import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/home/home_page.dart'
     show HomePage;
 import 'package:pet_shop/presentation/pages/mobile/tab/profile_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/social_home_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/qr_scanner/qr_scanner_screen.dart';
 import 'package:pet_shop/presentation/widgets/conditional_draggable_chat_bubble.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
@@ -28,6 +29,7 @@ class _HomePageState extends State<BottomNavigator> {
   late int selectedIndex;
   final List pages = [
     const HomePage(),
+    const SocialHomePage(),
     const FavoriteScreen(),
     const QRScannerScreen(),
     const CartScreen(),
@@ -63,6 +65,7 @@ class _HomePageState extends State<BottomNavigator> {
         onTap: (i) => setState(() => selectedIndex = i),
         labels: [
           l10n?.home ?? "Home",
+          "Social",
           l10n?.favorite ?? "Yêu thích",
           l10n?.scanQRCode ?? "Quét QR",
           l10n?.cart ?? "Giỏ hàng",
@@ -70,6 +73,7 @@ class _HomePageState extends State<BottomNavigator> {
         ],
         icons: const [
           Icons.home_outlined,
+          Icons.pets_outlined,
           Icons.favorite_border,
           Icons.qr_code_scanner_outlined,
           Icons.shopping_cart_outlined,
@@ -77,6 +81,7 @@ class _HomePageState extends State<BottomNavigator> {
         ],
         activeIcons: const [
           Icons.home,
+          Icons.pets,
           Icons.favorite,
           Icons.qr_code_scanner,
           Icons.shopping_cart,
@@ -143,9 +148,9 @@ class _FancyBottomBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  for (int i = 0; i < 5; i++)
-                    if (i == 2)
-                      SizedBox(width: circleSize + 16) // gap for center
+                  for (int i = 0; i < 6; i++)
+                    if (i == 3)
+                      SizedBox(width: circleSize + 16) // gap for center (QR Scanner at index 3)
                     else
                       _BarItem(
                         icon: icons[i],
@@ -158,11 +163,11 @@ class _FancyBottomBar extends StatelessWidget {
               ),
             ),
 
-            // Center elevated circle button (QR)
+            // Center elevated circle button (QR Scanner at index 3)
             Positioned(
               bottom: height - notchRadius - 15,
               child: GestureDetector(
-                onTap: () => onTap(2),
+                onTap: () => onTap(3),
                 child: Container(
                   width: circleSize,
                   height: circleSize,
@@ -183,7 +188,7 @@ class _FancyBottomBar extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    currentIndex == 2 ? activeIcons[2] : icons[2],
+                    currentIndex == 3 ? activeIcons[3] : icons[3],
                     color: Colors.white,
                     size: 24, // slightly smaller center icon
                   ),
@@ -195,13 +200,13 @@ class _FancyBottomBar extends StatelessWidget {
             Positioned(
               bottom: 16, // align baseline with other labels
               child: GestureDetector(
-                onTap: () => onTap(2),
+                onTap: () => onTap(3),
                 child: Text(
-                  labels[2],
+                  labels[3],
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: currentIndex == 2 ? FontWeight.w700 : FontWeight.w500,
-                    color: currentIndex == 2
+                    fontWeight: currentIndex == 3 ? FontWeight.w700 : FontWeight.w500,
+                    color: currentIndex == 3
                         ? primaryColor
                         : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                   ),

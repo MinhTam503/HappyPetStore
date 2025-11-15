@@ -1764,9 +1764,162 @@
   "gotIt": "Got it",
   "ok": "OK"
   ,
-  "you": "you"
-  ,
+  "you": "you",
   "somethingWentWrong": "Something went wrong",
-  "loginButton": "LOGIN"
+  "loginButton": "LOGIN",
+  "socialNetwork": "Pet Social Network",
+  "following": "Following",
+  "explore": "Explore",
+  "search": "Search",
+  "searchPets": "Search pets...",
+  "createPost": "Create Post",
+  "newPost": "New Post",
+  "selectPhotos": "Select Photos",
+  "selectPet": "Select Pet",
+  "writeCaption": "Write caption...",
+  "addLocation": "Add Location",
+  "location": "Location",
+  "post": "Post",
+  "posting": "Posting...",
+  "cancel": "Cancel",
+  "selectAtLeastOnePhoto": "Please select at least 1 photo",
+  "selectPetFirst": "Please select a pet first",
+  "postCreatedSuccessfully": "Post created successfully!",
+  "errorCreatingPost": "Error creating post",
+  "likes": "{count} likes",
+  "@likes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "comments": "{count} comments",
+  "@comments": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewAllComments": "View all {count} comments",
+  "@viewAllComments": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addComment": "Add comment...",
+  "writeComment": "Write comment...",
+  "reply": "Reply",
+  "delete": "Delete",
+  "edit": "Edit",
+  "share": "Share",
+  "follow": "Follow",
+  "unfollow": "Unfollow",
+  "followers": "{count} followers",
+  "@followers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "posts": "{count} posts",
+  "@posts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noPostsYet": "No posts yet",
+  "startFollowing": "Start following pets to see their posts",
+  "noPetsFound": "No pets found",
+  "uploadingImages": "Uploading images...",
+  "processingPost": "Processing post...",
+  "selectFromGallery": "Select from gallery",
+  "takePhoto": "Take photo",
+  "maxPhotosReached": "Maximum 10 photos",
+  "photosSelected": "{count} photos selected",
+  "@photosSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removePhoto": "Remove photo",
+  "petProfile": "Pet Profile",
+  "bio": "Bio",
+  "editProfile": "Edit Profile",
+  "noCommentsYet": "No comments yet",
+  "beFirstToComment": "Be the first to comment!",
+  "like": "Like",
+  "deleteComment": "Delete Comment",
+  "deleteCommentConfirm": "Are you sure you want to delete this comment?",
+  "commentDeleted": "Comment deleted",
+  "replyingTo": "Replying to {name}",
+  "@replyingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "justNow": "Just now",
+  "viewComment": "View 1 comment",
+  "sendComment": "Send",
+  "profile": "Profile",
+  "myProfile": "My Profile",
+  "editSocialProfile": "Edit Profile",
+  "website": "Website",
+  "email": "Email",
+  "phone": "Phone",
+  "savingProfile": "Saving...",
+  "saveProfile": "Save Changes",
+  "profileUpdated": "Profile updated",
+  "followersList": "Followers",
+  "followingList": "Following",
+  "noFollowers": "No followers yet",
+  "noFollowing": "Not following anyone",
+  "message": "Message",
+  "messages": "Messages",
+  "conversations": "Conversations",
+  "noConversations": "No conversations yet",
+  "startConversation": "Start chatting with other users",
+  "typeMessage": "Type a message...",
+  "send": "Send",
+  "noMessages": "No messages yet",
+  "noMessagesYet": "No messages yet",
+  "sendFirstMessage": "Send the first message!",
+  "retry": "Retry",
+  "online": "Online",
+  "offline": "Offline",
+  "lastSeen": "Last seen {time}",
+  "@lastSeen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "chatWith": "Chat with {name}",
+  "@chatWith": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteConversation": "Delete conversation",
+  "deleteConversationConfirm": "Are you sure you want to delete this conversation?",
+  "userPosts": "Posts",
+  "userFollowers": "Followers",
+  "userFollowing": "Following"
 }
+
+
+
 
