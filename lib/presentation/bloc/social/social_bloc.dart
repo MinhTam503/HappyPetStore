@@ -276,6 +276,12 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
 
       await _repository.followPet(userId: userId, petId: event.petId);
 
+      // Reload current user profile to get updated following list
+      final currentUserProfile = await _repository.getUserProfile(userId);
+      
+      // Reload feed with updated following list
+      final feed = await _repository.getFeed(userId);
+      
       // Reload profile to get updated data
       if (state is SocialLoaded) {
         final currentState = state as SocialLoaded;
@@ -285,19 +291,23 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         newStatus[event.petId] = true;
 
         // Reload profile from cache or fetch new
-        SocialPetProfile? updatedProfile;
-        if (currentState.profileCache.containsKey(event.petId)) {
-          updatedProfile = await _repository.getUserProfile(event.petId);
-        }
+        SocialPetProfile? updatedProfile = await _repository.getUserProfile(event.petId);
 
         final newCache = Map<String, SocialPetProfile>.from(currentState.profileCache);
         if (updatedProfile != null) {
           newCache[event.petId] = updatedProfile;
         }
+        if (currentUserProfile != null) {
+          newCache[userId] = currentUserProfile;
+        }
 
         emit(currentState.copyWith(
+          feed: feed,
           followingStatus: newStatus,
           profileCache: newCache,
+          currentProfile: _isCurrentUserProfile(event.petId, userId) 
+              ? updatedProfile 
+              : currentState.currentProfile,
         ));
       }
 
@@ -325,6 +335,12 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
 
       await _repository.unfollowPet(userId: userId, petId: event.petId);
 
+      // Reload current user profile to get updated following list
+      final currentUserProfile = await _repository.getUserProfile(userId);
+      
+      // Reload feed with updated following list
+      final feed = await _repository.getFeed(userId);
+
       // Reload profile to get updated data
       if (state is SocialLoaded) {
         final currentState = state as SocialLoaded;
@@ -333,20 +349,24 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         final newStatus = Map<String, bool>.from(currentState.followingStatus);
         newStatus[event.petId] = false;
 
-        // Reload profile from cache or fetch new
-        SocialPetProfile? updatedProfile;
-        if (currentState.profileCache.containsKey(event.petId)) {
-          updatedProfile = await _repository.getUserProfile(event.petId);
-        }
+        // Reload profile
+        SocialPetProfile? updatedProfile = await _repository.getUserProfile(event.petId);
 
         final newCache = Map<String, SocialPetProfile>.from(currentState.profileCache);
         if (updatedProfile != null) {
           newCache[event.petId] = updatedProfile;
         }
+        if (currentUserProfile != null) {
+          newCache[userId] = currentUserProfile;
+        }
 
         emit(currentState.copyWith(
+          feed: feed,
           followingStatus: newStatus,
           profileCache: newCache,
+          currentProfile: _isCurrentUserProfile(event.petId, userId) 
+              ? updatedProfile 
+              : currentState.currentProfile,
         ));
       }
 
@@ -480,7 +500,8 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
     try {
       emit(SocialLoading());
 
-      final exploreFeed = await _repository.getExplorePosts();
+      final userId = await _getUserId();
+      final exploreFeed = await _repository.getExplorePosts(excludeUserId: userId);
 
       if (state is SocialLoaded) {
         emit((state as SocialLoaded).copyWith(exploreFeed: exploreFeed));
@@ -837,5 +858,11 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
         print('❌ Error incrementing view count: $e');
       }
     }
+  }
+
+  // === Helper Methods ===
+
+  bool _isCurrentUserProfile(String petId, String userId) {
+    return petId == userId;
   }
 }

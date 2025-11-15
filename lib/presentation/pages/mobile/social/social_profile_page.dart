@@ -421,14 +421,156 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
   }
   
   Widget _buildFollowersList(BuildContext context, SocialPetProfile profile) {
-    return Center(
-      child: Text(AppLocalizations.of(context)!.noFollowers),
+    if (profile.followers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context)!.noFollowers,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: profile.followers.length,
+      itemBuilder: (context, index) {
+        final followerId = profile.followers[index];
+        
+        return BlocBuilder<SocialBloc, SocialState>(
+          builder: (context, state) {
+            if (state is! SocialLoaded) {
+              return const ListTile(
+                leading: CircleAvatar(child: Icon(Icons.person)),
+                title: Text('Loading...'),
+              );
+            }
+            
+            // Try to get profile from cache
+            final followerProfile = state.profileCache[followerId];
+            if (followerProfile == null) {
+              // Load profile if not in cache
+              context.read<SocialBloc>().add(LoadUserProfile(followerId));
+              return const ListTile(
+                leading: CircleAvatar(child: Icon(Icons.person)),
+                title: Text('Loading...'),
+              );
+            }
+
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: followerProfile.avatarUrl.isNotEmpty
+                    ? NetworkImage(followerProfile.avatarUrl)
+                    : null,
+                child: followerProfile.avatarUrl.isEmpty
+                    ? const Icon(Icons.person)
+                    : null,
+              ),
+              title: Text(followerProfile.displayName ?? followerProfile.petName),
+              subtitle: followerProfile.bio.isNotEmpty ? Text(followerProfile.bio) : null,
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  '/social/profile',
+                  arguments: followerId,
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
   
   Widget _buildFollowingList(BuildContext context, SocialPetProfile profile) {
-    return Center(
-      child: Text(AppLocalizations.of(context)!.noFollowing),
+    if (profile.following.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_add_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context)!.noFollowing,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: profile.following.length,
+      itemBuilder: (context, index) {
+        final followingId = profile.following[index];
+        
+        return BlocBuilder<SocialBloc, SocialState>(
+          builder: (context, state) {
+            if (state is! SocialLoaded) {
+              return const ListTile(
+                leading: CircleAvatar(child: Icon(Icons.person)),
+                title: Text('Loading...'),
+              );
+            }
+            
+            // Try to get profile from cache
+            final followingProfile = state.profileCache[followingId];
+            if (followingProfile == null) {
+              // Load profile if not in cache
+              context.read<SocialBloc>().add(LoadUserProfile(followingId));
+              return const ListTile(
+                leading: CircleAvatar(child: Icon(Icons.person)),
+                title: Text('Loading...'),
+              );
+            }
+
+            final isFollowing = state.followingStatus[followingId] ?? false;
+
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: followingProfile.avatarUrl.isNotEmpty
+                    ? NetworkImage(followingProfile.avatarUrl)
+                    : null,
+                child: followingProfile.avatarUrl.isEmpty
+                    ? const Icon(Icons.person)
+                    : null,
+              ),
+              title: Text(followingProfile.displayName ?? followingProfile.petName),
+              subtitle: followingProfile.bio.isNotEmpty ? Text(followingProfile.bio) : null,
+              trailing: _isOwnProfile
+                  ? null
+                  : OutlinedButton(
+                      onPressed: () {
+                        if (isFollowing) {
+                          context.read<SocialBloc>().add(UnfollowPet(followingId));
+                        } else {
+                          context.read<SocialBloc>().add(FollowPet(followingId));
+                        }
+                      },
+                      child: Text(
+                        isFollowing
+                            ? AppLocalizations.of(context)!.following
+                            : AppLocalizations.of(context)!.follow,
+                      ),
+                    ),
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  '/social/profile',
+                  arguments: followingId,
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 

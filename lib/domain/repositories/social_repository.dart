@@ -82,7 +82,7 @@ abstract class SocialRepository {
   Future<List<SocialPost>> getFeed(String userId, {int limit = 20});
   
   /// Get trending/explore posts
-  Future<List<SocialPost>> getExplorePosts({int limit = 30});
+  Future<List<SocialPost>> getExplorePosts({int limit = 30, String? excludeUserId});
   
   /// Delete a post
   Future<void> deletePost(String postId);

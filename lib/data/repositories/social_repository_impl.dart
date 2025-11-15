@@ -148,8 +148,8 @@ class SocialRepositoryImpl implements SocialRepository {
   Future<List<SocialPost>> getUserPosts(String userId, {int limit = 20}) async {
     try {
       final querySnapshot = await _postsRef
-          .where('authorId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
+          .where('petId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
           .limit(limit)
           .get();
 
@@ -473,13 +473,20 @@ class SocialRepositoryImpl implements SocialRepository {
   @override
   Future<List<SocialPost>> getFeed(String userId, {int limit = 20}) async {
     try {
-      // Get pets that user follows
-      final following = await getFollowing(userId);
-      final petIds = following.map((p) => p.id).toList();
+      // Get user's following array from their profile
+      final userProfile = await getUserProfile(userId);
+      if (userProfile == null) {
+        return [];
+      }
 
+      // Include own userId to see own posts in feed
+      final petIds = [...userProfile.following];
+      if (!petIds.contains(userId)) {
+        petIds.add(userId);
+      }
+      
       if (petIds.isEmpty) {
-        // If not following anyone, return explore posts
-        return getExplorePosts(limit: limit);
+        return [];
       }
 
       // Get posts from followed pets (in batches due to whereIn limit)
@@ -509,17 +516,24 @@ class SocialRepositoryImpl implements SocialRepository {
   }
 
   @override
-  Future<List<SocialPost>> getExplorePosts({int limit = 30}) async {
+  Future<List<SocialPost>> getExplorePosts({int limit = 30, String? excludeUserId}) async {
     try {
       final snapshot = await _postsRef
           .orderBy('viewCount', descending: true)
           .orderBy('timestamp', descending: true)
-          .limit(limit)
+          .limit(limit * 2)
           .get();
 
-      return snapshot.docs
+      var posts = snapshot.docs
           .map((doc) => SocialPostModel.fromFirestore(doc))
           .toList();
+      
+      // Exclude own posts if userId provided
+      if (excludeUserId != null) {
+        posts = posts.where((post) => post.petId != excludeUserId).toList();
+      }
+
+      return posts.take(limit).toList();
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error getting explore posts: $e');
