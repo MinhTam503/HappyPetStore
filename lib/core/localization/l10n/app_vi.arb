@@ -834,7 +834,70 @@
   "searchByBreed": "Tìm theo giống",
   "searchByTag": "Tìm theo thẻ",
   "noResults": "Không tìm thấy kết quả",
-  "tryDifferentKeywords": "Thử từ khóa khác"
+  "tryDifferentKeywords": "Thử từ khóa khác",
+  "petTryOn": "Pet Try-On - {name}",
+  "@petTryOn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "captureAndSave": "Chụp ảnh & Lưu",
+  "capturePhoto": "Chụp ảnh phòng",
+  "retakePhoto": "Chụp lại ảnh",
+  "liveCamera": "Camera trực tiếp",
+  "petCategory": "Loại thú cưng",
+  "petSize": "Kích thước",
+  "dog": "Chó",
+  "cat": "Mèo",
+  "fish": "Cá",
+  "bird": "Chim",
+  "weightKg": "{weight} kg",
+  "@weightKg": {
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "gestureHint": "🐾 Kéo 1 ngón để di chuyển • Pinch 2 ngón để phóng to/thu nhỏ • Xoay 2 ngón để xoay hướng",
+  "petTryOnGuideTitle": "Hướng dẫn Pet Try-On",
+  "guideStep1": "1. Chọn chế độ: Chụp ảnh phòng hoặc Camera trực tiếp",
+  "guideStep2": "2. Kéo thú cưng đến vị trí mong muốn",
+  "guideStep3": "3. Pinch để phóng to/thu nhỏ đúng tỷ lệ",
+  "guideStep4": "4. Xoay bằng 2 ngón để đổi hướng",
+  "guideStep5": "5. Bấm nút camera để chụp và lưu + chia sẻ",
+  "understood": "Đã hiểu",
+  "noRoomPhoto": "Chưa có ảnh phòng. Bấm \"Chụp ảnh phòng\"",
+  "initializingCamera": "Đang khởi tạo camera...",
+  "cameraInitError": "Không thể khởi tạo camera: {error}",
+  "@cameraInitError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "photoSaved": "Đã lưu ảnh Pet Try-On: {fileName}",
+  "@photoSaved": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "captureError": "Lỗi khi chụp ảnh: {error}",
+  "@captureError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareText": "Xem thú cưng trong phòng của tôi!",
+  "collapseControls": "Thu gọn",
+  "expandControls": "Mở rộng"
 }
 
 

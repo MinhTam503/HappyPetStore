@@ -9,6 +9,7 @@ import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_bloc.dart';
 import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/pet/pet_try_on_page.dart';
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
 import '../../../bloc/favBloc/fav_state.dart';
@@ -154,7 +155,8 @@ class _DetailPetState extends State<DetailPet> {
       // Kiểm tra đăng nhập sử dụng UserManager (hỗ trợ tất cả phương thức đăng nhập)
       final userIdentifier = await userManager.getUserIdentifier();
       if (userIdentifier == null) {
-  _showMessage(AppLocalizations.of(context)?.loginRequiredAddToCart ?? 'Vui lòng đăng nhập để thêm vào giỏ hàng');
+        _showMessage(AppLocalizations.of(context)?.loginRequiredAddToCart ??
+            'Vui lòng đăng nhập để thêm vào giỏ hàng');
         return;
       }
 
@@ -210,8 +212,8 @@ class _DetailPetState extends State<DetailPet> {
 
   @override
   Widget build(BuildContext context) {
-  final data = widget.pet;
-  final l10n = AppLocalizations.of(context);
+    final data = widget.pet;
+    final l10n = AppLocalizations.of(context);
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
@@ -296,6 +298,29 @@ class _DetailPetState extends State<DetailPet> {
                     );
                   },
                 ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PetTryOnPage(pet: data),
+                      ),
+                    );
+                  },
+                  icon: Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: const Icon(
+                      Icons.view_in_ar,
+                      color: Colors.black,
+                    ),
+                  ),
+                  tooltip: 'Thử trong phòng',
+                ),
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
@@ -349,17 +374,31 @@ class _DetailPetState extends State<DetailPet> {
                           children: [
                             Text(
                               l10n?.basicInfo ?? 'Thông tin cơ bản',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 12),
-              _buildInfoRow(l10n?.breed ?? 'Giống', data['breed']?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
-              _buildInfoRow(l10n?.age ?? 'Tuổi', data['age']?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
-              _buildInfoRow(l10n?.weight ?? 'Cân nặng', (data['weight'] != null ? "${data['weight']} kg" : (l10n?.unknown ?? 'Không xác định'))),
-              _buildInfoRow(l10n?.gender ?? 'Giới tính', (data['sex'] ?? data['gender'])?.toString() ?? (l10n?.unknown ?? 'Không xác định')),
-              _buildColorInfoRow(l10n?.color ?? 'Màu sắc', data['color'] ?? 'colorMixed'),
+                            _buildInfoRow(
+                                l10n?.breed ?? 'Giống',
+                                data['breed']?.toString() ??
+                                    (l10n?.unknown ?? 'Không xác định')),
+                            _buildInfoRow(
+                                l10n?.age ?? 'Tuổi',
+                                data['age']?.toString() ??
+                                    (l10n?.unknown ?? 'Không xác định')),
+                            _buildInfoRow(
+                                l10n?.weight ?? 'Cân nặng',
+                                (data['weight'] != null
+                                    ? "${data['weight']} kg"
+                                    : (l10n?.unknown ?? 'Không xác định'))),
+                            _buildInfoRow(
+                                l10n?.gender ?? 'Giới tính',
+                                (data['sex'] ?? data['gender'])?.toString() ??
+                                    (l10n?.unknown ?? 'Không xác định')),
+                            _buildColorInfoRow(l10n?.color ?? 'Màu sắc',
+                                data['color'] ?? 'colorMixed'),
                           ],
                         ),
                       ),
@@ -375,18 +414,25 @@ class _DetailPetState extends State<DetailPet> {
                           children: [
                             Text(
                               l10n?.description ?? 'Mô tả',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 12),
                             Text(
-                isExpand
-                  ? (data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả'))
-                  : (data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả')).length > 100
-                    ? '${(data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả')).substring(0, 100)}...'
-                    : (data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả')),
+                              isExpand
+                                  ? (data['about'] ??
+                                      (l10n?.noDescription ?? 'Không có mô tả'))
+                                  : (data['about'] ??
+                                                  (l10n?.noDescription ??
+                                                      'Không có mô tả'))
+                                              .length >
+                                          100
+                                      ? '${(data['about'] ?? (l10n?.noDescription ?? 'Không có mô tả')).substring(0, 100)}...'
+                                      : (data['about'] ??
+                                          (l10n?.noDescription ??
+                                              'Không có mô tả')),
                               style: const TextStyle(fontSize: 16),
                             ),
                             if ((data['about'] ?? '').length > 100)
@@ -396,7 +442,9 @@ class _DetailPetState extends State<DetailPet> {
                                     isExpand = !isExpand;
                                   });
                                 },
-                                child: Text(isExpand ? (l10n?.showLess ?? 'Thu gọn') : (l10n?.readMore ?? 'Xem thêm')),
+                                child: Text(isExpand
+                                    ? (l10n?.showLess ?? 'Thu gọn')
+                                    : (l10n?.readMore ?? 'Xem thêm')),
                               ),
                           ],
                         ),
@@ -426,7 +474,7 @@ class _DetailPetState extends State<DetailPet> {
                     if (similarPets.isNotEmpty) ...[
                       Text(
                         l10n?.similarProducts ?? 'Sản phẩm tương tự',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -461,8 +509,9 @@ class _DetailPetState extends State<DetailPet> {
                       const SizedBox(height: 24),
                     ] else ...[
                       Text(
-                        l10n?.noSimilarProducts ?? 'Không tìm thấy sản phẩm tương tự',
-                        style: TextStyle(
+                        l10n?.noSimilarProducts ??
+                            'Không tìm thấy sản phẩm tương tự',
+                        style: const TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
                           fontStyle: FontStyle.italic,
@@ -533,10 +582,11 @@ class _DetailPetState extends State<DetailPet> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.shopping_cart, color: Colors.white, size: 24),
+                    const Icon(Icons.shopping_cart, color: Colors.white, size: 24),
                     Text(
-                      (AppLocalizations.of(context)?.addToCart ?? 'Thêm vào giỏ hàng'),
-                      style: TextStyle(
+                      (AppLocalizations.of(context)?.addToCart ??
+                          'Thêm vào giỏ hàng'),
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -659,7 +709,7 @@ class _DetailPetState extends State<DetailPet> {
 
   String _getLocalizedColor(AppLocalizations? l10n, String colorKey) {
     if (l10n == null) return colorKey;
-    
+
     switch (colorKey) {
       case 'colorBrown':
         return l10n.colorBrown;

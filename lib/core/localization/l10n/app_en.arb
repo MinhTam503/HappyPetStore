@@ -52,6 +52,69 @@
   "@confirm": {
     "description": "Confirm dialog title"
   },
+  "petTryOn": "Pet Try-On - {name}",
+  "@petTryOn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "captureAndSave": "Capture & Save",
+  "capturePhoto": "Capture Room Photo",
+  "retakePhoto": "Retake Photo",
+  "liveCamera": "Live Camera",
+  "petCategory": "Pet Category",
+  "petSize": "Size",
+  "dog": "Dog",
+  "cat": "Cat",
+  "fish": "Fish",
+  "bird": "Bird",
+  "weightKg": "{weight} kg",
+  "@weightKg": {
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "gestureHint": "🐾 Drag with 1 finger to move • Pinch with 2 fingers to zoom • Rotate with 2 fingers",
+  "petTryOnGuideTitle": "Pet Try-On Guide",
+  "guideStep1": "1. Choose mode: Capture room photo or Live camera",
+  "guideStep2": "2. Drag pet to desired position",
+  "guideStep3": "3. Pinch to zoom in/out to proper scale",
+  "guideStep4": "4. Rotate with 2 fingers to change direction",
+  "guideStep5": "5. Tap camera button to capture and save + share",
+  "understood": "Got it",
+  "noRoomPhoto": "No room photo. Tap \"Capture Room Photo\"",
+  "initializingCamera": "Initializing camera...",
+  "cameraInitError": "Cannot initialize camera: {error}",
+  "@cameraInitError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "photoSaved": "Pet Try-On photo saved: {fileName}",
+  "@photoSaved": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "captureError": "Error capturing photo: {error}",
+  "@captureError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareText": "Check out my pet in my room!",
+  "collapseControls": "Collapse",
+  "expandControls": "Expand",
   "areYouSureLogout": "Are you sure you want to logout?",
   "@areYouSureLogout": {
     "description": "Logout confirmation message"

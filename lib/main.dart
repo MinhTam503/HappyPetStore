@@ -38,7 +38,7 @@ import 'package:pet_shop/presentation/pages/mobile/social/edit_social_profile_pa
 import 'package:pet_shop/presentation/pages/mobile/social/followers_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_room_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/pet/ar_viewer_page.dart';
+// import 'package:pet_shop/presentation/pages/mobile/pet/ar_viewer_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/get_started/get_started_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -394,16 +394,16 @@ class MyApp extends StatelessWidget {
                 );
               }
 
-              if (settings.name == '/pet/ar-viewer') {
-                final args = settings.arguments as Map<String, dynamic>?;
-                return MaterialPageRoute(
-                  builder: (_) => ArViewerPage(
-                    modelPath: args?['modelPath'],
-                    petName: args?['petName'],
-                  ),
-                  settings: settings,
-                );
-              }
+              // if (settings.name == '/pet/ar-viewer') {
+              //   final args = settings.arguments as Map<String, dynamic>?;
+              //   return MaterialPageRoute(
+              //     builder: (_) => ArViewerPage(
+              //       modelPath: args?['modelPath'],
+              //       petName: args?['petName'],
+              //     ),
+              //     settings: settings,
+              //   );
+              // }
 
               // Default routes
               return null;

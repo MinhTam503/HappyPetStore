@@ -107,6 +107,12 @@
 	<!-- Camera permission usage description for QR code scanning and AR -->
 	<key>NSCameraUsageDescription</key>
 	<string>Ứng dụng cần quyền truy cập camera để quét mã QR, xem AR và đặt thú cưng 3D lên sàn nhà.</string>
+
+	<!-- Photo library usage for saving Pet Try-On screenshots -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập thư viện ảnh để lưu ảnh Pet Try-On.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần quyền lưu ảnh vào thư viện để bạn chia sẻ hình thú cưng trong phòng.</string>
 	
 	<!-- ARKit requirement for iOS AR features -->
 	<key>UIRequiredDeviceCapabilities</key>
