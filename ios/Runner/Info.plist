@@ -104,8 +104,14 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Ứng dụng cần quyền truy cập vị trí để cung cấp trải nghiệm giao hàng tốt hơn.</string>
 	
-	<!-- Camera permission usage description for QR code scanning -->
+	<!-- Camera permission usage description for QR code scanning and AR -->
 	<key>NSCameraUsageDescription</key>
-	<string>Ứng dụng cần quyền truy cập camera để quét mã QR và xem thông tin thú cưng.</string>
+	<string>Ứng dụng cần quyền truy cập camera để quét mã QR, xem AR và đặt thú cưng 3D lên sàn nhà.</string>
+	
+	<!-- ARKit requirement for iOS AR features -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arkit</string>
+	</array>
 </dict>
 </plist>

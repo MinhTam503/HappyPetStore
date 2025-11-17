@@ -175,6 +175,7 @@ class _SocialHomePageState extends State<SocialHomePage>
   void _showCommentsSheet(BuildContext context, String postId) {
     final currentUser = FirebaseAuth.instance.currentUser;
     String? replyingToUser;
+    String? replyingToCommentId; // Store parent comment ID
 
     // Load comments when opening sheet
     context.read<SocialBloc>().add(LoadComments(postId));
@@ -275,12 +276,17 @@ class _SocialHomePageState extends State<SocialHomePage>
                                 );
                               }
 
+                              // Filter to show only top-level comments (replies will be rendered inside CommentWidget)
+                              final topLevelComments = state.currentComments
+                                  .where((c) => c.parentId == null)
+                                  .toList();
+
                               return ListView.builder(
                                 controller: scrollController,
-                                itemCount: state.currentComments.length,
+                                itemCount: topLevelComments.length,
                                 padding: const EdgeInsets.only(top: 8),
                                 itemBuilder: (context, index) {
-                                  final comment = state.currentComments[index];
+                                  final comment = topLevelComments[index];
 
                                   return CommentWidget(
                                     comment: comment,
@@ -293,6 +299,7 @@ class _SocialHomePageState extends State<SocialHomePage>
                                     onReply: () {
                                       setState(() {
                                         replyingToUser = comment.userName;
+                                        replyingToCommentId = comment.id;
                                       });
                                     },
                                     onDelete: () async {
@@ -370,6 +377,7 @@ class _SocialHomePageState extends State<SocialHomePage>
                             onCancelReply: () {
                               setState(() {
                                 replyingToUser = null;
+                                replyingToCommentId = null;
                               });
                             },
                             onSubmit: (text) {
@@ -380,11 +388,16 @@ class _SocialHomePageState extends State<SocialHomePage>
                                 }
 
                                 context.read<SocialBloc>().add(
-                                      AddComment(postId, commentText),
+                                      AddComment(
+                                        postId,
+                                        commentText,
+                                        parentId: replyingToCommentId, // Pass parentId for replies
+                                      ),
                                     );
 
                                 setState(() {
                                   replyingToUser = null;
+                                  replyingToCommentId = null;
                                 });
                               }
                             },

@@ -18,7 +18,7 @@ class SocialRepositoryImpl implements SocialRepository {
   // === User Profile Management ===
 
   @override
-  Future<SocialPetProfile> ensureUserProfile(String userId) async {
+  Future<SocialPetProfile> ensureUserProfile(String userId) async { 
     try {
       // Check if profile already exists
       final profileDoc = await _profilesRef.doc(userId).get();

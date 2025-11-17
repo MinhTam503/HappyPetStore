@@ -505,7 +505,7 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                l10n?.noResults ?? 'No results found',
+                l10n?.noResults ?? 'Không tìm thấy người dùng',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -514,7 +514,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                l10n?.tryDifferentKeywords ?? 'Try different keywords',
+                'Hãy thử tìm kiếm bằng tên, giống loại, hoặc thông tin khác',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],

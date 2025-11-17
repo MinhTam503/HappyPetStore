@@ -112,14 +112,21 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
 
       final profile = await _repository.getUserProfile(event.userId);
       
-      if (profile != null && state is SocialLoaded) {
-        final currentState = state as SocialLoaded;
-        final updatedCache = Map<String, SocialPetProfile>.from(currentState.profileCache);
-        updatedCache[event.userId] = profile;
-        
-        emit(currentState.copyWith(
-          profileCache: updatedCache,
-        ));
+      if (profile != null) {
+        if (state is SocialLoaded) {
+          final currentState = state as SocialLoaded;
+          final updatedCache = Map<String, SocialPetProfile>.from(currentState.profileCache);
+          updatedCache[event.userId] = profile;
+          
+          emit(currentState.copyWith(
+            profileCache: updatedCache,
+          ));
+        } else {
+          // Create initial SocialLoaded state with profile
+          emit(SocialLoaded(
+            profileCache: {event.userId: profile},
+          ));
+        }
       }
     } catch (e) {
       if (kDebugMode) {

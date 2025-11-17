@@ -38,6 +38,7 @@ import 'package:pet_shop/presentation/pages/mobile/social/edit_social_profile_pa
 import 'package:pet_shop/presentation/pages/mobile/social/followers_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_room_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/pet/ar_viewer_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/get_started/get_started_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -63,7 +64,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_strategy/url_strategy.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart' as mobile_chat;
+import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart'
+    as mobile_chat;
 import 'presentation/bloc/cartBloc/cart_bloc.dart';
 import 'firebase_options.dart';
 import 'core/di/service_locator.dart';
@@ -123,7 +125,8 @@ void main() async {
       // Basic routing: chat notifications go to ChatPage
       final route = (payload ?? data?['route'] as String?) ?? '';
       if (route == 'chat' || data?['type'] == 'chat') {
-        nav.push(MaterialPageRoute(builder: (_) => const mobile_chat.ChatPage()));
+        nav.push(
+            MaterialPageRoute(builder: (_) => const mobile_chat.ChatPage()));
         return;
       }
     });
@@ -182,11 +185,13 @@ class MyApp extends StatelessWidget {
             ..add(LoadRecentPets()),
         ),
         BlocProvider(create: (_) => getIt<RecommendationBloc>()),
-        BlocProvider(create: (_) => SocialBloc(repository: SocialRepositoryImpl())),
-        BlocProvider(create: (_) => ChatBloc(
-          chatRepository: UserChatRepositoryImpl(),
-          socialRepository: SocialRepositoryImpl(),
-        )),
+        BlocProvider(
+            create: (_) => SocialBloc(repository: SocialRepositoryImpl())),
+        BlocProvider(
+            create: (_) => ChatBloc(
+                  chatRepository: UserChatRepositoryImpl(),
+                  socialRepository: SocialRepositoryImpl(),
+                )),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
@@ -326,7 +331,7 @@ class MyApp extends StatelessWidget {
                   }
                 }
               }
-              
+
               // Social Network routes
               if (settings.name == '/social/create-post') {
                 return MaterialPageRoute(
@@ -334,14 +339,14 @@ class MyApp extends StatelessWidget {
                   settings: settings,
                 );
               }
-              
+
               if (settings.name == '/social/search') {
                 return MaterialPageRoute(
                   builder: (_) => const SocialSearchPage(),
                   settings: settings,
                 );
               }
-              
+
               if (settings.name == '/social/profile') {
                 final userId = settings.arguments as String;
                 return MaterialPageRoute(
@@ -349,7 +354,7 @@ class MyApp extends StatelessWidget {
                   settings: settings,
                 );
               }
-              
+
               if (settings.name == '/social/edit-profile') {
                 final profile = settings.arguments as SocialPetProfile;
                 return MaterialPageRoute(
@@ -357,7 +362,7 @@ class MyApp extends StatelessWidget {
                   settings: settings,
                 );
               }
-              
+
               if (settings.name == '/social/followers') {
                 final args = settings.arguments as Map<String, dynamic>;
                 return MaterialPageRoute(
@@ -368,14 +373,14 @@ class MyApp extends StatelessWidget {
                   settings: settings,
                 );
               }
-              
+
               if (settings.name == '/social/chat') {
                 return MaterialPageRoute(
                   builder: (_) => const ChatListPage(),
                   settings: settings,
                 );
               }
-              
+
               if (settings.name == '/social/chat/room') {
                 final args = settings.arguments as Map<String, dynamic>;
                 return MaterialPageRoute(
@@ -384,6 +389,17 @@ class MyApp extends StatelessWidget {
                     otherUserId: args['otherUserId'],
                     otherUserName: args['otherUserName'],
                     otherUserAvatar: args['otherUserAvatar'],
+                  ),
+                  settings: settings,
+                );
+              }
+
+              if (settings.name == '/pet/ar-viewer') {
+                final args = settings.arguments as Map<String, dynamic>?;
+                return MaterialPageRoute(
+                  builder: (_) => ArViewerPage(
+                    modelPath: args?['modelPath'],
+                    petName: args?['petName'],
                   ),
                   settings: settings,
                 );
@@ -400,15 +416,18 @@ class MyApp extends StatelessWidget {
                         future: OnboardingService.hasSeenGetStarted(),
                         builder: (context, onboardingSnapshot) {
                           // Show loading while checking onboarding status
-                          if (onboardingSnapshot.connectionState == ConnectionState.waiting) {
+                          if (onboardingSnapshot.connectionState ==
+                              ConnectionState.waiting) {
                             return const Scaffold(
                               body: Center(
-                                child: CircularProgressIndicator(color: Colors.pink),
+                                child: CircularProgressIndicator(
+                                    color: Colors.pink),
                               ),
                             );
                           }
 
-                          final hasSeenOnboarding = onboardingSnapshot.data ?? false;
+                          final hasSeenOnboarding =
+                              onboardingSnapshot.data ?? false;
 
                           // If first time opening app, show GetStarted
                           if (!hasSeenOnboarding) {
@@ -417,75 +436,76 @@ class MyApp extends StatelessWidget {
 
                           // Otherwise check auth state
                           return StreamBuilder<User?>(
-                              stream: FirebaseAuth.instance.authStateChanges(),
-                              builder: (context, snapshot) {
+                            stream: FirebaseAuth.instance.authStateChanges(),
+                            builder: (context, snapshot) {
+                              if (kDebugMode) {
+                                debugPrint(
+                                    ' AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
+                              }
+
+                              // Show loading during connection state waiting
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Scaffold(
+                                  body: Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        CircularProgressIndicator(
+                                            color: Colors.pink),
+                                        SizedBox(height: 16),
+                                        Text(
+                                            'Đang kiểm tra trạng thái đăng nhập...'),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              // User is authenticated
+                              if (snapshot.hasData) {
+                                final user = snapshot.data!;
+
                                 if (kDebugMode) {
                                   debugPrint(
-                                      ' AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
+                                      'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
                                 }
 
-                                // Show loading during connection state waiting
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Scaffold(
-                                    body: Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          CircularProgressIndicator(
-                                              color: Colors.pink),
-                                          SizedBox(height: 16),
-                                          Text(
-                                              'Đang kiểm tra trạng thái đăng nhập...'),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }
+                                // Check authentication provider
+                                List<String> providers = user.providerData
+                                    .map((info) => info.providerId)
+                                    .toList();
+                                bool isSocialLogin =
+                                    providers.contains('google.com') ||
+                                        providers.contains('facebook.com') ||
+                                        providers.contains('phone');
 
-                                // User is authenticated
-                                if (snapshot.hasData) {
-                                  final user = snapshot.data!;
-
+                                // Allow social login users to bypass email verification
+                                // Email/password users still need email verification
+                                if (user.emailVerified || isSocialLogin) {
                                   if (kDebugMode) {
                                     debugPrint(
-                                        'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
+                                        ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
                                   }
-
-                                  // Check authentication provider
-                                  List<String> providers = user.providerData
-                                      .map((info) => info.providerId)
-                                      .toList();
-                                  bool isSocialLogin =
-                                      providers.contains('google.com') ||
-                                          providers.contains('facebook.com') ||
-                                          providers.contains('phone');
-
-                                  // Allow social login users to bypass email verification
-                                  // Email/password users still need email verification
-                                  if (user.emailVerified || isSocialLogin) {
-                                    if (kDebugMode) {
-                                      debugPrint(
-                                          ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
-                                    }
-                                    return const BottomNavigator();
-                                  } else {
-                                    if (kDebugMode) {
-                                      debugPrint(
-                                          ' Email not verified and not social login, showing LoginOrRegister');
-                                    }
-                                    return const LoginOrRegister();
-                                  }
+                                  return const BottomNavigator();
                                 } else {
-                                  // User is not authenticated
                                   if (kDebugMode) {
                                     debugPrint(
-                                        ' User not authenticated, showing LoginOrRegister');
+                                        ' Email not verified and not social login, showing LoginOrRegister');
                                   }
                                   return const LoginOrRegister();
                                 }
-                              },
-                            );
+                              } else {
+                                // User is not authenticated
+                                if (kDebugMode) {
+                                  debugPrint(
+                                      ' User not authenticated, showing LoginOrRegister');
+                                }
+                                return const LoginOrRegister();
+                              }
+                            },
+                          );
                         },
                       );
               },

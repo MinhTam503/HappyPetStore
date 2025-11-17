@@ -107,7 +107,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                 children: [
                   const Icon(Icons.person_off, size: 64),
                   const SizedBox(height: 16),
-                  Text(l10n.noPetsFound),
+                  const Text('Không tìm thấy người dùng'),
                 ],
               ),
             );
