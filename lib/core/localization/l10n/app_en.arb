@@ -115,6 +115,9 @@
   "shareText": "Check out my pet in my room!",
   "collapseControls": "Collapse",
   "expandControls": "Expand",
+  "flip": "Flip",
+  "flipHorizontal": "Flip Horizontal",
+  "flipVertical": "Flip Vertical",
   "areYouSureLogout": "Are you sure you want to logout?",
   "@areYouSureLogout": {
     "description": "Logout confirmation message"

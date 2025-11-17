@@ -42,6 +42,8 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
   Offset _stickerOffset = const Offset(0, 0);
   double _stickerScale = 0.3;
   double _stickerRotation = 0.0;
+  bool _flipHorizontal = false;
+  bool _flipVertical = false;
 
   // Gesture base values
   Offset _baseOffset = const Offset(0, 0);
@@ -413,6 +415,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                   _buildModeSwitcher(l10n),
                   _buildCategorySelector(l10n),
                   _buildWeightSlider(l10n),
+                  _buildFlipControls(l10n),
                 ],
               ),
             ),
@@ -438,6 +441,8 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                             offset: _stickerOffset,
                             scale: _stickerScale,
                             rotation: _stickerRotation,
+                            flipHorizontal: _flipHorizontal,
+                            flipVertical: _flipVertical,
                           ),
                         ),
                       ),
@@ -758,6 +763,94 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
     );
   }
 
+  Widget _buildFlipControls(AppLocalizations l10n) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flip, size: 18, color: Colors.grey[700]),
+              const SizedBox(width: 6),
+              Text(
+                l10n.flip,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => setState(() => _flipHorizontal = !_flipHorizontal),
+                  icon: Icon(
+                    Icons.flip,
+                    size: 20,
+                    color: _flipHorizontal ? Colors.white : Colors.grey[700],
+                  ),
+                  label: Text(
+                    l10n.flipHorizontal,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _flipHorizontal ? Colors.white : Colors.grey[700],
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _flipHorizontal
+                        ? Theme.of(context).primaryColor
+                        : Colors.white,
+                    elevation: _flipHorizontal ? 2 : 0,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => setState(() => _flipVertical = !_flipVertical),
+                  icon: Transform.rotate(
+                    angle: 1.5708, // 90 degrees in radians
+                    child: Icon(
+                      Icons.flip,
+                      size: 20,
+                      color: _flipVertical ? Colors.white : Colors.grey[700],
+                    ),
+                  ),
+                  label: Text(
+                    l10n.flipVertical,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _flipVertical ? Colors.white : Colors.grey[700],
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _flipVertical
+                        ? Theme.of(context).primaryColor
+                        : Colors.white,
+                    elevation: _flipVertical ? 2 : 0,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHintBar(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -822,12 +915,16 @@ class _StickerOverlay extends StatefulWidget {
   final Offset offset;
   final double scale;
   final double rotation;
+  final bool flipHorizontal;
+  final bool flipVertical;
 
   const _StickerOverlay({
     required this.imageUrl,
     required this.offset,
     required this.scale,
     required this.rotation,
+    required this.flipHorizontal,
+    required this.flipVertical,
   });
 
   @override
@@ -906,6 +1003,8 @@ class _StickerOverlayState extends State<_StickerOverlay> {
         offset: widget.offset,
         scale: widget.scale,
         rotation: widget.rotation,
+        flipHorizontal: widget.flipHorizontal,
+        flipVertical: widget.flipVertical,
       ),
     );
   }
@@ -916,12 +1015,16 @@ class _StickerPainter extends CustomPainter {
   final Offset offset;
   final double scale;
   final double rotation;
+  final bool flipHorizontal;
+  final bool flipVertical;
 
   _StickerPainter({
     required this.image,
     required this.offset,
     required this.scale,
     required this.rotation,
+    required this.flipHorizontal,
+    required this.flipVertical,
   });
 
   @override
@@ -939,7 +1042,10 @@ class _StickerPainter extends CustomPainter {
     final center = size.center(Offset.zero) + offset;
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotation);
-    canvas.scale(scale, scale);
+    // Apply flip transformations
+    final scaleX = flipHorizontal ? -scale : scale;
+    final scaleY = flipVertical ? -scale : scale;
+    canvas.scale(scaleX, scaleY);
     final rect =
         Rect.fromCenter(center: Offset.zero, width: imgW, height: imgH);
     paintImage(canvas: canvas, rect: rect, image: img, fit: BoxFit.contain);
@@ -951,6 +1057,8 @@ class _StickerPainter extends CustomPainter {
     return oldDelegate.offset != offset ||
         oldDelegate.scale != scale ||
         oldDelegate.rotation != rotation ||
+        oldDelegate.flipHorizontal != flipHorizontal ||
+        oldDelegate.flipVertical != flipVertical ||
         oldDelegate.image != image;
   }
 }

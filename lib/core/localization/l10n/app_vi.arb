@@ -897,7 +897,10 @@
   },
   "shareText": "Xem thú cưng trong phòng của tôi!",
   "collapseControls": "Thu gọn",
-  "expandControls": "Mở rộng"
+  "expandControls": "Mở rộng",
+  "flip": "Lật",
+  "flipHorizontal": "Lật ngang",
+  "flipVertical": "Lật dọc"
 }
 
 
