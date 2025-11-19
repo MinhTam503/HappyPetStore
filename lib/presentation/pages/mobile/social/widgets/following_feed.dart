@@ -46,6 +46,7 @@ class FollowingFeed extends StatelessWidget {
               itemBuilder: (context, index) {
                 final post = state.feed[index];
                 final isLiked = currentUserId != null && post.isLikedBy(currentUserId!);
+                final isOwnPost = currentUserId != null && post.authorId == currentUserId;
 
                 // Get profile info from profileCache
                 String petName = 'User';
@@ -75,6 +76,43 @@ class FollowingFeed extends StatelessWidget {
                   },
                   onComment: () => onCommentTap(post.id),
                   onProfileTap: () => onProfileTap(post.petId),
+                  onDelete: isOwnPost
+                      ? () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: Text(AppLocalizations.of(context)!.deletePost),
+                              content: Text(AppLocalizations.of(context)!.deletePostConfirm),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: Text(AppLocalizations.of(context)!.cancel),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(dialogContext);
+                                    context.read<SocialBloc>().add(DeletePost(post.id));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(AppLocalizations.of(context)!.postDeleted)),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                  child: Text(AppLocalizations.of(context)!.deletePost),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      : null,
+                  onEdit: isOwnPost
+                      ? () {
+                          Navigator.pushNamed(
+                            context,
+                            '/social/edit-post',
+                            arguments: post,
+                          );
+                        }
+                      : null,
                 );
               },
             ),
@@ -87,6 +125,8 @@ class FollowingFeed extends StatelessWidget {
   }
 
   Widget _buildErrorState(BuildContext context, String message) {
+    final l10n = AppLocalizations.of(context);
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -94,7 +134,7 @@ class FollowingFeed extends StatelessWidget {
           Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'Oops! Something went wrong',
+            l10n!.oopsSomethingWrong,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -116,7 +156,7 @@ class FollowingFeed extends StatelessWidget {
               context.read<SocialBloc>().add(const LoadFeed());
             },
             icon: const Icon(Icons.refresh),
-            label: const Text('Try Again'),
+            label: Text(l10n.tryAgain),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,

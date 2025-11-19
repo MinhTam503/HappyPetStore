@@ -13,6 +13,7 @@
         android:label="pet_shop"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="${usesCleartextTraffic}"
         android:enableOnBackInvokedCallback="true">
         <!-- Default FCM notification channel (must match created channel id) -->
         <meta-data

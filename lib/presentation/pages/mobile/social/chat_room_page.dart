@@ -122,7 +122,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading image: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.errorUploadingImage}: $e')),
         );
       }
     }

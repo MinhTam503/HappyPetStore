@@ -31,10 +31,12 @@ import 'package:pet_shop/presentation/bloc/chat/chat_bloc.dart';
 import 'package:pet_shop/data/repositories/social_repository_impl.dart';
 import 'package:pet_shop/data/repositories/user_chat_repository_impl.dart';
 import 'package:pet_shop/domain/entities/social_pet_profile.dart';
+import 'package:pet_shop/domain/entities/social_post.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/create_post_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/social_search_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/social_profile_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/edit_social_profile_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/edit_post_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/followers_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_room_page.dart';
@@ -359,6 +361,14 @@ class MyApp extends StatelessWidget {
                 final profile = settings.arguments as SocialPetProfile;
                 return MaterialPageRoute(
                   builder: (_) => EditSocialProfilePage(profile: profile),
+                  settings: settings,
+                );
+              }
+
+              if (settings.name == '/social/edit-post') {
+                final post = settings.arguments as SocialPost;
+                return MaterialPageRoute(
+                  builder: (_) => EditPostPage(post: post),
                   settings: settings,
                 );
               }

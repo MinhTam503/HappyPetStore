@@ -30,7 +30,7 @@ class _HomePageState extends State<BottomNavigator> {
   final List pages = [
     const HomePage(),
     const SocialHomePage(),
-    const FavoriteScreen(),
+    // const FavoriteScreen(),
     const QRScannerScreen(),
     const CartScreen(),
     const ProfileScreen(),
@@ -56,7 +56,7 @@ class _HomePageState extends State<BottomNavigator> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     return Scaffold(
       backgroundColor: secondaryColor,
       drawer: const AppDrawer(),
@@ -65,8 +65,8 @@ class _HomePageState extends State<BottomNavigator> {
         onTap: (i) => setState(() => selectedIndex = i),
         labels: [
           l10n?.home ?? "Home",
-          "Social",
-          l10n?.favorite ?? "Yêu thích",
+          l10n?.social ?? "Social",
+          // l10n?.favorite ?? "Yêu thích",
           l10n?.scanQRCode ?? "Quét QR",
           l10n?.cart ?? "Giỏ hàng",
           l10n?.profile ?? "Hồ sơ",
@@ -74,7 +74,7 @@ class _HomePageState extends State<BottomNavigator> {
         icons: const [
           Icons.home_outlined,
           Icons.pets_outlined,
-          Icons.favorite_border,
+          // Icons.favorite_border,
           Icons.qr_code_scanner_outlined,
           Icons.shopping_cart_outlined,
           Icons.person_outline,
@@ -82,7 +82,7 @@ class _HomePageState extends State<BottomNavigator> {
         activeIcons: const [
           Icons.home,
           Icons.pets,
-          Icons.favorite,
+          // Icons.favorite,
           Icons.qr_code_scanner,
           Icons.shopping_cart,
           Icons.person,
@@ -116,9 +116,9 @@ class _FancyBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  final height = 82.0;
-  final notchRadius = 32.0;
-  final circleSize = 56.0;
+    final height = 82.0;
+    final notchRadius = 32.0;
+    final circleSize = 56.0;
 
     return SafeArea(
       top: false,
@@ -148,9 +148,11 @@ class _FancyBottomBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  for (int i = 0; i < 6; i++)
-                    if (i == 3)
-                      SizedBox(width: circleSize + 16) // gap for center (QR Scanner at index 3)
+                  for (int i = 0; i < 5; i++)
+                    if (i == 2)
+                      SizedBox(
+                          width: circleSize +
+                              16) // gap for center (QR Scanner at index 2)
                     else
                       _BarItem(
                         icon: icons[i],
@@ -163,11 +165,11 @@ class _FancyBottomBar extends StatelessWidget {
               ),
             ),
 
-            // Center elevated circle button (QR Scanner at index 3)
+            // Center elevated circle button (QR Scanner at index 2)
             Positioned(
               bottom: height - notchRadius - 15,
               child: GestureDetector(
-                onTap: () => onTap(3),
+                onTap: () => onTap(2),
                 child: Container(
                   width: circleSize,
                   height: circleSize,
@@ -188,7 +190,7 @@ class _FancyBottomBar extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    currentIndex == 3 ? activeIcons[3] : icons[3],
+                    currentIndex == 2 ? activeIcons[2] : icons[2],
                     color: Colors.white,
                     size: 24, // slightly smaller center icon
                   ),
@@ -200,15 +202,20 @@ class _FancyBottomBar extends StatelessWidget {
             Positioned(
               bottom: 16, // align baseline with other labels
               child: GestureDetector(
-                onTap: () => onTap(3),
+                onTap: () => onTap(2),
                 child: Text(
-                  labels[3],
+                  labels[2],
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: currentIndex == 3 ? FontWeight.w700 : FontWeight.w500,
-                    color: currentIndex == 3
+                    fontWeight:
+                        currentIndex == 2 ? FontWeight.w700 : FontWeight.w500,
+                    color: currentIndex == 2
                         ? primaryColor
-                        : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        : Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.color
+                            ?.withOpacity(0.7),
                   ),
                 ),
               ),
@@ -237,7 +244,9 @@ class _BarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? primaryColor : Theme.of(context).iconTheme.color?.withOpacity(0.6);
+    final color = selected
+        ? primaryColor
+        : Theme.of(context).iconTheme.color?.withOpacity(0.6);
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -258,7 +267,11 @@ class _BarItem extends StatelessWidget {
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected
                       ? primaryColor
-                      : Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                      : Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withOpacity(0.7),
                 ),
               ),
             ],
@@ -303,14 +316,20 @@ class _NavBarPainter extends CustomPainter {
 
     // Notch curve down and back up
     path.cubicTo(
-      notchStart + notchRadius * 0.4, 0,
-      centerX - notchRadius * 0.9, notchDepth,
-      centerX, notchDepth + 2,
+      notchStart + notchRadius * 0.4,
+      0,
+      centerX - notchRadius * 0.9,
+      notchDepth,
+      centerX,
+      notchDepth + 2,
     );
     path.cubicTo(
-      centerX + notchRadius * 0.9, notchDepth,
-      notchEnd - notchRadius * 0.4, 0,
-      notchEnd, 0,
+      centerX + notchRadius * 0.9,
+      notchDepth,
+      notchEnd - notchRadius * 0.4,
+      0,
+      notchEnd,
+      0,
     );
 
     // Top-right corner

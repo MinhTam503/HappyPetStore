@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/data/repositories/social_repository_impl.dart';
+import 'package:pet_shop/data/models/social_post_model.dart';
 import 'package:pet_shop/domain/entities/social_pet_profile.dart';
 import 'package:pet_shop/domain/repositories/social_repository.dart';
 import 'package:pet_shop/presentation/bloc/social/social_event.dart';
@@ -41,6 +42,7 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
     // Post events
     on<CreatePost>(_onCreatePost);
     on<DeletePost>(_onDeletePost);
+    on<UpdatePost>(_onUpdatePost);
 
     // Like events
     on<LikePost>(_onLikePost);
@@ -145,18 +147,28 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
       // Reload profile
       final profile = await _repository.getUserProfile(event.userId);
       
-      if (profile != null && state is SocialLoaded) {
-        final currentState = state as SocialLoaded;
-        final updatedCache = Map<String, SocialPetProfile>.from(currentState.profileCache);
-        updatedCache[event.userId] = profile;
-        
-        emit(currentState.copyWith(
-          currentProfile: profile,
-          profileCache: updatedCache,
-        ));
+      if (profile != null) {
+        if (state is SocialLoaded) {
+          final currentState = state as SocialLoaded;
+          final updatedCache = Map<String, SocialPetProfile>.from(currentState.profileCache);
+          updatedCache[event.userId] = profile;
+          
+          // Keep the same state with updated profile, don't emit SocialOperationSuccess
+          emit(currentState.copyWith(
+            currentProfile: profile,
+            profileCache: updatedCache,
+          ));
+        } else {
+          // If state is not loaded, emit new loaded state
+          emit(SocialLoaded(
+            currentProfile: profile,
+            profileCache: {event.userId: profile},
+          ));
+        }
       }
       
-      emit(const SocialOperationSuccess('Profile updated successfully'));
+      // Success message will be shown by listener in edit_social_profile_page.dart
+      // No need to emit SocialOperationSuccess which causes screen clearing
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error updating user profile: $e');
@@ -595,13 +607,81 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
     try {
       await _repository.deletePost(event.postId);
 
-      emit(const SocialOperationSuccess('Post deleted successfully'));
-
-      // Reload feed
-      add(const LoadFeed(refresh: true));
+      // Reload feed to reflect deletion
+      if (state is SocialLoaded) {
+        final currentState = state as SocialLoaded;
+        
+        // Remove post from feed
+        final updatedFeed = currentState.feed.where((post) => post.id != event.postId).toList();
+        final updatedUserPosts = currentState.userPosts.where((post) => post.id != event.postId).toList();
+        final updatedExploreFeed = currentState.exploreFeed.where((post) => post.id != event.postId).toList();
+        
+        emit(currentState.copyWith(
+          feed: updatedFeed,
+          userPosts: updatedUserPosts,
+          exploreFeed: updatedExploreFeed,
+        ));
+      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error deleting post: $e');
+      }
+      emit(SocialError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdatePost(
+    UpdatePost event,
+    Emitter<SocialState> emit,
+  ) async {
+    try {
+      await _repository.updatePost(event.postId, event.updates);
+
+      // Reload the updated post
+      if (state is SocialLoaded) {
+        final currentState = state as SocialLoaded;
+        
+        // Get updated post from Firestore
+        final updatedPostDoc = await FirebaseFirestore.instance
+            .collection('socialPosts')
+            .doc(event.postId)
+            .get();
+            
+        if (updatedPostDoc.exists) {
+          // Find and update the post in all lists using SocialPostModel
+          final updatedPost = SocialPostModel.fromFirestore(updatedPostDoc);
+          
+          final updatedFeed = currentState.feed.map((post) {
+            if (post.id == event.postId) {
+              return updatedPost;
+            }
+            return post;
+          }).toList();
+
+          final updatedUserPosts = currentState.userPosts.map((post) {
+            if (post.id == event.postId) {
+              return updatedPost;
+            }
+            return post;
+          }).toList();
+
+          final updatedExploreFeed = currentState.exploreFeed.map((post) {
+            if (post.id == event.postId) {
+              return updatedPost;
+            }
+            return post;
+          }).toList();
+
+          emit(currentState.copyWith(
+            feed: updatedFeed,
+            userPosts: updatedUserPosts,
+            exploreFeed: updatedExploreFeed,
+          ));
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error updating post: $e');
       }
       emit(SocialError(e.toString()));
     }

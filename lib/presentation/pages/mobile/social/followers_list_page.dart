@@ -77,7 +77,7 @@ class _FollowersListPageState extends State<FollowersListPage> {
                 children: [
                   const Icon(Icons.person_off, size: 64),
                   const SizedBox(height: 16),
-                  const Text('Profile not found'),
+                  Text(l10n.userNotFound),
                 ],
               ),
             );

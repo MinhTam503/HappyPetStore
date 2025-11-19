@@ -21,6 +21,7 @@
   "totalRevenueWeb": "Tổng doanh thu (Web)",
   "dataSource": "Nguồn dữ liệu",
   "all": "Tất cả",
+  "social": "Mạng xã hội",
   "mobileApp": "Ứng dụng di động",
   "webApp": "Ứng dụng web",
   "web": "Web",
@@ -835,6 +836,23 @@
   "searchByTag": "Tìm theo thẻ",
   "noResults": "Không tìm thấy kết quả",
   "tryDifferentKeywords": "Thử từ khóa khác",
+  "editPost": "Chỉnh sửa bài viết",
+  "deletePost": "Xóa bài viết",
+  "deletePostConfirm": "Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.",
+  "postDeleted": "Đã xóa bài viết",
+  "postUpdatedSuccessfully": "Đã cập nhật bài viết thành công",
+  "userNotFound": "Không tìm thấy người dùng",
+  "tryAgain": "Thử lại",
+  "saving": "Đang lưu...",
+  "save": "Lưu",
+  "caption": "Chú thích",
+  "writeCaption": "Viết chú thích...",
+  "tags": "Thẻ",
+  "tagsHint": "#thucung #cute #cho",
+  "tagsHelperText": "Phân tách các thẻ bằng khoảng trắng. # sẽ được thêm tự động",
+  "editPostInfo": "Bạn chỉ có thể chỉnh sửa chú thích và thẻ. Hình ảnh không thể thay đổi.",
+  "errorUploadingImage": "Lỗi khi tải lên hình ảnh",
+  "oopsSomethingWrong": "Rất tiếc! Đã xảy ra lỗi",
   "petTryOn": "Pet Try-On - {name}",
   "@petTryOn": {
     "placeholders": {
@@ -900,7 +918,10 @@
   "expandControls": "Mở rộng",
   "flip": "Lật",
   "flipHorizontal": "Lật ngang",
-  "flipVertical": "Lật dọc"
+  "flipVertical": "Lật dọc",
+  "renderMode": "Chế độ hiển thị",
+  "mode2D": "2D",
+  "mode3D": "3D"
 }
 
 

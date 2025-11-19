@@ -158,12 +158,54 @@ class _SocialHomePageState extends State<SocialHomePage>
                 ),
               ),
               ExploreGrid(
-                onPostTap: (post) => PostDetailSheet.show(
-                  context,
-                  post: post,
-                  currentUserId: _currentUserId,
-                  onCommentTap: (postId) => _showCommentsSheet(context, postId),
-                ),
+                onPostTap: (post) {
+                  final isOwnPost = _currentUserId != null && post.authorId == _currentUserId;
+                  return PostDetailSheet.show(
+                    context,
+                    post: post,
+                    currentUserId: _currentUserId,
+                    onCommentTap: (postId) => _showCommentsSheet(context, postId),
+                    onDelete: isOwnPost
+                        ? () {
+                            Navigator.pop(context); // Close detail sheet
+                            showDialog(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                title: Text(AppLocalizations.of(context)!.deletePost),
+                                content: Text(AppLocalizations.of(context)!.deletePostConfirm),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dialogContext),
+                                    child: Text(AppLocalizations.of(context)!.cancel),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(dialogContext);
+                                      context.read<SocialBloc>().add(DeletePost(post.id));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(AppLocalizations.of(context)!.postDeleted)),
+                                      );
+                                    },
+                                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                    child: Text(AppLocalizations.of(context)!.deletePost),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        : null,
+                    onEdit: isOwnPost
+                        ? () {
+                            Navigator.pop(context); // Close detail sheet
+                            Navigator.pushNamed(
+                              context,
+                              '/social/edit-post',
+                              arguments: post,
+                            );
+                          }
+                        : null,
+                  );
+                },
               ),
             ],
           );

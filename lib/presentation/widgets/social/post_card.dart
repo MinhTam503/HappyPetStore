@@ -14,6 +14,7 @@ class PostCard extends StatelessWidget {
   final VoidCallback? onComment;
   final VoidCallback? onProfileTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const PostCard({
     Key? key,
@@ -25,6 +26,7 @@ class PostCard extends StatelessWidget {
     this.onComment,
     this.onProfileTap,
     this.onDelete,
+    this.onEdit,
   }) : super(key: key);
 
   @override
@@ -98,7 +100,7 @@ class PostCard extends StatelessWidget {
               ],
             )
           : null,
-      trailing: onDelete != null
+      trailing: (onDelete != null || onEdit != null)
           ? IconButton(
               icon: const Icon(Icons.more_vert),
               onPressed: () => _showOptionsMenu(context),
@@ -292,10 +294,19 @@ class PostCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (onEdit != null)
+                ListTile(
+                  leading: const Icon(Icons.edit),
+                  title: Text(AppLocalizations.of(context)!.editPost),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onEdit!();
+                  },
+                ),
               if (onDelete != null)
                 ListTile(
                   leading: const Icon(Icons.delete, color: Colors.red),
-                  title: const Text('Delete Post', style: TextStyle(color: Colors.red)),
+                  title: Text(AppLocalizations.of(context)!.deletePost, style: const TextStyle(color: Colors.red)),
                   onTap: () {
                     Navigator.pop(context);
                     onDelete!();
@@ -303,7 +314,7 @@ class PostCard extends StatelessWidget {
                 ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(AppLocalizations.of(context)!.cancel),
                 onTap: () => Navigator.pop(context),
               ),
             ],

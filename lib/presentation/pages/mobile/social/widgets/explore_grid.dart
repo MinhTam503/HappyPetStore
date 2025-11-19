@@ -186,6 +186,8 @@ class ExploreGrid extends StatelessWidget {
   }
 
   Widget _buildErrorState(BuildContext context, String message) {
+    final l10n = AppLocalizations.of(context);
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -193,7 +195,7 @@ class ExploreGrid extends StatelessWidget {
           Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'Oops! Something went wrong',
+            l10n?.oopsSomethingWrong ?? 'Oops! Something went wrong',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -215,7 +217,7 @@ class ExploreGrid extends StatelessWidget {
               context.read<SocialBloc>().add(const LoadExploreFeed());
             },
             icon: const Icon(Icons.refresh),
-            label: const Text('Try Again'),
+            label: Text(l10n?.tryAgain ?? 'Try Again'),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,

@@ -13,6 +13,7 @@ import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/notification/nofi_screen.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -214,7 +215,8 @@ class _AppDrawerState extends State<AppDrawer> {
 
   Future<void> _logout() async {
     try {
-      DialogHelper.showLoadingDialog(context, message: AppLocalizations.of(context)!.loggingOut);
+      DialogHelper.showLoadingDialog(context,
+          message: AppLocalizations.of(context)!.loggingOut);
       await authService.value.signOut();
 
       // Clear UserManager data
@@ -395,11 +397,10 @@ class _AppDrawerState extends State<AppDrawer> {
                   title: AppLocalizations.of(context)!.favorites,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.pushReplacement(
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const BottomNavigator(initialIndex: 1),
+                        builder: (context) => FavoriteScreen(),
                       ),
                     );
                   },
@@ -414,7 +415,7 @@ class _AppDrawerState extends State<AppDrawer> {
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                            const BottomNavigator(initialIndex: 2),
+                            const BottomNavigator(initialIndex: 3),
                       ),
                     );
                   },

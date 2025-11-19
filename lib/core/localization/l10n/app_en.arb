@@ -118,6 +118,9 @@
   "flip": "Flip",
   "flipHorizontal": "Flip Horizontal",
   "flipVertical": "Flip Vertical",
+  "renderMode": "Render Mode",
+  "mode2D": "2D",
+  "mode3D": "3D",
   "areYouSureLogout": "Are you sure you want to logout?",
   "@areYouSureLogout": {
     "description": "Logout confirmation message"
@@ -1940,6 +1943,7 @@
   "profile": "Profile",
   "myProfile": "My Profile",
   "editSocialProfile": "Edit Profile",
+  "social": "Social",
   "website": "Website",
   "email": "Email",
   "phone": "Phone",
@@ -1992,7 +1996,24 @@
   "searchByBreed": "Search by breed",
   "searchByTag": "Search by tag",
   "noResults": "No results found",
-  "tryDifferentKeywords": "Try different keywords"
+  "tryDifferentKeywords": "Try different keywords",
+  "editPost": "Edit Post",
+  "deletePost": "Delete Post",
+  "deletePostConfirm": "Are you sure you want to delete this post? This action cannot be undone.",
+  "postDeleted": "Post deleted",
+  "postUpdatedSuccessfully": "Post updated successfully",
+  "userNotFound": "User not found",
+  "tryAgain": "Try Again",
+  "saving": "Saving...",
+  "save": "Save",
+  "caption": "Caption",
+  "writeCaption": "Write a caption...",
+  "tags": "Tags",
+  "tagsHint": "#pet #cute #dog",
+  "tagsHelperText": "Separate tags with spaces. # will be added automatically",
+  "editPostInfo": "You can only edit the caption and tags. Images cannot be changed.",
+  "errorUploadingImage": "Error uploading image",
+  "oopsSomethingWrong": "Oops! Something went wrong"
 }
 
 

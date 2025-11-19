@@ -10,12 +10,16 @@ class PostDetailSheet extends StatefulWidget {
   final SocialPost post;
   final String? currentUserId;
   final Function(String postId) onCommentTap;
+  final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const PostDetailSheet({
     Key? key,
     required this.post,
     required this.currentUserId,
     required this.onCommentTap,
+    this.onDelete,
+    this.onEdit,
   }) : super(key: key);
 
   @override
@@ -26,6 +30,8 @@ class PostDetailSheet extends StatefulWidget {
     required SocialPost post,
     required String? currentUserId,
     required Function(String postId) onCommentTap,
+    VoidCallback? onDelete,
+    VoidCallback? onEdit,
   }) {
     showModalBottomSheet(
       context: context,
@@ -35,6 +41,8 @@ class PostDetailSheet extends StatefulWidget {
         post: post,
         currentUserId: currentUserId,
         onCommentTap: onCommentTap,
+        onDelete: onDelete,
+        onEdit: onEdit,
       ),
     );
   }
@@ -153,6 +161,8 @@ class _PostDetailSheetState extends State<PostDetailSheet> {
                           arguments: widget.post.petId,
                         );
                       },
+                      onDelete: widget.onDelete,
+                      onEdit: widget.onEdit,
                     ),
                   ],
                 ),

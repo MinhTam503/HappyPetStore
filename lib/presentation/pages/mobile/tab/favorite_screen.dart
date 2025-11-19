@@ -67,7 +67,6 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: secondaryColor,
-      drawer: const AppDrawer(),
       appBar: AppBar(
         iconTheme: const IconThemeData(
           color: primaryColor,

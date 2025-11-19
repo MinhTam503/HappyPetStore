@@ -107,7 +107,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                 children: [
                   const Icon(Icons.person_off, size: 64),
                   const SizedBox(height: 16),
-                  const Text('Không tìm thấy người dùng'),
+                  Text(l10n.userNotFound),
                 ],
               ),
             );
@@ -386,8 +386,12 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
       itemCount: posts.length,
       itemBuilder: (context, index) {
         final post = posts[index];
+        final isOwnPost = _currentUserId != null && post.authorId == _currentUserId;
+        
         return GestureDetector(
           onTap: () {
+            final l10n = AppLocalizations.of(context)!;
+            
             PostDetailSheet.show(
               context,
               post: post,
@@ -396,6 +400,45 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                 // Handle comment tap - navigate to comments
                 // Can be implemented later
               },
+              onDelete: isOwnPost
+                  ? () {
+                      Navigator.pop(context); // Close detail sheet
+                      showDialog(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: Text(l10n.deletePost),
+                          content: Text(l10n.deletePostConfirm),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              child: Text(l10n.cancel),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(dialogContext);
+                                context.read<SocialBloc>().add(DeletePost(post.id));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(l10n.postDeleted)),
+                                );
+                              },
+                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              child: Text(l10n.deletePost),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  : null,
+              onEdit: isOwnPost
+                  ? () {
+                      Navigator.pop(context); // Close detail sheet
+                      Navigator.pushNamed(
+                        context,
+                        '/social/edit-post',
+                        arguments: post,
+                      );
+                    }
+                  : null,
             );
           },
           child: Image.network(
@@ -457,11 +500,18 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
             if (followerProfile == null) {
               // Load profile if not in cache
               context.read<SocialBloc>().add(LoadUserProfile(followerId));
-              return const ListTile(
-                leading: CircleAvatar(child: Icon(Icons.person)),
-                title: Text('Loading...'),
+              return ListTile(
+                leading: const CircleAvatar(child: Icon(Icons.person)),
+                title: Text(AppLocalizations.of(context)!.loading),
               );
             }
+
+            // Check following status for this user if not in cache
+            if (!state.followingStatus.containsKey(followerId) && _currentUserId != null && followerId != _currentUserId) {
+              context.read<SocialBloc>().add(CheckIsFollowing(followerId));
+            }
+
+            final isFollowing = state.followingStatus[followerId] ?? false;
 
             return ListTile(
               leading: CircleAvatar(
@@ -474,6 +524,22 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
               ),
               title: Text(followerProfile.displayName ?? followerProfile.petName),
               subtitle: followerProfile.bio.isNotEmpty ? Text(followerProfile.bio) : null,
+              trailing: (_isOwnProfile || followerId == _currentUserId)
+                  ? null
+                  : OutlinedButton(
+                      onPressed: () {
+                        if (isFollowing) {
+                          context.read<SocialBloc>().add(UnfollowPet(followerId));
+                        } else {
+                          context.read<SocialBloc>().add(FollowPet(followerId));
+                        }
+                      },
+                      child: Text(
+                        isFollowing
+                            ? AppLocalizations.of(context)!.following
+                            : AppLocalizations.of(context)!.follow,
+                      ),
+                    ),
               onTap: () {
                 Navigator.pushNamed(
                   context,
@@ -525,10 +591,15 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
             if (followingProfile == null) {
               // Load profile if not in cache
               context.read<SocialBloc>().add(LoadUserProfile(followingId));
-              return const ListTile(
-                leading: CircleAvatar(child: Icon(Icons.person)),
-                title: Text('Loading...'),
+              return ListTile(
+                leading: const CircleAvatar(child: Icon(Icons.person)),
+                title: Text(AppLocalizations.of(context)!.loading),
               );
+            }
+
+            // Check following status for this user if not in cache
+            if (!state.followingStatus.containsKey(followingId) && _currentUserId != null && followingId != _currentUserId) {
+              context.read<SocialBloc>().add(CheckIsFollowing(followingId));
             }
 
             final isFollowing = state.followingStatus[followingId] ?? false;
@@ -544,7 +615,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
               ),
               title: Text(followingProfile.displayName ?? followingProfile.petName),
               subtitle: followingProfile.bio.isNotEmpty ? Text(followingProfile.bio) : null,
-              trailing: _isOwnProfile
+              trailing: (_isOwnProfile || followingId == _currentUserId)
                   ? null
                   : OutlinedButton(
                       onPressed: () {

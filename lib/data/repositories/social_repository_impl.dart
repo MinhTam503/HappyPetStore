@@ -569,6 +569,46 @@ class SocialRepositoryImpl implements SocialRepository {
     }
   }
 
+  @override
+  Future<void> updatePost(String postId, Map<String, dynamic> updates) async {
+    try {
+      final doc = await _postsRef.doc(postId).get();
+      if (!doc.exists) {
+        throw Exception('Post not found');
+      }
+
+      // Only allow updating certain fields
+      final allowedFields = ['caption', 'tags', 'location'];
+      final filteredUpdates = <String, dynamic>{};
+      
+      for (var key in allowedFields) {
+        if (updates.containsKey(key)) {
+          filteredUpdates[key] = updates[key];
+        }
+      }
+
+      if (filteredUpdates.isEmpty) {
+        if (kDebugMode) {
+          print('⚠️ No valid fields to update');
+        }
+        return;
+      }
+
+      filteredUpdates['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _postsRef.doc(postId).update(filteredUpdates);
+
+      if (kDebugMode) {
+        print('✅ Updated post: $postId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error updating post: $e');
+      }
+      rethrow;
+    }
+  }
+
   // === Likes & Comments ===
 
   @override

@@ -182,6 +182,16 @@ class DeletePost extends SocialEvent {
   List<Object?> get props => [postId];
 }
 
+class UpdatePost extends SocialEvent {
+  final String postId;
+  final Map<String, dynamic> updates;
+
+  const UpdatePost(this.postId, this.updates);
+
+  @override
+  List<Object?> get props => [postId, updates];
+}
+
 // === Like Events ===
 
 class LikePost extends SocialEvent {

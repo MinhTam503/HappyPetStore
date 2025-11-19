@@ -100,14 +100,21 @@ class _EditSocialProfilePageState extends State<EditSocialProfilePage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading image: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.errorUploadingImage}: $e')),
         );
       }
     }
   }
   
+  bool _isUpdating = false;
+  
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isUpdating) return; // Prevent multiple saves
+    
+    setState(() {
+      _isUpdating = true;
+    });
     
     final updates = <String, dynamic>{
       'displayName': _displayNameController.text.trim(),
@@ -138,25 +145,35 @@ class _EditSocialProfilePageState extends State<EditSocialProfilePage> {
         actions: [
           BlocConsumer<SocialBloc, SocialState>(
             listener: (context, state) {
-              if (state is SocialOperationSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.profileUpdated)),
-                );
-                Navigator.pop(context);
+              // Listen for profile update
+              if (state is SocialLoaded && _isUpdating) {
+                // Check if the profile has been updated
+                final updatedProfile = state.profileCache[widget.profile.id];
+                if (updatedProfile != null) {
+                  setState(() {
+                    _isUpdating = false;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.profileUpdated)),
+                  );
+                  Navigator.pop(context, true); // Return true to indicate update success
+                }
               } else if (state is SocialError) {
+                setState(() {
+                  _isUpdating = false;
+                });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(state.message)),
                 );
               }
             },
             builder: (context, state) {
-              final isLoading = state is SocialLoading;
               return TextButton(
-                onPressed: isLoading ? null : _saveProfile,
+                onPressed: _isUpdating ? null : _saveProfile,
                 child: Text(
-                  isLoading ? l10n.savingProfile : l10n.saveProfile,
+                  _isUpdating ? l10n.savingProfile : l10n.saveProfile,
                   style: TextStyle(
-                    color: isLoading ? Colors.grey : theme.primaryColor,
+                    color: _isUpdating ? Colors.grey : theme.primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

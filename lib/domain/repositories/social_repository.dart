@@ -87,6 +87,9 @@ abstract class SocialRepository {
   /// Delete a post
   Future<void> deletePost(String postId);
   
+  /// Update a post (caption, tags, etc.)
+  Future<void> updatePost(String postId, Map<String, dynamic> updates);
+  
   // === Likes & Comments ===
   
   /// Like a post

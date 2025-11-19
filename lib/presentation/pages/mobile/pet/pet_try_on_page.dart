@@ -15,6 +15,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
+import 'package:pet_shop/presentation/widgets/model_3d_overlay.dart';
 
 /// Pet Try-On MVP with collapsible controls and weight-based sizing
 /// Fixed camera disposal crash on Android/iOS
@@ -53,6 +54,9 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
   // Weight-based sizing
   double _petWeightKg = 10.0;
   
+  // 3D capture flag
+  bool _isCapturing3D = false;
+  
   final Map<String, Map<String, double>> _categoryWeightRanges = {
     'Dog': {'min': 1.0, 'max': 50.0, 'default': 10.0},
     'Cat': {'min': 1.0, 'max': 10.0, 'default': 4.0},
@@ -63,13 +67,22 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
   // Category selection + dynamic image handling
   String _selectedCategory = 'Dog';
   final List<String> _categories = ['Dog', 'Cat', 'Fish', 'Bird'];
-  final Map<String, String> _categoryImageUrls = {}; // Fetched download URLs
+  final Map<String, String> _categoryImageUrls = {}; // Fetched download URLs (2D)
+  final Map<String, String> _categoryModelUrls = {}; // Fetched download URLs (3D)
   final Set<String> _categoryLoading = {}; // Loading state per category
+  bool _use3DMode = false; // Toggle between 2D images and 3D models
   final Map<String, String> _categoryFolderNames = {
     'Dog': 'Dogs',
     'Cat': 'Cats',
     'Fish': 'Fish',
     'Bird': 'Birds',
+  };
+  
+  final Map<String, String> _category3DFolderNames = {
+    'Dog': 'Dogs_3D',
+    'Cat': 'Cats_3D',
+    'Fish': 'Fish_3D',
+    'Bird': 'Birds_3D',
   };
 
   final Map<String, IconData> _categoryIcons = {
@@ -224,14 +237,70 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
 
   Future<void> _captureScreenshot() async {
     final l10n = AppLocalizations.of(context)!;
+    
+    // Warning for 3D mode screenshot limitations
+    if (_use3DMode && mounted) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Chụp ảnh 3D'),
+            ],
+          ),
+          content: const Text(
+            'Lưu ý: Mô hình 3D có thể không hiển thị đầy đủ trong ảnh chụp do giới hạn kỹ thuật WebView.\n\n'
+            'Để có ảnh đẹp hơn:\n'
+            '• Chuyển sang chế độ 2D\n'
+            '• Hoặc dùng screenshot hệ thống\n'
+            '• Hoặc dùng AR mode và chụp bằng camera thông thường',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Vẫn chụp'),
+            ),
+          ],
+        ),
+      );
+      
+      if (shouldContinue != true) return;
+    }
+    
     try {
       DialogHelper.showLoadingDialog(context);
+      
+      // Special handling for 3D mode: wait for WebView to render
+      if (_use3DMode) {
+        setState(() => _isCapturing3D = true);
+        // Give WebView time to render to texture
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
       RenderRepaintBoundary boundary = _captureKey.currentContext!
           .findRenderObject() as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      
+      // Higher pixel ratio for 3D to capture more detail
+      final pixelRatio = _use3DMode ? 4.0 : 3.0;
+      ui.Image image = await boundary.toImage(pixelRatio: pixelRatio);
       ByteData? byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
+      
+      if (_use3DMode) {
+        setState(() => _isCapturing3D = false);
+      }
+      
+      if (byteData == null) {
+        throw Exception('Failed to capture image data');
+      }
+      
       final pngBytes = byteData.buffer.asUint8List();
 
       final tempDir = await getTemporaryDirectory();
@@ -248,10 +317,14 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
 
       await Share.shareXFiles([XFile(file.path)], text: l10n.shareText);
     } catch (e) {
+      debugPrint('❌ Screenshot error: $e');
       if (mounted) {
         NotificationHelper.showError(context, l10n.captureError(e.toString()));
       }
     } finally {
+      if (_use3DMode && _isCapturing3D) {
+        setState(() => _isCapturing3D = false);
+      }
       await DialogHelper.safeHideLoadingDialog();
     }
   }
@@ -263,8 +336,8 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details, Size canvasSize) {
-    // Single finger: only pan (move)
-    // Two+ fingers: pan + scale + rotate
+    // Both 2D and 3D: 1-finger = move widget position, 2-finger = scale widget size
+    // 3D model's internal rotation/zoom is handled by ModelViewer cameraControls
     final isSingleFinger = details.pointerCount == 1;
     
     double newScale = _stickerScale;
@@ -272,13 +345,18 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
     Offset newOffset = _stickerOffset;
 
     if (isSingleFinger) {
-      // Only move (pan) with single finger
+      // 1 finger: move widget position (both 2D and 3D)
       final delta = details.focalPointDelta;
       newOffset = _stickerOffset + delta;
     } else {
-      // Scale, rotate, and pan with two+ fingers
+      // 2+ fingers: scale widget size + move
       newScale = (_baseScale * details.scale).clamp(0.05, 5.0);
-      newRotation = _baseRotation + details.rotation;
+      
+      // Only apply rotation for 2D mode (3D uses ModelViewer cameraControls)
+      if (!_use3DMode) {
+        newRotation = _baseRotation + details.rotation;
+      }
+      
       final delta = details.focalPointDelta;
       newOffset = _baseOffset + delta;
     }
@@ -305,7 +383,8 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
   void _updateScaleFromWeight() {
     final range = _categoryWeightRanges[_selectedCategory]!;
     final normalized = (_petWeightKg - range['min']!) / (range['max']! - range['min']!);
-    final newScale = 0.1 + (normalized * 0.7);
+    // Scale range 0.3 to 1.2 for better visibility (baseSize now 300px)
+    final newScale = 0.3 + (normalized * 0.9);
     setState(() {
       _stickerScale = newScale;
       _baseScale = newScale;
@@ -332,6 +411,8 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
     if (_categoryImageUrls.containsKey(category) || _categoryLoading.contains(category)) return;
     _categoryLoading.add(category);
     final folder = _categoryFolderNames[category] ?? category;
+    final folder3D = _category3DFolderNames[category] ?? '${category}_3D';
+    
     // Show loading only when fetching current category image for first time
     final shouldShowOverlay = category == _selectedCategory;
     if (shouldShowOverlay && mounted) {
@@ -342,11 +423,19 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
         }
       });
     }
-    _fetchFirstImageInFolder('3d_model/$folder').then((url) {
+    
+    // Load both 2D image and 3D model in parallel
+    Future.wait([
+      _fetchFirstImageInFolder('3d_model/$folder'),
+      _fetchFirst3DModelInFolder('3d_model/$folder3D'),
+    ]).then((urls) {
       if (!mounted) return;
       setState(() {
-        if (url != null) {
-          _categoryImageUrls[category] = url;
+        if (urls[0] != null) {
+          _categoryImageUrls[category] = urls[0]!;
+        }
+        if (urls[1] != null) {
+          _categoryModelUrls[category] = urls[1]!;
         }
         _categoryLoading.remove(category);
       });
@@ -380,11 +469,55 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
     }
   }
 
+  Future<String?> _fetchFirst3DModelInFolder(String path) async {
+    try {
+      debugPrint('🔍 Fetching 3D model from: $path');
+      final ref = FirebaseStorage.instance.ref(path);
+      final result = await ref.listAll();
+      if (result.items.isEmpty) {
+        debugPrint('❌ No 3D models found in storage path: $path');
+        return null;
+      }
+      debugPrint('📁 Found ${result.items.length} items in $path');
+      Reference? selected;
+      // Look for .glb or .gltf files (preferred formats for model_viewer_plus)
+      for (final item in result.items) {
+        final name = item.name.toLowerCase();
+        debugPrint('   - File: ${item.name}');
+        if (name.endsWith('.glb') || name.endsWith('.gltf')) {
+          selected = item;
+          break;
+        }
+      }
+      if (selected == null) {
+        debugPrint('❌ No .glb or .gltf files found in $path');
+        return null;
+      }
+      final url = await selected.getDownloadURL();
+      debugPrint('✅ 3D Model URL: $url');
+      return url;
+    } catch (e) {
+      debugPrint('❌ 3D model fetch error for $path: $e');
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final petImageUrl = _categoryImageUrls[_selectedCategory];
+    final petModelUrl = _categoryModelUrls[_selectedCategory];
     final petName = widget.pet['name'] ?? l10n.pets;
+    
+    // Debug log for 3D mode
+    if (_use3DMode) {
+      debugPrint('🎨 Rendering in 3D mode');
+      debugPrint('   Category: $_selectedCategory');
+      debugPrint('   Model URL: ${petModelUrl ?? "NULL"}');
+      debugPrint('   Offset: $_stickerOffset');
+      debugPrint('   Scale: $_stickerScale');
+      debugPrint('   Rotation: $_stickerRotation');
+    }
     
     return Scaffold(
       appBar: AppBar(
@@ -413,6 +546,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
               child: Column(
                 children: [
                   _buildModeSwitcher(l10n),
+                  _build2D3DToggle(l10n),
                   _buildCategorySelector(l10n),
                   _buildWeightSlider(l10n),
                   _buildFlipControls(l10n),
@@ -431,19 +565,34 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                   child: Stack(
                     children: [
                       Positioned.fill(child: _buildBackground(l10n)),
+                      // Both 2D and 3D use GestureDetector for widget position/scale
+                      // 3D: ModelViewer handles internal rotation/zoom via cameraControls
+                      // 2D: GestureDetector handles everything (position, scale, rotate)
                       Positioned.fill(
                         child: GestureDetector(
                           behavior: HitTestBehavior.translucent,
                           onScaleStart: (d) => _onScaleStart(d, size),
                           onScaleUpdate: (d) => _onScaleUpdate(d, size),
-                          child: _StickerOverlay(
-                            imageUrl: petImageUrl ?? '',
-                            offset: _stickerOffset,
-                            scale: _stickerScale,
-                            rotation: _stickerRotation,
-                            flipHorizontal: _flipHorizontal,
-                            flipVertical: _flipVertical,
-                          ),
+                          child: _use3DMode && petModelUrl != null
+                              ? IgnorePointer(
+                                  ignoring: _isCapturing3D,
+                                  child: Model3DOverlay(
+                                    modelUrl: petModelUrl,
+                                    offset: _stickerOffset,
+                                    scale: _stickerScale,
+                                    rotationY: _stickerRotation * 57.2958,
+                                    flipHorizontal: _flipHorizontal,
+                                    flipVertical: _flipVertical,
+                                  ),
+                                )
+                              : _StickerOverlay(
+                                  imageUrl: petImageUrl ?? '',
+                                  offset: _stickerOffset,
+                                  scale: _stickerScale,
+                                  rotation: _stickerRotation,
+                                  flipHorizontal: _flipHorizontal,
+                                  flipVertical: _flipVertical,
+                                ),
                         ),
                       ),
                       if (_hintVisible)
@@ -452,6 +601,24 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                           right: 12,
                           bottom: 12,
                           child: _buildHintBar(l10n),
+                        ),
+                      // Reset button for 3D mode (bottom-right corner)
+                      if (_use3DMode && !_hintVisible)
+                        Positioned(
+                          right: 12,
+                          bottom: 12,
+                          child: FloatingActionButton.small(
+                            onPressed: () {
+                              setState(() {
+                                _stickerOffset = const Offset(0, 0);
+                                _stickerScale = 0.3;
+                                _stickerRotation = 0.0;
+                              });
+                            },
+                            backgroundColor: Colors.black54,
+                            child: const Icon(Icons.restart_alt, color: Colors.white),
+                            tooltip: 'Reset vị trí',
+                          ),
                         ),
                       if (_error != null)
                         Positioned.fill(
@@ -496,6 +663,63 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _build2D3DToggle(AppLocalizations l10n) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.view_in_ar, size: 18, color: Colors.grey[700]),
+          const SizedBox(width: 6),
+          Text(
+            l10n.renderMode,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+          const Spacer(),
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(
+                value: false,
+                label: Text(l10n.mode2D, style: const TextStyle(fontSize: 12)),
+                icon: const Icon(Icons.image, size: 16),
+              ),
+              ButtonSegment(
+                value: true,
+                label: Text(l10n.mode3D, style: const TextStyle(fontSize: 12)),
+                icon: const Icon(Icons.threed_rotation, size: 16),
+              ),
+            ],
+            selected: {_use3DMode},
+            onSelectionChanged: (Set<bool> newSelection) async {
+              final switching = newSelection.first;
+              if (switching && !_use3DMode) {
+                // Show loading when switching to 3D
+                DialogHelper.showLoadingDialog(context, message: 'Đang tải 3D model...');
+                await Future.delayed(const Duration(milliseconds: 500));
+                await DialogHelper.safeHideLoadingDialog();
+              }
+              setState(() {
+                _use3DMode = switching;
+              });
+            },
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -852,6 +1076,10 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
   }
 
   Widget _buildHintBar(AppLocalizations l10n) {
+    final hintText = _use3DMode 
+        ? '👆 1 ngón: Di chuyển widget • 👌 2 ngón: Phóng to widget + Xoay model 3D'
+        : l10n.gestureHint;
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -861,9 +1089,13 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          if (_use3DMode)
+            const Icon(Icons.threed_rotation, color: Colors.white70, size: 16),
+          if (_use3DMode)
+            const SizedBox(width: 8),
           Expanded(
             child: Text(
-              l10n.gestureHint,
+              hintText,
               style: const TextStyle(color: Colors.white, fontSize: 12),
               textAlign: TextAlign.center,
             ),
