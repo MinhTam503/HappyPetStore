@@ -1010,7 +1010,20 @@
   "waitForAdminCreateGroup": "Vui lòng chờ admin tạo nhóm cộng đồng",
   "discoverGroups": "Khám phá nhóm",
   "doYouWantToJoin": "Bạn có muốn tham gia nhóm",
-  "join": "Tham gia"
+  "join": "Tham gia",
+  "replyTo": "Trả lời",
+  "replyToMessage": "Trả lời tin nhắn",
+  "deleteMessage": "Xóa tin nhắn",
+  "deleteMessageConfirm": "Bạn có chắc chắn muốn xóa tin nhắn này?",
+  "messageDeleted": "Đã xóa tin nhắn",
+  "addReaction": "Thể hiện cảm xúc",
+  "replying": "Đang trả lời {name}",
+  "cancelReply": "Hủy",
+  "reply": "Trả lời",
+  "delete": "Xóa",
+  "copy": "Sao chép",
+  "forward": "Chuyển tiếp",
+  "you": "Bạn"
 }
 
 

@@ -23,6 +23,8 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
     on<JoinGroup>(_onJoinGroup);
     on<LeaveGroup>(_onLeaveGroup);
     on<MarkGroupMessagesAsRead>(_onMarkGroupMessagesAsRead);
+    on<AddGroupReaction>(_onAddGroupReaction);
+    on<DeleteGroupMessage>(_onDeleteGroupMessage);
   }
 
   Future<void> _onLoadGroupConversations(
@@ -125,16 +127,8 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
     Emitter<GroupChatState> emit,
   ) async {
     try {
-      // Check if user is blocked by any group member
-      final group = await _repository.getGroup(event.groupId);
-      if (group != null) {
-        final isBlocked = await _isBlockedInGroup(event.senderId, group.participants);
-        if (isBlocked) {
-          emit(const GroupChatError('Cannot send message: blocked by a member.'));
-          return;
-        }
-      }
-
+      // In group chats, allow sending even if blocked by someone
+      // Only the UI will filter messages from blocked users
       await _repository.sendGroupMessage(
         groupId: event.groupId,
         senderId: event.senderId,
@@ -152,15 +146,8 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
     Emitter<GroupChatState> emit,
   ) async {
     try {
-      final group = await _repository.getGroup(event.groupId);
-      if (group != null) {
-        final isBlocked = await _isBlockedInGroup(event.senderId, group.participants);
-        if (isBlocked) {
-          emit(const GroupChatError('Cannot send message: blocked by a member.'));
-          return;
-        }
-      }
-
+      // In group chats, allow sending even if blocked by someone
+      // Only the UI will filter messages from blocked users
       await _repository.sendGroupImage(
         groupId: event.groupId,
         senderId: event.senderId,
@@ -227,51 +214,49 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
     }
   }
 
+  Future<void> _onAddGroupReaction(
+    AddGroupReaction event,
+    Emitter<GroupChatState> emit,
+  ) async {
+    try {
+      // Update reaction in Firestore
+      await FirebaseFirestore.instance
+          .collection('groupConversations')
+          .doc(event.groupId)
+          .collection('messages')
+          .doc(event.messageId)
+          .update({
+        'reactions.${event.userId}': event.emoji,
+      });
+
+      // Messages will auto-update via stream
+    } catch (e) {
+      if (kDebugMode) print('❌ Error adding reaction: $e');
+      emit(GroupChatError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteGroupMessage(
+    DeleteGroupMessage event,
+    Emitter<GroupChatState> emit,
+  ) async {
+    try {
+      // Delete message from Firestore
+      await FirebaseFirestore.instance
+          .collection('groupConversations')
+          .doc(event.groupId)
+          .collection('messages')
+          .doc(event.messageId)
+          .delete();
+
+      // Messages will auto-update via stream
+    } catch (e) {
+      if (kDebugMode) print('❌ Error deleting message: $e');
+      emit(GroupChatError(e.toString()));
+    }
+  }
+
   // Helper: Check if user is blocked by any participant in group
-  Future<bool> _isBlockedInGroup(String userId, List<String> participants) async {
-    try {
-      for (var participantId in participants) {
-        if (participantId == userId) continue;
-        
-        final isBlocked = await _isBlockedBetween(userId, participantId);
-        if (isBlocked) return true;
-      }
-      return false;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<bool> _isBlockedBetween(String a, String b) async {
-    try {
-      final aDoc = await FirebaseFirestore.instance
-          .collection('blockedUsers')
-          .doc(a)
-          .get();
-      if (aDoc.exists) {
-        final data = aDoc.data() as Map<String, dynamic>;
-        final List<dynamic> blocked = data['blocked'] ?? [];
-        final List<dynamic> blockedBy = data['blockedBy'] ?? [];
-        if (blocked.contains(b) || blockedBy.contains(b)) return true;
-      }
-      
-      final bDoc = await FirebaseFirestore.instance
-          .collection('blockedUsers')
-          .doc(b)
-          .get();
-      if (bDoc.exists) {
-        final data = bDoc.data() as Map<String, dynamic>;
-        final List<dynamic> blocked = data['blocked'] ?? [];
-        final List<dynamic> blockedBy = data['blockedBy'] ?? [];
-        if (blocked.contains(a) || blockedBy.contains(a)) return true;
-      }
-      
-      return false;
-    } catch (_) {
-      return false;
-    }
-  }
-
   @override
   Future<void> close() {
     _messagesSubscription?.cancel();

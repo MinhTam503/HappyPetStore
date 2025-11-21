@@ -53,6 +53,7 @@ class ChatMessage {
   final DateTime timestamp;
   final bool isRead;
   final String? replyToId; // For replying to messages
+  final Map<String, String> reactions; // userId -> emoji
 
   ChatMessage({
     required this.id,
@@ -63,6 +64,7 @@ class ChatMessage {
     required this.timestamp,
     this.isRead = false,
     this.replyToId,
+    this.reactions = const {},
   });
 
   ChatMessage copyWith({
@@ -74,6 +76,7 @@ class ChatMessage {
     DateTime? timestamp,
     bool? isRead,
     String? replyToId,
+    Map<String, String>? reactions,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -84,6 +87,7 @@ class ChatMessage {
       timestamp: timestamp ?? this.timestamp,
       isRead: isRead ?? this.isRead,
       replyToId: replyToId ?? this.replyToId,
+      reactions: reactions ?? this.reactions,
     );
   }
 }

@@ -50,15 +50,17 @@ class SendMessage extends ChatEvent {
   final String conversationId;
   final String senderId;
   final String text;
+  final String? replyToId;
 
   const SendMessage({
     required this.conversationId,
     required this.senderId,
     required this.text,
+    this.replyToId,
   });
 
   @override
-  List<Object?> get props => [conversationId, senderId, text];
+  List<Object?> get props => [conversationId, senderId, text, replyToId];
 }
 
 /// Send image message
@@ -66,15 +68,49 @@ class SendImageMessage extends ChatEvent {
   final String conversationId;
   final String senderId;
   final String imageUrl;
+  final String? replyToId;
 
   const SendImageMessage({
     required this.conversationId,
     required this.senderId,
     required this.imageUrl,
+    this.replyToId,
   });
 
   @override
-  List<Object?> get props => [conversationId, senderId, imageUrl];
+  List<Object?> get props => [conversationId, senderId, imageUrl, replyToId];
+}
+
+/// Add reaction to message
+class AddReaction extends ChatEvent {
+  final String conversationId;
+  final String messageId;
+  final String userId;
+  final String emoji;
+
+  const AddReaction({
+    required this.conversationId,
+    required this.messageId,
+    required this.userId,
+    required this.emoji,
+  });
+
+  @override
+  List<Object?> get props => [conversationId, messageId, userId, emoji];
+}
+
+/// Delete message
+class DeleteMessage extends ChatEvent {
+  final String conversationId;
+  final String messageId;
+
+  const DeleteMessage({
+    required this.conversationId,
+    required this.messageId,
+  });
+
+  @override
+  List<Object?> get props => [conversationId, messageId];
 }
 
 /// Mark messages as read

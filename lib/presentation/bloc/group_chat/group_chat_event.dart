@@ -133,3 +133,35 @@ class MarkGroupMessagesAsRead extends GroupChatEvent {
   @override
   List<Object?> get props => [groupId, userId];
 }
+
+/// Add reaction to group message
+class AddGroupReaction extends GroupChatEvent {
+  final String groupId;
+  final String messageId;
+  final String userId;
+  final String emoji;
+
+  const AddGroupReaction({
+    required this.groupId,
+    required this.messageId,
+    required this.userId,
+    required this.emoji,
+  });
+
+  @override
+  List<Object?> get props => [groupId, messageId, userId, emoji];
+}
+
+/// Delete group message
+class DeleteGroupMessage extends GroupChatEvent {
+  final String groupId;
+  final String messageId;
+
+  const DeleteGroupMessage({
+    required this.groupId,
+    required this.messageId,
+  });
+
+  @override
+  List<Object?> get props => [groupId, messageId];
+}

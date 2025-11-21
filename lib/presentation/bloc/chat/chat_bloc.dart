@@ -24,6 +24,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<LoadMessages>(_onLoadMessages);
     on<SendMessage>(_onSendMessage);
     on<SendImageMessage>(_onSendImageMessage);
+    on<AddReaction>(_onAddReaction);
+    on<DeleteMessage>(_onDeleteMessage);
     on<MarkMessagesAsRead>(_onMarkMessagesAsRead);
     on<DeleteConversation>(_onDeleteConversation);
   }
@@ -217,6 +219,46 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         final conversations = await _chatRepository.getConversations(event.userId);
         emit(currentState.copyWith(conversations: conversations));
       }
+    } catch (e) {
+      emit(ChatError(e.toString()));
+    }
+  }
+
+  Future<void> _onAddReaction(
+    AddReaction event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      // Update reaction in Firestore
+      await FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(event.conversationId)
+          .collection('messages')
+          .doc(event.messageId)
+          .update({
+        'reactions.${event.userId}': event.emoji,
+      });
+
+      // Messages will auto-update via stream
+    } catch (e) {
+      emit(ChatError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteMessage(
+    DeleteMessage event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      // Delete message from Firestore
+      await FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(event.conversationId)
+          .collection('messages')
+          .doc(event.messageId)
+          .delete();
+
+      // Messages will auto-update via stream
     } catch (e) {
       emit(ChatError(e.toString()));
     }

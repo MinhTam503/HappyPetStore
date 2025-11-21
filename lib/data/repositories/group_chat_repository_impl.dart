@@ -215,6 +215,8 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
         'timestamp': Timestamp.fromDate(message.timestamp),
         'readBy': message.readBy,
         'replyToId': message.replyToId,
+        'reactions': {},
+        'isSystemMessage': false,
       });
 
       // Update group last message
@@ -259,6 +261,8 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
         'timestamp': Timestamp.fromDate(message.timestamp),
         'readBy': message.readBy,
         'replyToId': message.replyToId,
+        'reactions': {},
+        'isSystemMessage': false,
       });
 
       await _updateGroupLastMessage(
@@ -426,6 +430,8 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
       timestamp: (data['timestamp'] as Timestamp).toDate(),
       readBy: Map<String, bool>.from(data['readBy'] ?? {}),
       replyToId: data['replyToId'],
+      reactions: Map<String, String>.from(data['reactions'] ?? {}),
+      isSystemMessage: data['isSystemMessage'] ?? false,
     );
   }
 }

@@ -38,6 +38,8 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
   bool _isUploading = false;
   Set<String> _blockedUserIds = {};
   GroupConversation? _groupInfo;
+  GroupChatMessage? _replyingTo;
+  final Map<String, GroupChatMessage> _messagesCache = {};
 
   @override
   void initState() {
@@ -116,11 +118,17 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    final replyToId = _replyingTo?.id;
     _messageController.clear();
+    setState(() {
+      _replyingTo = null;
+    });
+    
     context.read<GroupChatBloc>().add(SendGroupMessage(
           groupId: widget.groupId,
           senderId: _currentUserId,
           text: text,
+          replyToId: replyToId,
         ));
 
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -153,11 +161,17 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
       await storageRef.putFile(File(image.path));
       final imageUrl = await storageRef.getDownloadURL();
 
+      final replyToId = _replyingTo?.id;
+      setState(() {
+        _replyingTo = null;
+      });
+      
       if (mounted) {
         context.read<GroupChatBloc>().add(SendGroupImage(
               groupId: widget.groupId,
               senderId: _currentUserId,
               imageUrl: imageUrl,
+              replyToId: replyToId,
             ));
       }
 
@@ -170,6 +184,141 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
         );
       }
     }
+  }
+
+  void _setReplyingTo(GroupChatMessage? message) {
+    setState(() {
+      _replyingTo = message;
+    });
+  }
+
+  void _showMessageOptions(BuildContext context, GroupChatMessage message, AppLocalizations l10n) {
+    if (message.isSystemMessage) return; // No menu for system messages
+    
+    final isMe = message.senderId == _currentUserId;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.reply, color: Color(0xFF00A86B)),
+              title: Text(l10n.reply),
+              onTap: () {
+                Navigator.pop(context);
+                _setReplyingTo(message);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_reaction_outlined, color: Colors.amber),
+              title: Text(l10n.addReaction),
+              onTap: () {
+                Navigator.pop(context);
+                _showReactionPicker(context, message);
+              },
+            ),
+            if (isMe)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: Text(l10n.deleteMessage),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteMessage(context, message, l10n);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReactionPicker(BuildContext context, GroupChatMessage message) {
+    final emojis = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                AppLocalizations.of(context)!.addReaction,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 16,
+                children: emojis.map((emoji) {
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<GroupChatBloc>().add(AddGroupReaction(
+                            groupId: widget.groupId,
+                            messageId: message.id,
+                            userId: _currentUserId,
+                            emoji: emoji,
+                          ));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(emoji, style: const TextStyle(fontSize: 32)),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteMessage(BuildContext context, GroupChatMessage message, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteMessage),
+        content: Text(l10n.deleteMessageConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<GroupChatBloc>().add(DeleteGroupMessage(
+                    groupId: widget.groupId,
+                    messageId: message.id,
+                  ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.messageDeleted)),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -285,9 +434,9 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                 }
 
                 if (state is GroupChatLoaded) {
-                  // Filter messages from blocked users
+                  // Filter messages: show system messages and hide messages from blocked users
                   final messages = state.messages
-                      .where((msg) => !_blockedUserIds.contains(msg.senderId))
+                      .where((msg) => msg.isSystemMessage || !_blockedUserIds.contains(msg.senderId))
                       .toList();
 
                   if (messages.isEmpty) {
@@ -315,7 +464,17 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                       final message = messages[messages.length - 1 - index];
                       final isMe = message.senderId == _currentUserId;
 
-                      return _buildMessageBubble(message, isMe, theme, l10n);
+                      // Cache messages for reply lookup
+                      if (!message.isSystemMessage) {
+                        _messagesCache[message.id] = message;
+                      }
+
+                      return GestureDetector(
+                        onLongPress: message.isSystemMessage 
+                            ? null 
+                            : () => _showMessageOptions(context, message, l10n),
+                        child: _buildMessageBubble(message, isMe, theme, l10n, messages),
+                      );
                     },
                   );
                 }
@@ -337,44 +496,101 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: _isUploading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.image),
-                  onPressed: _isUploading ? null : _pickAndSendImage,
-                  color: theme.colorScheme.primary,
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: l10n.typeMessage,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+                // Reply indicator bar
+                if (_replyingTo != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00A86B).withOpacity(0.1),
+                      border: Border(
+                        left: BorderSide(
+                          color: const Color(0xFF00A86B),
+                          width: 4,
+                        ),
                       ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.replyTo,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF00A86B),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _replyingTo!.text ?? '📷 Photo',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () => _setReplyingTo(null),
+                          color: Colors.grey[600],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary,
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                    onPressed: _sendMessage,
+
+                // Input row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: _isUploading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.image),
+                        onPressed: _isUploading ? null : _pickAndSendImage,
+                        color: theme.colorScheme.primary,
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: l10n.typeMessage,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        backgroundColor: theme.colorScheme.primary,
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                          onPressed: _sendMessage,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -385,15 +601,54 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
     );
   }
 
-  Widget _buildMessageBubble(GroupChatMessage message, bool isMe, ThemeData theme, AppLocalizations l10n) {
+  Widget _buildMessageBubble(
+    GroupChatMessage message,
+    bool isMe,
+    ThemeData theme,
+    AppLocalizations l10n,
+    List<GroupChatMessage> allMessages,
+  ) {
+    // System messages (join/leave notifications) - centered, no avatar
+    if (message.isSystemMessage) {
+      return Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            message.text ?? '',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[700],
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    // Get replied message if exists
+    GroupChatMessage? repliedMessage;
+    if (message.replyToId != null) {
+      repliedMessage = _messagesCache[message.replyToId];
+    }
+
+    // Get reactions
+    final reactions = message.reactions;
+    final hasReactions = reactions.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Avatar (only for other users)
           if (!isMe) ...[
-            // Sender avatar for group messages
             FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
                   .collection('socialPetProfiles')
@@ -419,10 +674,12 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
             ),
             const SizedBox(width: 8),
           ],
+          
           Flexible(
             child: Column(
               crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
+                // Sender name (only for other users)
                 if (!isMe)
                   FutureBuilder<DocumentSnapshot>(
                     future: FirebaseFirestore.instance
@@ -448,35 +705,132 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                       );
                     },
                   ),
+                
+                // Message bubble
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isMe ? theme.colorScheme.primary : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(18),
+                    color: isMe ? const Color(0xFF00A86B) : Colors.grey[200],
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(18),
+                      topRight: const Radius.circular(18),
+                      bottomLeft: Radius.circular(isMe ? 18 : 4),
+                      bottomRight: Radius.circular(isMe ? 4 : 18),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Replied message indicator
+                      if (repliedMessage != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isMe ? Colors.white.withOpacity(0.2) : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border(
+                              left: BorderSide(
+                                color: isMe ? Colors.white : const Color(0xFF00A86B),
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                repliedMessage.senderId == _currentUserId
+                                    ? l10n.you
+                                    : 'Member',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isMe ? Colors.white : const Color(0xFF00A86B),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                repliedMessage.text ?? '📷 Photo',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isMe ? Colors.white70 : Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Image if present
                       if (message.imageUrl != null && message.imageUrl!.isNotEmpty)
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           child: Image.network(
                             message.imageUrl!,
                             width: 200,
                             fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                height: 150,
+                                width: 150,
+                                color: Colors.grey[300],
+                                child: const Center(child: CircularProgressIndicator()),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 100,
+                                width: 100,
+                                color: Colors.grey[200],
+                                child: const Icon(Icons.error, color: Colors.red),
+                              );
+                            },
                           ),
                         ),
+                      
+                      // Text if present
                       if (message.text != null && message.text!.isNotEmpty)
-                        Text(
-                          message.text!,
-                          style: TextStyle(
-                            color: isMe ? Colors.white : Colors.black87,
-                            fontSize: 15,
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: (message.imageUrl?.isNotEmpty ?? false) ? 8 : 0,
+                          ),
+                          child: Text(
+                            message.text!,
+                            style: TextStyle(
+                              color: isMe ? Colors.white : Colors.black87,
+                              fontSize: 15,
+                            ),
                           ),
                         ),
                     ],
                   ),
                 ),
+
+                // Reactions
+                if (hasReactions)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4, left: 8, right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: reactions.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Text(entry.value, style: const TextStyle(fontSize: 16)),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
+                // Timestamp
                 Padding(
                   padding: const EdgeInsets.only(top: 4, left: 8, right: 8),
                   child: Text(

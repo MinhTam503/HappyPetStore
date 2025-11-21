@@ -73,6 +73,8 @@ class GroupChatMessage {
   final DateTime timestamp;
   final Map<String, bool> readBy; // userId -> read status
   final String? replyToId;
+  final Map<String, String> reactions; // userId -> emoji
+  final bool isSystemMessage; // For join/leave notifications
 
   GroupChatMessage({
     required this.id,
@@ -83,6 +85,8 @@ class GroupChatMessage {
     required this.timestamp,
     required this.readBy,
     this.replyToId,
+    this.reactions = const {},
+    this.isSystemMessage = false,
   });
 
   GroupChatMessage copyWith({
@@ -94,6 +98,8 @@ class GroupChatMessage {
     DateTime? timestamp,
     Map<String, bool>? readBy,
     String? replyToId,
+    Map<String, String>? reactions,
+    bool? isSystemMessage,
   }) {
     return GroupChatMessage(
       id: id ?? this.id,
@@ -104,6 +110,8 @@ class GroupChatMessage {
       timestamp: timestamp ?? this.timestamp,
       readBy: readBy ?? this.readBy,
       replyToId: replyToId ?? this.replyToId,
+      reactions: reactions ?? this.reactions,
+      isSystemMessage: isSystemMessage ?? this.isSystemMessage,
     );
   }
 }

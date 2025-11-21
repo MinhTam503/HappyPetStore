@@ -124,6 +124,7 @@ class UserChatRepositoryImpl implements UserChatRepository {
         'timestamp': Timestamp.fromDate(message.timestamp),
         'isRead': message.isRead,
         'replyToId': message.replyToId,
+        'reactions': {}, // Empty map for reactions
       });
 
       // Update conversation
@@ -176,6 +177,7 @@ class UserChatRepositoryImpl implements UserChatRepository {
         'timestamp': Timestamp.fromDate(message.timestamp),
         'isRead': message.isRead,
         'replyToId': message.replyToId,
+        'reactions': {}, // Empty map for reactions
       });
 
       // Update conversation
@@ -363,6 +365,7 @@ class UserChatRepositoryImpl implements UserChatRepository {
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isRead: data['isRead'] ?? false,
       replyToId: data['replyToId'],
+      reactions: Map<String, String>.from(data['reactions'] ?? {}),
     );
   }
 }

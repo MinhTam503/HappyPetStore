@@ -8,6 +8,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/services/user_manager.dart';
+import '../../../../domain/entities/chat_entities.dart';
 import '../../../bloc/chat/chat_bloc.dart';
 import '../../../bloc/chat/chat_event.dart';
 import '../../../bloc/chat/chat_state.dart';
@@ -37,6 +38,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   late String _currentUserId;
   bool _isUploading = false;
   bool _isBlocked = false;
+  
+  // Reply functionality
+  ChatMessage? _replyingTo;
+  final Map<String, ChatMessage> _messagesCache = {}; // Cache for quick lookup
 
   @override
   void initState() {
@@ -97,11 +102,16 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    final replyToId = _replyingTo?.id;
+    
     _messageController.clear();
+    _setReplyingTo(null); // Clear reply after sending
+    
     context.read<ChatBloc>().add(SendMessage(
           conversationId: widget.conversationId,
           senderId: _currentUserId,
           text: text,
+          replyToId: replyToId,
         ));
 
     // Scroll to bottom
@@ -141,12 +151,16 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         print('📸 Image uploaded successfully: $imageUrl');
       }
 
+      final replyToId = _replyingTo?.id;
+      _setReplyingTo(null); // Clear reply after sending
+      
       // Send image message
       if (mounted) {
         context.read<ChatBloc>().add(SendImageMessage(
               conversationId: widget.conversationId,
               senderId: _currentUserId,
               imageUrl: imageUrl,
+              replyToId: replyToId,
             ));
       }
 
@@ -165,6 +179,151 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         );
       }
     }
+  }
+
+  void _setReplyingTo(ChatMessage? message) {
+    setState(() {
+      _replyingTo = message;
+    });
+  }
+
+  void _showMessageOptions(BuildContext context, ChatMessage message, AppLocalizations l10n) {
+    final isMe = message.senderId == _currentUserId;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Reply option
+            ListTile(
+              leading: const Icon(Icons.reply, color: Color(0xFF00A86B)),
+              title: Text(l10n.reply),
+              onTap: () {
+                Navigator.pop(context);
+                _setReplyingTo(message);
+              },
+            ),
+            
+            // Reaction option
+            ListTile(
+              leading: const Icon(Icons.add_reaction_outlined, color: Colors.amber),
+              title: Text(l10n.addReaction),
+              onTap: () {
+                Navigator.pop(context);
+                _showReactionPicker(context, message);
+              },
+            ),
+            
+            // Delete option (only for own messages)
+            if (isMe)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: Text(l10n.deleteMessage),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteMessage(context, message, l10n);
+                },
+              ),
+              
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReactionPicker(BuildContext context, ChatMessage message) {
+    final emojis = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                AppLocalizations.of(context)!.addReaction,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 16,
+                children: emojis.map((emoji) {
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<ChatBloc>().add(AddReaction(
+                            conversationId: widget.conversationId,
+                            messageId: message.id,
+                            userId: _currentUserId,
+                            emoji: emoji,
+                          ));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 32),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteMessage(BuildContext context, ChatMessage message, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteMessage),
+        content: Text(l10n.deleteMessageConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<ChatBloc>().add(DeleteMessage(
+                    conversationId: widget.conversationId,
+                    messageId: message.id,
+                  ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.messageDeleted)),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -267,8 +426,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                       // Reverse index because list is reversed
                       final message = messages[messages.length - 1 - index];
                       final isMe = message.senderId == _currentUserId;
+                      
+                      // Cache messages for reply lookup
+                      _messagesCache[message.id] = message;
 
-                      return _buildMessageBubble(message, isMe, theme);
+                      return GestureDetector(
+                        onLongPress: () => _showMessageOptions(context, message, l10n),
+                        child: _buildMessageBubble(message, isMe, theme, l10n, messages),
+                      );
                     },
                   );
                 }
@@ -303,162 +468,251 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
           // Input area
           if (!_isBlocked)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
-                children: [
-                  // Image picker button
-                  IconButton(
-                    icon: _isUploading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.image),
-                    onPressed: _isUploading ? null : _pickAndSendImage,
-                    color: theme.colorScheme.primary,
-                  ),
-
-                  // Text input
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: l10n.typeMessage,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+            Column(
+              children: [
+                // Reply indicator
+                if (_replyingTo != null)
+                  Container(
+                    color: Colors.grey[100],
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 3,
+                          height: 40,
+                          color: const Color(0xFF00A86B),
                         ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.reply, size: 16, color: Color(0xFF00A86B)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    l10n.replyTo,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF00A86B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _replyingTo!.text ?? '📷 Photo',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () => _setReplyingTo(null),
+                          color: Colors.grey[600],
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                // Input row
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Image picker button
+                      IconButton(
+                        icon: _isUploading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.image),
+                        onPressed: _isUploading ? null : _pickAndSendImage,
+                        color: theme.colorScheme.primary,
+                      ),
+
+                      // Text input
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: l10n.typeMessage,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
                         ),
                       ),
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
 
-                  const SizedBox(width: 8),
+                      const SizedBox(width: 8),
 
-                  // Send button
-                  CircleAvatar(
-                    backgroundColor: theme.colorScheme.primary,
-                    child: IconButton(
-                      icon:
-                          const Icon(Icons.send, color: Colors.white, size: 20),
-                      onPressed: _sendMessage,
-                    ),
+                      // Send button
+                      CircleAvatar(
+                        backgroundColor: theme.colorScheme.primary,
+                        child: IconButton(
+                          icon:
+                              const Icon(Icons.send, color: Colors.white, size: 20),
+                          onPressed: _sendMessage,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
         ],
       ),
     );
   }
 
-  Widget _buildMessageBubble(dynamic message, bool isMe, ThemeData theme) {
-    // Debug log for image URLs
-    if (kDebugMode &&
-        message.imageUrl != null &&
-        message.imageUrl!.isNotEmpty) {
-      print('🖼️ Rendering image: ${message.imageUrl}');
+  Widget _buildMessageBubble(
+    ChatMessage message,
+    bool isMe,
+    ThemeData theme,
+    AppLocalizations l10n,
+    List<ChatMessage> allMessages,
+  ) {
+    // Get replied message if exists
+    ChatMessage? repliedMessage;
+    if (message.replyToId != null) {
+      repliedMessage = _messagesCache[message.replyToId];
     }
+
+    // Get reactions
+    final reactions = message.reactions;
+    final hasReactions = reactions.isNotEmpty;
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 12),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: Column(
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
+            // Main message bubble
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isMe ? theme.colorScheme.primary : Colors.grey[200],
+                color: isMe ? const Color(0xFF00A86B) : Colors.grey[200],
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 16),
+                  topLeft: const Radius.circular(18),
+                  topRight: const Radius.circular(18),
+                  bottomLeft: Radius.circular(isMe ? 18 : 4),
+                  bottomRight: Radius.circular(isMe ? 4 : 18),
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Replied message indicator
+                  if (repliedMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isMe ? Colors.white.withOpacity(0.2) : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border(
+                          left: BorderSide(
+                            color: isMe ? Colors.white : const Color(0xFF00A86B),
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            repliedMessage.senderId == _currentUserId
+                                ? l10n.you
+                                : widget.otherUserName,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isMe ? Colors.white : const Color(0xFF00A86B),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            repliedMessage.text ?? '📷 Photo',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isMe ? Colors.white70 : Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // Image if present
                   if (message.imageUrl != null && message.imageUrl!.isNotEmpty)
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: 250,
-                        maxHeight: 300,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          message.imageUrl!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              height: 200,
-                              width: 200,
-                              color: Colors.grey[300],
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes !=
-                                          null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            if (kDebugMode) {
-                              print('❌ Error loading image: $error');
-                            }
-                            return Container(
-                              height: 200,
-                              width: 200,
-                              color: Colors.grey[200],
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.error, color: Colors.red),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Failed to load image',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        message.imageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 200,
+                            width: 200,
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 150,
+                            width: 150,
+                            color: Colors.grey[200],
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error, color: Colors.red),
+                                SizedBox(height: 8),
+                                Text('Failed to load'),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
 
@@ -479,6 +733,30 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 ],
               ),
             ),
+
+            // Reactions
+            if (hasReactions)
+              Container(
+                margin: const EdgeInsets.only(top: 4, left: 8, right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: reactions.entries.map((entry) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Text(
+                        entry.value,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
 
             // Timestamp
             Padding(
