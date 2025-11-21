@@ -988,7 +988,29 @@
   "reportUser": "Báo cáo người dùng",
   "cannotAccessProfile": "Bạn không thể truy cập trang này",
   "cannotMessageUser": "Bạn không thể nhắn tin cho người này",
-  "cannotReplyConversation": "Bạn không thể trả lời cuộc trò chuyện này"
+  "cannotReplyConversation": "Bạn không thể trả lời cuộc trò chuyện này",
+  "friends": "Bạn bè",
+  "community": "Cộng đồng",
+  "groupChat": "Nhóm chat",
+  "createGroup": "Tạo nhóm",
+  "addMembers": "Thêm thành viên",
+  "groupName": "Tên nhóm",
+  "publicGroup": "Nhóm công khai",
+  "privateGroup": "Nhóm riêng tư",
+  "joinGroup": "Tham gia",
+  "leaveGroup": "Rời nhóm",
+  "members": "Thành viên",
+  "admin": "Quản trị viên",
+  "enterGroupName": "Nhập tên nhóm",
+  "selectMembers": "Chọn thành viên",
+  "createGroupSuccess": "Tạo nhóm thành công",
+  "joinedGroup": "Đã tham gia nhóm",
+  "leftGroup": "Đã rời khỏi nhóm",
+  "noGroupsYet": "Chưa có nhóm nào",
+  "waitForAdminCreateGroup": "Vui lòng chờ admin tạo nhóm cộng đồng",
+  "discoverGroups": "Khám phá nhóm",
+  "doYouWantToJoin": "Bạn có muốn tham gia nhóm",
+  "join": "Tham gia"
 }
 
 

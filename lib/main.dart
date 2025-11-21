@@ -11,6 +11,7 @@ import 'package:pet_shop/core/services/recommendation_tracking_service.dart';
 import 'package:pet_shop/core/services/search_recommendations_manager.dart';
 import 'package:pet_shop/core/services/settings_service.dart';
 import 'package:pet_shop/data/datasources/vnpay_service.dart';
+import 'package:pet_shop/data/repositories/group_chat_repository_impl.dart';
 import 'package:pet_shop/data/repositories/notification_repository.dart';
 import 'package:pet_shop/data/repositories/viewed_pets/recent_pets_repository_impl.dart';
 import 'package:pet_shop/data/repositories/vnpay_repository_impl.dart';
@@ -18,6 +19,7 @@ import 'package:pet_shop/domain/usecases/create_vnpay_payment_url.dart';
 import 'package:pet_shop/domain/usecases/verify_vnpay_payment.dart';
 import 'package:pet_shop/presentation/bloc/cart_bloc_web/cart_bloc_web.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
+import 'package:pet_shop/presentation/bloc/group_chat/group_chat_bloc.dart';
 import 'package:pet_shop/presentation/bloc/recommendation/recommendation_bloc.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 import 'package:pet_shop/core/providers/theme_provider.dart';
@@ -38,8 +40,9 @@ import 'package:pet_shop/presentation/pages/mobile/social/social_profile_page.da
 import 'package:pet_shop/presentation/pages/mobile/social/edit_social_profile_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/edit_post_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/followers_list_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/social/chat_list_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/chat_list_page_with_tabs.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_room_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/group_chat_room_page.dart';
 // import 'package:pet_shop/presentation/pages/mobile/pet/ar_viewer_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/get_started/get_started_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
@@ -193,6 +196,10 @@ class MyApp extends StatelessWidget {
             create: (_) => ChatBloc(
                   chatRepository: UserChatRepositoryImpl(),
                   socialRepository: SocialRepositoryImpl(),
+                )),
+        BlocProvider(
+            create: (_) => GroupChatBloc(
+                  repository: GroupChatRepositoryImpl(),
                 )),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
@@ -386,7 +393,7 @@ class MyApp extends StatelessWidget {
 
               if (settings.name == '/social/chat') {
                 return MaterialPageRoute(
-                  builder: (_) => const ChatListPage(),
+                  builder: (_) => const ChatListPageWithTabs(),
                   settings: settings,
                 );
               }
@@ -399,6 +406,18 @@ class MyApp extends StatelessWidget {
                     otherUserId: args['otherUserId'],
                     otherUserName: args['otherUserName'],
                     otherUserAvatar: args['otherUserAvatar'],
+                  ),
+                  settings: settings,
+                );
+              }
+
+              if (settings.name == '/social/chat/group') {
+                final args = settings.arguments as Map<String, dynamic>;
+                return MaterialPageRoute(
+                  builder: (_) => GroupChatRoomPage(
+                    groupId: args['groupId'],
+                    groupName: args['groupName'],
+                    groupAvatar: args['groupAvatar'],
                   ),
                   settings: settings,
                 );

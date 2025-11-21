@@ -26,6 +26,7 @@ class _SocialHomePageState extends State<SocialHomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String? _currentUserId;
+  String? _userAvatar;
 
   @override
   void initState() {
@@ -40,6 +41,23 @@ class _SocialHomePageState extends State<SocialHomePage>
     // Ensure user profile exists (auto-sync from Users collection)
     if (_currentUserId != null) {
       context.read<SocialBloc>().add(EnsureUserProfile(_currentUserId!));
+      
+      // Load user avatar
+      try {
+        final profileDoc = await FirebaseFirestore.instance
+            .collection('socialPetProfiles')
+            .doc(_currentUserId)
+            .get();
+        
+        if (profileDoc.exists && mounted) {
+          final data = profileDoc.data();
+          setState(() {
+            _userAvatar = data?['avatarUrl'] ?? '';
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading user avatar: $e');
+      }
     }
 
     context.read<SocialBloc>().add(const LoadFeed());
@@ -169,7 +187,12 @@ class _SocialHomePageState extends State<SocialHomePage>
                                   CircleAvatar(
                                     radius: 18,
                                     backgroundColor: isDark ? darkPrimaryColor : primaryColor,
-                                    child: const Icon(Icons.person, size: 20, color: Colors.white),
+                                    backgroundImage: _userAvatar != null && _userAvatar!.isNotEmpty
+                                        ? NetworkImage(_userAvatar!)
+                                        : null,
+                                    child: _userAvatar == null || _userAvatar!.isEmpty
+                                        ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                        : null,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -279,7 +302,7 @@ class _SocialHomePageState extends State<SocialHomePage>
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setState) {                              
             return DraggableScrollableSheet(
               initialChildSize: 0.75,
               minChildSize: 0.5,

@@ -2129,7 +2129,29 @@
   "reportUser": "Report User",
   "cannotAccessProfile": "You cannot access this profile",
   "cannotMessageUser": "You cannot message this user",
-  "cannotReplyConversation": "You can't reply to this conversation"
+  "cannotReplyConversation": "You can't reply to this conversation",
+  "friends": "Friends",
+  "community": "Community",
+  "groupChat": "Group Chat",
+  "createGroup": "Create Group",
+  "addMembers": "Add Members",
+  "groupName": "Group Name",
+  "publicGroup": "Public Group",
+  "privateGroup": "Private Group",
+  "joinGroup": "Join",
+  "leaveGroup": "Leave Group",
+  "members": "Members",
+  "admin": "Admin",
+  "enterGroupName": "Enter group name",
+  "selectMembers": "Select members",
+  "createGroupSuccess": "Group created successfully",
+  "joinedGroup": "Joined group",
+  "leftGroup": "Left group",
+  "noGroupsYet": "No groups yet",
+  "waitForAdminCreateGroup": "Please wait for admin to create community groups",
+  "discoverGroups": "Discover Groups",
+  "doYouWantToJoin": "Do you want to join",
+  "join": "Join"
 }
 
 
