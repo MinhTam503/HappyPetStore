@@ -10,6 +10,10 @@ import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_a
 import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
 import 'package:pet_shop/presentation/widgets/settings_menu.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/social/social_posts_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/social/social_accounts_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/social/community_groups_admin.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/social/sensitive_words_admin.dart';
 import '../account/account_admin.dart';
 import '../category/category_admin.dart';
 import '../auth/login_admin_page.dart';
@@ -20,11 +24,13 @@ class NavigationItem {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+  final List<NavigationItem>? subItems;
 
   const NavigationItem({
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    this.subItems,
   });
 }
 
@@ -39,6 +45,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   int _selectedIndex = 0;
   String? _role;
   bool _loading = true;
+  bool _socialMenuExpanded = false;
 
   late final List<Widget> _pages;
 
@@ -61,6 +68,10 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       const ShopInfo(),
       const PetAnalyticsPage(),
       const RevenuePage(),
+      const SocialPostsAdmin(), // Social Network - Posts Management
+      const SocialAccountsAdmin(), // Social Network - Accounts Management
+      const CommunityGroupsAdmin(), // Social Network - Groups Management
+      const SensitiveWordsAdmin(), // Social Network - Sensitive Words
       //  const ShippingManagementPage(),
       //  const GHNTestPage(), // GHN Test page
     ];
@@ -179,6 +190,33 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         selectedIcon: Icons.bar_chart,
         label: l10n.revenue,
       ),
+      NavigationItem(
+        icon: Icons.hub_outlined,
+        selectedIcon: Icons.hub,
+        label: l10n.socialNetwork,
+        subItems: [
+          NavigationItem(
+            icon: Icons.article_outlined,
+            selectedIcon: Icons.article,
+            label: l10n.managePosts,
+          ),
+          NavigationItem(
+            icon: Icons.people_outlined,
+            selectedIcon: Icons.people,
+            label: l10n.manageAccounts,
+          ),
+          NavigationItem(
+            icon: Icons.groups_outlined,
+            selectedIcon: Icons.groups,
+            label: l10n.manageCommunityGroups,
+          ),
+          NavigationItem(
+            icon: Icons.block_outlined,
+            selectedIcon: Icons.block,
+            label: l10n.manageSensitiveWords,
+          ),
+        ],
+      ),
       // NavigationItem(
       //   icon: Icons.local_shipping_outlined,
       //   selectedIcon: Icons.local_shipping,
@@ -197,6 +235,131 @@ class _HomePageAdminState extends State<HomePageAdmin> {
     
     final isSelected = _selectedIndex == index;
     final theme = Theme.of(context);
+    final hasSubItems = item.subItems != null && item.subItems!.isNotEmpty;
+
+    // Check if any sub-item is selected
+    final isSubItemSelected = hasSubItems && 
+        _selectedIndex >= index && 
+        _selectedIndex < index + item.subItems!.length;
+
+    if (hasSubItems) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            child: Material(
+              color: (isSubItemSelected || _socialMenuExpanded)
+                  ? theme.colorScheme.primary.withOpacity(0.05)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  if (mounted) {
+                    setState(() {
+                      _socialMenuExpanded = !_socialMenuExpanded;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isSubItemSelected ? item.selectedIcon : item.icon,
+                        color: isSubItemSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          item.label,
+                          style: TextStyle(
+                            color: isSubItemSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                            fontWeight:
+                                isSubItemSelected ? FontWeight.w600 : FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(
+                        _socialMenuExpanded 
+                            ? Icons.keyboard_arrow_up 
+                            : Icons.keyboard_arrow_down,
+                        color: theme.colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Sub-items
+          if (_socialMenuExpanded)
+            ...item.subItems!.asMap().entries.map((entry) {
+              final subIndex = index + entry.key;
+              final subItem = entry.value;
+              final isSubSelected = _selectedIndex == subIndex;
+              
+              return Container(
+                margin: const EdgeInsets.only(left: 24, right: 8, top: 2, bottom: 2),
+                child: Material(
+                  color: isSubSelected
+                      ? theme.colorScheme.primary.withOpacity(0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      if (mounted) {
+                        _setIndex(subIndex);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSubSelected ? subItem.selectedIcon : subItem.icon,
+                            color: isSubSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              subItem.label,
+                              style: TextStyle(
+                                color: isSubSelected
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurfaceVariant,
+                                fontWeight:
+                                    isSubSelected ? FontWeight.w600 : FontWeight.w500,
+                                fontSize: 13,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+        ],
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -266,7 +429,6 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       }
       
       final items = _getNavigationItems();
-      const itemHeight = 65.0; // Increased height to accommodate longer text
       
       // Calculate responsive sidebar width based on screen size
       final screenWidth = MediaQuery.of(context).size.width;
@@ -379,7 +541,6 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                       ),
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        itemExtent: itemHeight,
                         itemCount: items.length,
                         itemBuilder: (context, i) => _buildNavigationItem(i, items[i]),
                       ),
