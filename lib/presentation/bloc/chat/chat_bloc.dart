@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../domain/repositories/user_chat_repository.dart';
 import '../../../domain/repositories/social_repository.dart';
 import '../../../domain/entities/chat_entities.dart';
@@ -52,6 +53,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
+      // Block check before creating conversation
+      final isBlocked = await _isBlockedBetween(event.currentUserId, event.otherUserId);
+      if (isBlocked) {
+        emit(ChatError('Cannot start conversation: user blocked.'));
+        return;
+      }
       // Get current user info from social repository
       final currentUserProfile = await _socialRepository.getUserProfile(event.currentUserId);
       
@@ -121,6 +128,30 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
+      // Prevent sending if blocked relationship established
+      final conversation = state is ChatLoaded
+          ? (state as ChatLoaded).conversations.firstWhere(
+              (c) => c.id == event.conversationId,
+              orElse: () => ChatConversation(
+                id: event.conversationId,
+                participants: [],
+                lastMessage: null,
+                lastMessageTime: DateTime.now(),
+                lastMessageSenderId: null,
+                unreadCount: {},
+                createdAt: DateTime.now(),
+                participantsInfo: {},
+              ),
+            )
+          : null;
+      if (conversation != null && conversation.participants.length == 2) {
+        final a = conversation.participants[0];
+        final b = conversation.participants[1];
+        if (await _isBlockedBetween(a, b)) {
+          emit(ChatError('Cannot send message: users blocked.'));
+          return;
+        }
+      }
       await _chatRepository.sendMessage(
         conversationId: event.conversationId,
         senderId: event.senderId,
@@ -137,6 +168,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
+      final conversation = state is ChatLoaded
+          ? (state as ChatLoaded).conversations.firstWhere(
+              (c) => c.id == event.conversationId,
+              orElse: () => ChatConversation(
+                id: event.conversationId,
+                participants: [],
+                lastMessage: null,
+                lastMessageTime: DateTime.now(),
+                lastMessageSenderId: null,
+                unreadCount: {},
+                createdAt: DateTime.now(),
+                participantsInfo: {},
+              ),
+            )
+          : null;
+      if (conversation != null && conversation.participants.length == 2) {
+        final a = conversation.participants[0];
+        final b = conversation.participants[1];
+        if (await _isBlockedBetween(a, b)) {
+          emit(ChatError('Cannot send message: users blocked.'));
+          return;
+        }
+      }
       await _chatRepository.sendImageMessage(
         conversationId: event.conversationId,
         senderId: event.senderId,
@@ -195,5 +249,28 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _conversationsSubscription?.cancel();
     _messagesSubscription?.cancel();
     return super.close();
+  }
+
+  // Helper: check block relationship between two users
+  Future<bool> _isBlockedBetween(String a, String b) async {
+    try {
+      final aDoc = await FirebaseFirestore.instance.collection('blockedUsers').doc(a).get();
+      if (aDoc.exists) {
+        final data = aDoc.data() as Map<String, dynamic>;
+        final List<dynamic> blocked = data['blocked'] ?? [];
+        final List<dynamic> blockedBy = data['blockedBy'] ?? [];
+        if (blocked.contains(b) || blockedBy.contains(b)) return true;
+      }
+      final bDoc = await FirebaseFirestore.instance.collection('blockedUsers').doc(b).get();
+      if (bDoc.exists) {
+        final data = bDoc.data() as Map<String, dynamic>;
+        final List<dynamic> blocked = data['blocked'] ?? [];
+        final List<dynamic> blockedBy = data['blockedBy'] ?? [];
+        if (blocked.contains(a) || blockedBy.contains(a)) return true;
+      }
+      return false;
+    } catch (_) {
+      return false; // Fail-safe: allow if error (could log)
+    }
   }
 }

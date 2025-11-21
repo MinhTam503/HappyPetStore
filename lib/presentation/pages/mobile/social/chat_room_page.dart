@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/services/user_manager.dart';
 import '../../../bloc/chat/chat_bloc.dart';
 import '../../../bloc/chat/chat_event.dart';
@@ -35,13 +36,49 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   final ImagePicker _imagePicker = ImagePicker();
   late String _currentUserId;
   bool _isUploading = false;
+  bool _isBlocked = false;
 
   @override
   void initState() {
     super.initState();
     _currentUserId = UserManager().currentUserId ?? '';
+    _checkIfBlocked();
     _loadMessages();
     _markAsRead();
+  }
+
+  Future<void> _checkIfBlocked() async {
+    try {
+      final aDoc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(_currentUserId)
+          .get();
+      if (aDoc.exists) {
+        final data = aDoc.data() as Map<String, dynamic>;
+        final List<dynamic> blocked = data['blocked'] ?? [];
+        final List<dynamic> blockedBy = data['blockedBy'] ?? [];
+        if (blocked.contains(widget.otherUserId) ||
+            blockedBy.contains(widget.otherUserId)) {
+          if (mounted) setState(() => _isBlocked = true);
+          return;
+        }
+      }
+      final bDoc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(widget.otherUserId)
+          .get();
+      if (bDoc.exists) {
+        final data = bDoc.data() as Map<String, dynamic>;
+        final List<dynamic> blocked = data['blocked'] ?? [];
+        final List<dynamic> blockedBy = data['blockedBy'] ?? [];
+        if (blocked.contains(_currentUserId) ||
+            blockedBy.contains(_currentUserId)) {
+          if (mounted) setState(() => _isBlocked = true);
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error checking blocked: $e');
+    }
   }
 
   void _loadMessages() {
@@ -56,6 +93,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   }
 
   Future<void> _sendMessage() async {
+    if (_isBlocked) return;
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
@@ -79,6 +117,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   }
 
   Future<void> _pickAndSendImage() async {
+    if (_isBlocked) return;
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -92,10 +131,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       });
 
       // Upload to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('chat_images')
-          .child('${widget.conversationId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final storageRef = FirebaseStorage.instance.ref().child('chat_images').child(
+          '${widget.conversationId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
       await storageRef.putFile(File(image.path));
       final imageUrl = await storageRef.getDownloadURL();
@@ -122,7 +159,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)!.errorUploadingImage}: $e')),
+          SnackBar(
+              content: Text(
+                  '${AppLocalizations.of(context)!.errorUploadingImage}: $e')),
         );
       }
     }
@@ -150,8 +189,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               radius: 18,
               backgroundColor: Colors.white,
               backgroundImage: widget.otherUserAvatar.isNotEmpty
-                  ? NetworkImage(widget.otherUserAvatar)
-                      as ImageProvider
+                  ? NetworkImage(widget.otherUserAvatar) as ImageProvider
                   : null,
               child: widget.otherUserAvatar.isEmpty
                   ? Icon(Icons.person, size: 20, color: Colors.grey[600])
@@ -240,70 +278,95 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             ),
           ),
 
-          // Input area
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              children: [
-                // Image picker button
-                IconButton(
-                  icon: _isUploading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.image),
-                  onPressed: _isUploading ? null : _pickAndSendImage,
-                  color: theme.colorScheme.primary,
-                ),
-
-                // Text input
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: l10n.typeMessage,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+          // Blocked banner (like Facebook Messenger)
+          if (_isBlocked)
+            Container(
+              color: Colors.grey[200],
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: Colors.grey[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.cannotReplyConversation,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
                       ),
                     ),
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
                   ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // Send button
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary,
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                    onPressed: _sendMessage,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+
+          // Input area
+          if (!_isBlocked)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                children: [
+                  // Image picker button
+                  IconButton(
+                    icon: _isUploading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.image),
+                    onPressed: _isUploading ? null : _pickAndSendImage,
+                    color: theme.colorScheme.primary,
+                  ),
+
+                  // Text input
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: l10n.typeMessage,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                      ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // Send button
+                  CircleAvatar(
+                    backgroundColor: theme.colorScheme.primary,
+                    child: IconButton(
+                      icon:
+                          const Icon(Icons.send, color: Colors.white, size: 20),
+                      onPressed: _sendMessage,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -311,10 +374,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
   Widget _buildMessageBubble(dynamic message, bool isMe, ThemeData theme) {
     // Debug log for image URLs
-    if (kDebugMode && message.imageUrl != null && message.imageUrl!.isNotEmpty) {
+    if (kDebugMode &&
+        message.imageUrl != null &&
+        message.imageUrl!.isNotEmpty) {
       print('🖼️ Rendering image: ${message.imageUrl}');
     }
-    
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -360,7 +425,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                               color: Colors.grey[300],
                               child: Center(
                                 child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
                                       ? loadingProgress.cumulativeBytesLoaded /
                                           loadingProgress.expectedTotalBytes!
                                       : null,

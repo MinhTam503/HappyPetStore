@@ -6,8 +6,10 @@ import 'package:pet_shop/domain/entities/social_post.dart';
 import 'package:pet_shop/presentation/bloc/social/social_bloc.dart';
 import 'package:pet_shop/presentation/bloc/social/social_event.dart';
 import 'package:pet_shop/presentation/bloc/social/social_state.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 
-class ExploreGrid extends StatelessWidget {
+class ExploreGrid extends StatefulWidget {
   final Function(SocialPost post) onPostTap;
 
   const ExploreGrid({
@@ -16,7 +18,65 @@ class ExploreGrid extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<ExploreGrid> createState() => _ExploreGridState();
+}
+
+class _ExploreGridState extends State<ExploreGrid> with AutomaticKeepAliveClientMixin {
+  List<String> _blockedUserIds = [];
+  bool _isLoadingBlockedList = true;
+
+  @override
+  bool get wantKeepAlive => false; // Don't keep state when tab changes
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBlockedUsers();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload blocked users when screen becomes visible again
+    _loadBlockedUsers();
+  }
+
+  Future<void> _loadBlockedUsers() async {
+    final userId = await UserManager().getUserIdForOperations();
+    
+    if (userId == null) {
+      setState(() {
+        _isLoadingBlockedList = false;
+      });
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(userId)
+          .get();
+
+      if (doc.exists && mounted) {
+        final List<dynamic> blocked = doc.data()?['blocked'] ?? [];
+        final List<dynamic> blockedBy = doc.data()?['blockedBy'] ?? [];
+        
+        setState(() {
+          _blockedUserIds = [...blocked.cast<String>(), ...blockedBy.cast<String>()];
+          _isLoadingBlockedList = false;
+        });
+      } else {
+        setState(() => _isLoadingBlockedList = false);
+      }
+    } catch (e) {
+      debugPrint('Error loading blocked users: $e');
+      setState(() => _isLoadingBlockedList = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required by AutomaticKeepAliveClientMixin
     return BlocBuilder<SocialBloc, SocialState>(
       builder: (context, state) {
         if (state is SocialLoading) {
@@ -32,8 +92,21 @@ class ExploreGrid extends StatelessWidget {
             return _buildEmptyState(context);
           }
 
+          // Filter out posts from blocked users (check both petId and authorId)
+          final filteredFeed = _isLoadingBlockedList 
+              ? state.exploreFeed 
+              : state.exploreFeed.where((post) => 
+                  !_blockedUserIds.contains(post.authorId) && 
+                  !_blockedUserIds.contains(post.petId)
+                ).toList();
+
+          if (filteredFeed.isEmpty) {
+            return _buildEmptyState(context);
+          }
+
           return RefreshIndicator(
             onRefresh: () async {
+              await _loadBlockedUsers();
               context.read<SocialBloc>().add(const LoadExploreFeed(refresh: true));
             },
             child: GridView.builder(
@@ -43,9 +116,9 @@ class ExploreGrid extends StatelessWidget {
                 crossAxisSpacing: 3,
                 mainAxisSpacing: 3,
               ),
-              itemCount: state.exploreFeed.length,
+              itemCount: filteredFeed.length,
               itemBuilder: (context, index) {
-                final post = state.exploreFeed[index];
+                final post = filteredFeed[index];
                 return _buildGridItem(context, post);
               },
             ),
@@ -59,7 +132,7 @@ class ExploreGrid extends StatelessWidget {
 
   Widget _buildGridItem(BuildContext context, SocialPost post) {
     return GestureDetector(
-      onTap: () => onPostTap(post),
+      onTap: () => widget.onPostTap(post),
       child: Stack(
         fit: StackFit.expand,
         children: [

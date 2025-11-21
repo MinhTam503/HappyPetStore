@@ -6,8 +6,9 @@ import 'package:pet_shop/presentation/bloc/social/social_bloc.dart';
 import 'package:pet_shop/presentation/bloc/social/social_event.dart';
 import 'package:pet_shop/presentation/bloc/social/social_state.dart';
 import 'package:pet_shop/presentation/widgets/social/post_card.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class FollowingFeed extends StatelessWidget {
+class FollowingFeed extends StatefulWidget {
   final String? currentUserId;
   final Function(String postId) onCommentTap;
   final Function(String petId) onProfileTap;
@@ -20,7 +21,61 @@ class FollowingFeed extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<FollowingFeed> createState() => _FollowingFeedState();
+}
+
+class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveClientMixin {
+  List<String> _blockedUserIds = [];
+  bool _isLoadingBlockedList = true;
+
+  @override
+  bool get wantKeepAlive => false; // Don't keep state when tab changes
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBlockedUsers();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload blocked users when screen becomes visible again
+    _loadBlockedUsers();
+  }
+
+  Future<void> _loadBlockedUsers() async {
+    if (widget.currentUserId == null) {
+      setState(() => _isLoadingBlockedList = false);
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(widget.currentUserId)
+          .get();
+
+      if (doc.exists && mounted) {
+        final List<dynamic> blocked = doc.data()?['blocked'] ?? [];
+        final List<dynamic> blockedBy = doc.data()?['blockedBy'] ?? [];
+        
+        setState(() {
+          _blockedUserIds = [...blocked.cast<String>(), ...blockedBy.cast<String>()];
+          _isLoadingBlockedList = false;
+        });
+      } else {
+        setState(() => _isLoadingBlockedList = false);
+      }
+    } catch (e) {
+      debugPrint('Error loading blocked users: $e');
+      setState(() => _isLoadingBlockedList = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required by AutomaticKeepAliveClientMixin
     return BlocBuilder<SocialBloc, SocialState>(
       builder: (context, state) {
         if (state is SocialLoading) {
@@ -36,17 +91,30 @@ class FollowingFeed extends StatelessWidget {
             return _buildEmptyState(context);
           }
 
+          // Filter out posts from blocked users (check both petId and authorId)
+          final filteredFeed = _isLoadingBlockedList 
+              ? state.feed 
+              : state.feed.where((post) => 
+                  !_blockedUserIds.contains(post.authorId) && 
+                  !_blockedUserIds.contains(post.petId)
+                ).toList();
+
+          if (filteredFeed.isEmpty) {
+            return _buildEmptyState(context);
+          }
+
           return RefreshIndicator(
             onRefresh: () async {
+              await _loadBlockedUsers();
               context.read<SocialBloc>().add(const LoadFeed(refresh: true));
             },
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: state.feed.length,
+              itemCount: filteredFeed.length,
               itemBuilder: (context, index) {
-                final post = state.feed[index];
-                final isLiked = currentUserId != null && post.isLikedBy(currentUserId!);
-                final isOwnPost = currentUserId != null && post.authorId == currentUserId;
+                final post = filteredFeed[index];
+                final isLiked = widget.currentUserId != null && post.isLikedBy(widget.currentUserId!);
+                final isOwnPost = widget.currentUserId != null && post.authorId == widget.currentUserId;
 
                 // Get profile info from profileCache
                 String petName = 'User';
@@ -74,8 +142,8 @@ class FollowingFeed extends StatelessWidget {
                       context.read<SocialBloc>().add(LikePost(post.id));
                     }
                   },
-                  onComment: () => onCommentTap(post.id),
-                  onProfileTap: () => onProfileTap(post.petId),
+                  onComment: () => widget.onCommentTap(post.id),
+                  onProfileTap: () => widget.onProfileTap(post.petId),
                   onDelete: isOwnPost
                       ? () {
                           showDialog(

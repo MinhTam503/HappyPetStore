@@ -1837,6 +1837,7 @@
   "somethingWentWrong": "Something went wrong",
   "loginButton": "LOGIN",
   "socialNetwork": "Pet Social Network",
+  "whatsOnYourMind": "What's on your mind?",
   "following": "Following",
   "explore": "Explore",
   "search": "Search",
@@ -2013,7 +2014,122 @@
   "tagsHelperText": "Separate tags with spaces. # will be added automatically",
   "editPostInfo": "You can only edit the caption and tags. Images cannot be changed.",
   "errorUploadingImage": "Error uploading image",
-  "oopsSomethingWrong": "Oops! Something went wrong"
+  "oopsSomethingWrong": "Oops! Something went wrong",
+  "socialSettings": "Social Settings",
+  "accountPrivacy": "Account Privacy",
+  "privateAccount": "Private Account",
+  "privateAccountDescription": "Only approved followers can see your posts",
+  "profileVisibility": "Profile Visibility",
+  "showFollowers": "Show Followers",
+  "showFollowersDescription": "Let others see who follows you",
+  "showFollowing": "Show Following",
+  "showFollowingDescription": "Let others see who you follow",
+  "showActivityStatus": "Show Activity Status",
+  "showActivityStatusDescription": "Show when you were last active",
+  "postsAndInteractions": "Posts & Interactions",
+  "allowTagging": "Allow Tagging",
+  "allowTaggingDescription": "Let others tag you in posts",
+  "allowComments": "Allow Comments",
+  "allowCommentsDescription": "Let others comment on your posts",
+  "allowSharing": "Allow Sharing",
+  "allowSharingDescription": "Let others share your posts",
+  "socialNotifications": "Social Notifications",
+  "notifyLikes": "Notify Likes",
+  "notifyLikesDescription": "Get notified when someone likes your post",
+  "notifyComments": "Notify Comments",
+  "notifyCommentsDescription": "Get notified when someone comments on your post",
+  "notifyFollows": "Notify Follows",
+  "notifyFollowsDescription": "Get notified when someone follows you",
+  "notifyMentions": "Notify Mentions",
+  "notifyMentionsDescription": "Get notified when someone mentions you",
+  "blockedAccounts": "Blocked Accounts",
+  "manageBlockedAccounts": "Manage Blocked Accounts",
+  "viewAndManageBlocked": "View and manage blocked users",
+  "accountActions": "Account Actions",
+  "downloadData": "Download Your Data",
+  "downloadDataDescription": "Download a copy of your social data",
+  "deleteAccount": "Delete Account",
+  "deleteAccountDescription": "Permanently delete your social account",
+  "deleteAccountWarning": "This action cannot be undone. All your posts, followers, and data will be permanently deleted.",
+  "comingSoon": "Coming Soon",
+  "settingsSaved": "Settings saved",
+  "unblock": "Unblock",
+  "blocked": "Blocked",
+  "unblockUser": "Unblock User",
+  "unblockUserConfirmation": "Are you sure you want to unblock @{username}? They will be able to see your posts and interact with you.",
+  "@unblockUserConfirmation": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "userUnblocked": "User unblocked successfully",
+  "errorUnblockingUser": "Error unblocking user",
+  "noBlockedAccounts": "No Blocked Accounts",
+  "noBlockedAccountsDescription": "You haven't blocked anyone yet",
+  "justNow": "just now",
+  "oneMinuteAgo": "1 minute ago",
+  "minutesAgo": "{count} minutes ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "oneHourAgo": "1 hour ago",
+  "hoursAgo": "{count} hours ago",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "oneDayAgo": "1 day ago",
+  "daysAgo": "{count} days ago",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "oneMonthAgo": "1 month ago",
+  "monthsAgo": "{count} months ago",
+  "@monthsAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "oneYearAgo": "1 year ago",
+  "yearsAgo": "{count} years ago",
+  "@yearsAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blockUser": "Block User",
+  "block": "Block",
+  "blockUserConfirmation": "Are you sure you want to block {username}? They won't be able to see your posts or interact with you.",
+  "@blockUserConfirmation": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "userBlocked": "User blocked successfully",
+  "errorBlockingUser": "Error blocking user",
+  "reportUser": "Report User",
+  "cannotAccessProfile": "You cannot access this profile",
+  "cannotMessageUser": "You cannot message this user",
+  "cannotReplyConversation": "You can't reply to this conversation"
 }
 
 

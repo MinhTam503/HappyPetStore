@@ -10,6 +10,8 @@ import 'package:pet_shop/presentation/bloc/chat/chat_bloc.dart';
 import 'package:pet_shop/presentation/bloc/chat/chat_event.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/widgets/post_detail_sheet.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/social_settings_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SocialProfilePage extends StatefulWidget {
   final String userId;
@@ -26,6 +28,7 @@ class SocialProfilePage extends StatefulWidget {
 class _SocialProfilePageState extends State<SocialProfilePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String? _currentUserId;
+  bool _isChatBlocked = false; // cached block status for chat button
   
   @override
   void initState() {
@@ -42,9 +45,133 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
       setState(() {
         _currentUserId = userId;
       });
+      // Check if blocked before loading profile
+      await _checkIfBlocked();
+      await _updateChatBlockStatus();
       // Load profile after getting current user ID
       _loadProfile();
     }
+  }
+
+  Future<void> _updateChatBlockStatus() async {
+    if (_currentUserId == null || _currentUserId == widget.userId) {
+      setState(() => _isChatBlocked = false);
+      return;
+    }
+    final isBlocked = await _checkIfUserBlocked(_currentUserId!, widget.userId);
+    if (mounted) {
+      setState(() => _isChatBlocked = isBlocked);
+    }
+  }
+
+  Future<void> _checkIfBlocked() async {
+    if (_currentUserId == null || _currentUserId == widget.userId) return;
+
+    try {
+      // Check if current user blocked target user
+      final currentUserBlockDoc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(_currentUserId)
+          .get();
+      
+      if (currentUserBlockDoc.exists) {
+        final List<dynamic> blocked = currentUserBlockDoc.data()?['blocked'] ?? [];
+        if (blocked.contains(widget.userId)) {
+          // Already blocked, go back
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.userBlocked),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // Check if target user blocked current user
+      final targetUserBlockDoc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(widget.userId)
+          .get();
+      
+      if (targetUserBlockDoc.exists) {
+        final List<dynamic> blockedBy = targetUserBlockDoc.data()?['blockedBy'] ?? [];
+        if (blockedBy.contains(_currentUserId)) {
+          // Blocked by target user, go back
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.cannotAccessProfile),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking block status: $e');
+    }
+  }
+
+  Future<bool> _checkIfUserBlocked(String currentUserId, String targetUserId) async {
+    try {
+      // Check if current user blocked target user
+      final currentUserBlockDoc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(currentUserId)
+          .get();
+      
+      if (currentUserBlockDoc.exists) {
+        final List<dynamic> blocked = currentUserBlockDoc.data()?['blocked'] ?? [];
+        if (blocked.contains(targetUserId)) {
+          return true;
+        }
+      }
+
+      // Check if target user blocked current user
+      final targetUserBlockDoc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(targetUserId)
+          .get();
+      
+      if (targetUserBlockDoc.exists) {
+        final List<dynamic> blockedBy = targetUserBlockDoc.data()?['blockedBy'] ?? [];
+        if (blockedBy.contains(currentUserId)) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('Error checking if user blocked: $e');
+      return false;
+    }
+  }
+
+  Future<List<String>> _getBlockedUserIds() async {
+    if (_currentUserId == null) return [];
+    
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(_currentUserId)
+          .get();
+      
+      if (doc.exists) {
+        final List<dynamic> blocked = doc.data()?['blocked'] ?? [];
+        final List<dynamic> blockedBy = doc.data()?['blockedBy'] ?? [];
+        return [...blocked.cast<String>(), ...blockedBy.cast<String>()];
+      }
+    } catch (e) {
+      debugPrint('Error loading blocked users: $e');
+    }
+    
+    return [];
   }
   
   void _loadProfile() {
@@ -127,11 +254,54 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                 ),
                 actions: [
                   if (_isOwnProfile)
-                    IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        // TODO: Navigate to settings
+                    // Settings Button
+                        IconButton(
+                          icon: const Icon(Icons.settings),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const SocialSettingsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                  if (!_isOwnProfile)
+                    // More options menu (Block user, Report, etc.)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) {
+                        if (value == 'block') {
+                          _showBlockUserDialog(context, profile);
+                        } else if (value == 'report') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.comingSoon)),
+                          );
+                        }
                       },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'block',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.block, color: Colors.red),
+                              const SizedBox(width: 12),
+                              Text(l10n.blockUser),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'report',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.flag, color: Colors.orange),
+                              const SizedBox(width: 12),
+                              Text(l10n.reportUser),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),
@@ -184,47 +354,60 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Avatar and Stats
-          Row(
+    return FutureBuilder<List<String>>(
+      future: _getBlockedUserIds(),
+      builder: (context, snapshot) {
+        final blockedUserIds = snapshot.data ?? [];
+        
+        // Calculate filtered counts
+        final followersCount = profile.followers
+            .where((id) => !blockedUserIds.contains(id))
+            .length;
+        final followingCount = profile.following
+            .where((id) => !blockedUserIds.contains(id))
+            .length;
+
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
             children: [
-              // Avatar
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: profile.avatarUrl.isNotEmpty
-                    ? NetworkImage(profile.avatarUrl)
-                    : null,
-                child: profile.avatarUrl.isEmpty
-                    ? const Icon(Icons.person, size: 40)
-                    : null,
+              // Avatar and Stats
+              Row(
+                children: [
+                  // Avatar
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundImage: profile.avatarUrl.isNotEmpty
+                        ? NetworkImage(profile.avatarUrl)
+                        : null,
+                    child: profile.avatarUrl.isEmpty
+                        ? const Icon(Icons.person, size: 40)
+                        : null,
+                  ),
+                  const SizedBox(width: 24),
+                  
+                  // Stats
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatColumn(
+                          profile.stats.posts.toString(),
+                          l10n.posts(profile.stats.posts),
+                        ),
+                        _buildStatColumn(
+                          followersCount.toString(),
+                          l10n.userFollowers,
+                        ),
+                        _buildStatColumn(
+                          followingCount.toString(),
+                          l10n.userFollowing,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 24),
-              
-              // Stats
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatColumn(
-                      profile.stats.posts.toString(),
-                      l10n.posts(profile.stats.posts),
-                    ),
-                    _buildStatColumn(
-                      profile.followers.length.toString(),
-                      l10n.userFollowers,
-                    ),
-                    _buildStatColumn(
-                      profile.following.length.toString(),
-                      l10n.userFollowing,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           
           const SizedBox(height: 16),
           
@@ -300,20 +483,15 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _currentUserId == null ? null : () {
-                      // Create conversation ID (consistent with repository)
+                    onPressed: _currentUserId == null || _isChatBlocked ? null : () async {
                       final participants = [_currentUserId!, widget.userId]..sort();
                       final conversationId = participants.join('_');
-                      
-                      // Create conversation in Firestore
                       context.read<ChatBloc>().add(CreateConversation(
                         currentUserId: _currentUserId!,
                         otherUserId: widget.userId,
                         otherUserName: profile.displayName ?? 'User',
                         otherUserAvatar: profile.avatarUrl,
                       ));
-                      
-                      // Navigate to chat room
                       Navigator.pushNamed(
                         context,
                         '/social/chat/room',
@@ -334,6 +512,8 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
           ),
         ],
       ),
+    );
+      },
     );
   }
   
@@ -464,30 +644,40 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
   }
   
   Widget _buildFollowersList(BuildContext context, SocialPetProfile profile) {
-    if (profile.followers.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              AppLocalizations.of(context)!.noFollowers,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: profile.followers.length,
-      itemBuilder: (context, index) {
-        final followerId = profile.followers[index];
+    return FutureBuilder<List<String>>(
+      future: _getBlockedUserIds(),
+      builder: (context, snapshot) {
+        final blockedUserIds = snapshot.data ?? [];
         
-        return BlocBuilder<SocialBloc, SocialState>(
-          builder: (context, state) {
+        // Filter out blocked users
+        final filteredFollowers = profile.followers
+            .where((id) => !blockedUserIds.contains(id))
+            .toList();
+
+        if (filteredFollowers.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context)!.noFollowers,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredFollowers.length,
+          itemBuilder: (context, index) {
+            final followerId = filteredFollowers[index];
+        
+            return BlocBuilder<SocialBloc, SocialState>(
+              builder: (context, state) {
             if (state is! SocialLoaded) {
               return const ListTile(
                 leading: CircleAvatar(child: Icon(Icons.person)),
@@ -548,6 +738,8 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                 );
               },
             );
+              },
+            );
           },
         );
       },
@@ -555,27 +747,37 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
   }
   
   Widget _buildFollowingList(BuildContext context, SocialPetProfile profile) {
-    if (profile.following.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_add_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              AppLocalizations.of(context)!.noFollowing,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      );
-    }
+    return FutureBuilder<List<String>>(
+      future: _getBlockedUserIds(),
+      builder: (context, snapshot) {
+        final blockedUserIds = snapshot.data ?? [];
+        
+        // Filter out blocked users
+        final filteredFollowing = profile.following
+            .where((id) => !blockedUserIds.contains(id))
+            .toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: profile.following.length,
-      itemBuilder: (context, index) {
-        final followingId = profile.following[index];
+        if (filteredFollowing.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.person_add_outlined, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context)!.noFollowing,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredFollowing.length,
+          itemBuilder: (context, index) {
+            final followingId = filteredFollowing[index];
         
         return BlocBuilder<SocialBloc, SocialState>(
           builder: (context, state) {
@@ -637,6 +839,8 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                   '/social/profile',
                   arguments: followingId,
                 );
+              },
+            );
               },
             );
           },
@@ -770,6 +974,225 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
         );
       },
     );
+  }
+
+  void _showBlockUserDialog(BuildContext context, SocialPetProfile profile) async {
+    final l10n = AppLocalizations.of(context)!;
+    final currentUserId = await UserManager().getUserIdForOperations();
+    
+    if (currentUserId == null) return;
+
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.block, size: 48, color: Colors.red.shade400),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              l10n.blockUser,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.blockUserConfirmation(profile.displayName ?? profile.petName),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 30),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                    child: Text(
+                      l10n.cancel,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      _blockUser(currentUserId, profile);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade400,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      l10n.block,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _blockUser(String currentUserId, SocialPetProfile profile) async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // Add to blocked list (current user blocks target)
+      await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(currentUserId)
+          .set({
+        'blocked': FieldValue.arrayUnion([widget.userId]),
+        'blockedAt_${widget.userId}': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Also add reverse block (target user blocked by current user)
+      await FirebaseFirestore.instance
+          .collection('blockedUsers')
+          .doc(widget.userId)
+          .set({
+        'blockedBy': FieldValue.arrayUnion([currentUserId]),
+        'blockedByAt_$currentUserId': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Unfollow both directions if following
+      final currentUserFollowDoc = await FirebaseFirestore.instance
+          .collection('socialFollows')
+          .doc(currentUserId)
+          .get();
+      
+      if (currentUserFollowDoc.exists) {
+        await FirebaseFirestore.instance
+            .collection('socialFollows')
+            .doc(currentUserId)
+            .update({
+          'following': FieldValue.arrayRemove([widget.userId]),
+        });
+      }
+
+      final targetUserFollowDoc = await FirebaseFirestore.instance
+          .collection('socialFollows')
+          .doc(widget.userId)
+          .get();
+      
+      if (targetUserFollowDoc.exists) {
+        await FirebaseFirestore.instance
+            .collection('socialFollows')
+            .doc(widget.userId)
+            .update({
+          'followers': FieldValue.arrayRemove([currentUserId]),
+          'following': FieldValue.arrayRemove([currentUserId]),
+        });
+      }
+
+      final currentUserFollowDoc2 = await FirebaseFirestore.instance
+          .collection('socialFollows')
+          .doc(currentUserId)
+          .get();
+      
+      if (currentUserFollowDoc2.exists) {
+        await FirebaseFirestore.instance
+            .collection('socialFollows')
+            .doc(currentUserId)
+            .update({
+          'followers': FieldValue.arrayRemove([widget.userId]),
+        });
+      }
+
+      // Also update socialPetProfiles collection
+      await FirebaseFirestore.instance
+          .collection('socialPetProfiles')
+          .doc(currentUserId)
+          .update({
+        'following': FieldValue.arrayRemove([widget.userId]),
+        'followers': FieldValue.arrayRemove([widget.userId]),
+      });
+
+      await FirebaseFirestore.instance
+          .collection('socialPetProfiles')
+          .doc(widget.userId)
+          .update({
+        'followers': FieldValue.arrayRemove([currentUserId]),
+        'following': FieldValue.arrayRemove([currentUserId]),
+      });
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        
+        // Refresh feed and explore to remove blocked user's posts
+        context.read<SocialBloc>().add(const LoadFeed(refresh: true));
+        context.read<SocialBloc>().add(const LoadExploreFeed(refresh: true));
+        
+        Navigator.pop(context); // Go back to previous page
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.userBlocked),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error blocking user: $e');
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorBlockingUser),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

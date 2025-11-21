@@ -121,13 +121,6 @@ class _SocialHomePageState extends State<SocialHomePage>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, '/social/create-post');
-        },
-        backgroundColor: isDark ? darkPrimaryColor : primaryColor,
-        child: const Icon(Icons.add, size: 28),
-      ),
       body: BlocConsumer<SocialBloc, SocialState>(
         listener: (context, state) {
           if (state is SocialError) {
@@ -145,19 +138,74 @@ class _SocialHomePageState extends State<SocialHomePage>
           }
         },
         builder: (context, state) {
-          return TabBarView(
-            controller: _tabController,
+          return Column(
             children: [
-              FollowingFeed(
-                currentUserId: _currentUserId,
-                onCommentTap: (postId) => _showCommentsSheet(context, postId),
-                onProfileTap: (petId) => Navigator.pushNamed(
-                  context,
-                  '/social/profile',
-                  arguments: petId,
-                ),
-              ),
-              ExploreGrid(
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Following Tab with Fake TextField
+                    Column(
+                      children: [
+                        // Fake TextField for creating post (Facebook style)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          color: theme.scaffoldBackgroundColor,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/social/create-post');
+                            },
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: isDark ? darkPrimaryColor : primaryColor,
+                                    child: const Icon(Icons.person, size: 20, color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      l10n?.whatsOnYourMind ?? 'Bạn đang nghĩ gì?',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.image_outlined,
+                                    color: Colors.grey[600],
+                                    size: 24,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: FollowingFeed(
+                            currentUserId: _currentUserId,
+                            onCommentTap: (postId) => _showCommentsSheet(context, postId),
+                            onProfileTap: (petId) => Navigator.pushNamed(
+                              context,
+                              '/social/profile',
+                              arguments: petId,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Explore Tab without TextField
+                    ExploreGrid(
                 onPostTap: (post) {
                   final isOwnPost = _currentUserId != null && post.authorId == _currentUserId;
                   return PostDetailSheet.show(
@@ -206,6 +254,9 @@ class _SocialHomePageState extends State<SocialHomePage>
                         : null,
                   );
                 },
+              ),
+                  ],
+                ),
               ),
             ],
           );
@@ -395,13 +446,17 @@ class _SocialHomePageState extends State<SocialHomePage>
                         ),
                       ),
 
-                      // Comment input
-                      FutureBuilder<DocumentSnapshot>(
-                        future: FirebaseFirestore.instance
-                            .collection('Users')
-                            .doc(currentUser?.uid)
-                            .get(),
-                        builder: (context, snapshot) {
+                      // Comment input with keyboard padding
+                      Padding(
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewInsets.bottom,
+                        ),
+                        child: FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('Users')
+                              .doc(currentUser?.uid)
+                              .get(),
+                          builder: (context, snapshot) {
                           String? userAvatar;
                           String? userName;
 
@@ -444,7 +499,8 @@ class _SocialHomePageState extends State<SocialHomePage>
                               }
                             },
                           );
-                        },
+                          },
+                        ),
                       ),
                     ],
                   ),

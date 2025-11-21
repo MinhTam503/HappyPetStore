@@ -503,6 +503,31 @@ class SocialRepositoryImpl implements SocialRepository {
             .map((doc) => SocialPostModel.fromFirestore(doc)));
       }
 
+      // Load blocked users (both those current user blocked and who blocked current user)
+      final blockedDoc = await _firestore.collection('blockedUsers').doc(userId).get();
+      final blocked = <String>{};
+      if (blockedDoc.exists) {
+        final data = blockedDoc.data() as Map<String, dynamic>;
+        final List<dynamic> b = data['blocked'] ?? [];
+        final List<dynamic> bb = data['blockedBy'] ?? [];
+        blocked.addAll(b.cast<String>());
+        blocked.addAll(bb.cast<String>());
+      }
+
+      // Additionally, fetch docs of users who have userId in their blocked list (redundancy safeguard)
+      // This handles case where reverse entry not yet written.
+      final reverseQuery = await _firestore
+          .collection('blockedUsers')
+          .where('blocked', arrayContains: userId)
+          .get();
+      for (final doc in reverseQuery.docs) {
+        blocked.add(doc.id);
+      }
+
+      if (blocked.isNotEmpty) {
+        posts.removeWhere((p) => blocked.contains(p.authorId) || blocked.contains(p.petId));
+      }
+
       // Sort by timestamp
       posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
