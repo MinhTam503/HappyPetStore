@@ -102,11 +102,34 @@ class _ViewedPageState extends State<ViewedPage> {
                 }
 
                 if (state is RecentPetsLoaded) {
+                  // Filter out unavailable pets
+                  final availablePets = state.items.where((pet) {
+                    final isAvailable = pet.isAvailable ?? true;
+                    final status = pet.status?.toLowerCase() ?? '';
+                    return isAvailable && status != 'sold';
+                  }).toList();
+
+                  if (availablePets.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.history, size: 64, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          Text(
+                            l10n?.noRecentlyViewed ?? 'Chưa có thú cưng nào được xem',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
                   return ListView.builder(
                     padding: const EdgeInsets.all(12),
-                    itemCount: state.items.length,
+                    itemCount: availablePets.length,
                     itemBuilder: (context, index) {
-                      final pet = state.items[index];
+                      final pet = availablePets[index];
                       return _buildPetCard(pet);
                     },
                   );

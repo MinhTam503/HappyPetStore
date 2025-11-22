@@ -141,6 +141,14 @@ class PetDetailsDialog extends StatelessWidget {
                       title: l10n.weight,
                       value: '${pet.weight} Kg',
                     ),
+                    PetInfoRow(
+                      icon: pet.isAvailable ? Icons.check_circle : Icons.cancel,
+                      title: l10n.availableForSale,
+                      value: pet.isAvailable ? 'Có sẵn' : 'Không có sẵn',
+                      valueColor: pet.isAvailable 
+                          ? Colors.green 
+                          : Colors.red,
+                    ),
                     const SizedBox(height: 16),
 
                     // QR Code Section

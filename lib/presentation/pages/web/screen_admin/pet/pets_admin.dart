@@ -498,7 +498,7 @@ class _PetsState extends State<PetsAdmin> {
     final weightController = TextEditingController(text: pet?.weight ?? '');
 
     String pickedCategory = pet?.category ?? 'Dogs';
-    bool isAvailable = pet?.isAvailable ?? false;
+    bool isAvailable = pet?.isAvailable ?? true;
 
     // Store the bloc reference before showing dialog
     final petBloc = blocContext.read<PetBloc>();

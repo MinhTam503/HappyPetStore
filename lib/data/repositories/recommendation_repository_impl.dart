@@ -1,10 +1,8 @@
-﻿import 'dart:math' as math;
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/domain/entities/recommendation_entities.dart';
 import 'package:pet_shop/domain/repositories/recommendation_repository.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/services/recommendation_logger.dart';
-import 'package:pet_shop/core/config/recommendation_config.dart';
 
 class RecommendationRepositoryImpl implements RecommendationRepository {
   final FirebaseFirestore firestore;
@@ -107,18 +105,19 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   }
 
   //------------------------------------------------------------------//
-  // content-based filtering
+  // content-based filtering - ENHANCED VERSION
   @override
   Future<List<RecommendationItem>> getContentBasedRecommendations(String userId,
       {int? limit}) async {
     try {
-  final algoStart = DateTime.now();
+      final algoStart = DateTime.now();
+      
       // Analyze user preferences from multiple sources
       final userPreferences = await _analyzeUserPreferences(userId);
-    final favoriteCategories =
-      (userPreferences['favoriteCategories'] as List<String>?) ?? [];
-    final favoriteBreeds =
-      (userPreferences['favoriteBreeds'] as List<String>?) ?? [];
+      final favoriteCategories = (userPreferences['favoriteCategories'] as List<String>?) ?? [];
+      final favoriteBreeds = (userPreferences['favoriteBreeds'] as List<String>?) ?? [];
+      final breedToCategory = (userPreferences['breedToCategory'] as Map<String, dynamic>?) ?? {};
+      final hasUserData = favoriteCategories.isNotEmpty || favoriteBreeds.isNotEmpty;
 
       // Log preferences fetch
       await RecommendationLogger.logDataFetching(
@@ -128,33 +127,62 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         fetchTime: DateTime.now().difference(algoStart),
       );
 
-  // Get pets based on user preferences
       List<RecommendationItem> items = [];
-  final effectiveLimit = limit ?? RecommendationConfig.defaultLimit;
+      final minRecommendations = limit ?? 15; // Minimum 15 recommendations
 
-      if (favoriteCategories.isNotEmpty) {
-        // Recommend pets from favorite categories
-        final takeCategories = favoriteCategories.take(3).toList();
-  final perCategory = math.max(1, (effectiveLimit) ~/ takeCategories.length);
-
-        for (String category in takeCategories) {
+      if (hasUserData) {
+        // ==================== PERSONALIZED RECOMMENDATIONS ====================
+        
+        // Step 1: Ensure category diversity - add missing categories
+        final allCategories = ['Fish', 'Cats', 'Dogs', 'Birds'];
+        final activeCategories = <String>[];
+        
+        // Add user's favorite categories first
+        for (final cat in favoriteCategories.take(4)) {
+          if (!activeCategories.contains(cat)) {
+            activeCategories.add(cat);
+          }
+        }
+        
+        // Add missing categories for diversity (at least 3 categories)
+        for (final cat in allCategories) {
+          if (!activeCategories.contains(cat) && activeCategories.length < 3) {
+            activeCategories.add(cat);
+          }
+        }
+        
+        print('📊 Active categories: $activeCategories');
+        
+        // Step 2: Calculate dynamic quota per category
+        final baseQuotaPerCategory = (minRecommendations / activeCategories.length).ceil();
+        
+        // Step 3: Fetch pets for each category
+        for (int i = 0; i < activeCategories.length; i++) {
+          final category = activeCategories[i];
+          final isUserFavorite = favoriteCategories.contains(category);
+          final categoryQuota = isUserFavorite 
+              ? (baseQuotaPerCategory * 1.2).ceil() // Boost favorite categories by 20%
+              : baseQuotaPerCategory;
+          
           final addedIds = <String>{};
-          // 1) Breed-first within this category (if any favorite breeds exist)
-          final topBreeds = favoriteBreeds.take(3).toList();
-          if (topBreeds.isNotEmpty) {
-            // Distribute some of perCategory to breed-focused picks
-            final breedQuota = RecommendationConfig.strictBreed
-                ? perCategory
-                : math.max(1, (perCategory * (1.0 - RecommendationConfig.exploreRatio)).round());
-            final perBreedLimit = math.max(1, breedQuota ~/ topBreeds.length);
-
-            for (final breed in topBreeds) {
+          
+          // Get breeds for this category
+          final categoryBreeds = favoriteBreeds
+              .where((breed) => breedToCategory[breed]?.toString() == category)
+              .toList();
+          
+          print('🎯 Category: $category, Breeds: $categoryBreeds, Quota: $categoryQuota');
+          
+          // Fetch ALL pets from favorite breeds in this category
+          if (categoryBreeds.isNotEmpty) {
+            for (final breed in categoryBreeds) {
               final breedFetchStart = DateTime.now();
+              
+              // Fetch ALL pets of this breed (no limit)
               final breedSnapshot = await firestore
                   .collection('Pets')
                   .where('category', isEqualTo: category)
                   .where('breed', isEqualTo: breed)
-                  .limit(perBreedLimit)
                   .get();
 
               await RecommendationLogger.logDataFetching(
@@ -164,13 +192,20 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 fetchTime: DateTime.now().difference(breedFetchStart),
               );
 
+              print('📦 Fetched ${breedSnapshot.docs.length} pets for breed: $breed');
               for (final doc in breedSnapshot.docs) {
-                if (addedIds.contains(doc.id)) continue;
+                if (addedIds.contains(doc.id)) {
+                  print('⚠️ Duplicate pet skipped: ${doc.id}');
+                  continue;
+                }
                 final data = doc.data();
                 
-                // Only include available pets (not sold)
-                if (!_isPetAvailable(data)) continue;
+                if (!_isPetAvailable(data)) {
+                  print('❌ Pet not available: ${doc.id} (${data['name']}) - isAvailable: ${data['isAvailable']}, status: ${data['status']}');
+                  continue;
+                }
                 
+                print('✅ Adding pet: ${data['name']} (${data['breed']}) - ID: ${doc.id}');
                 items.add(RecommendationItem(
                   petId: doc.id,
                   name: data['name'] ?? 'Unknown Pet',
@@ -178,25 +213,25 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                   breed: data['breed'] ?? 'Mixed',
                   price: _parsePrice(data['price']),
                   imageUrl: data['imageUrl'] ?? '',
-                  score: 1.0, // Highest score for breed match
+                  score: 1.0,
                   reason: 'Dựa trên giống ${data['breed'] ?? breed} bạn quan tâm',
                   type: RecommendationType.contentBased,
                 ));
                 addedIds.add(doc.id);
-                if (addedIds.length >= breedQuota) break;
               }
-              if (addedIds.length >= breedQuota) break;
+              print('📊 Breed $breed result: Added ${breedSnapshot.docs.where((doc) => addedIds.contains(doc.id)).length}/${breedSnapshot.docs.length} pets');
             }
+            print('📈 Total pets after breeds: ${items.length}, addedIds: ${addedIds.length}');
           }
-
-          // 2) Fill remaining from category (skip if strictBreed)
-          final remaining = RecommendationConfig.strictBreed ? 0 : (perCategory - addedIds.length);
+          
+          // Fill remaining quota from category if needed
+          final remaining = categoryQuota - addedIds.length;
           if (remaining > 0) {
             final fetchStart = DateTime.now();
             final snapshot = await firestore
                 .collection('Pets')
                 .where('category', isEqualTo: category)
-                .limit(math.max(remaining, perCategory)) // fetch extra to offset dups
+                .limit(remaining * 2) // Fetch extra to account for duplicates
                 .get();
 
             await RecommendationLogger.logDataFetching(
@@ -210,7 +245,6 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               if (addedIds.contains(doc.id)) continue;
               final data = doc.data();
               
-              // Only include available pets (not sold)
               if (!_isPetAvailable(data)) continue;
               
               items.add(RecommendationItem(
@@ -220,52 +254,96 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
                 breed: data['breed'] ?? 'Mixed',
                 price: _parsePrice(data['price']),
                 imageUrl: data['imageUrl'] ?? '',
-                score: 0.9, // High score for category match
-                reason: 'Dựa trên sở thích $category của bạn',
+                score: isUserFavorite ? 0.9 : 0.7,
+                reason: isUserFavorite 
+                    ? 'Dựa trên sở thích $category của bạn'
+                    : 'Khám phá thêm $category',
                 type: RecommendationType.contentBased,
               ));
               addedIds.add(doc.id);
-              if (addedIds.length >= perCategory) break;
+              
+              if (addedIds.length >= categoryQuota) break;
             }
           }
         }
+        
       } else {
-        // Fallback: get some general pets
+        // ==================== NEW USER - BEST SELLING RECOMMENDATIONS ====================
+        print('🆕 New user detected - fetching best-selling pets');
+        
+        // Get pets sorted by order count (popularity)
         final fetchStart = DateTime.now();
-    final snapshot = await firestore
+        final snapshot = await firestore
             .collection('Pets')
-      .limit(effectiveLimit)
-            .get(); // Limit total
+            .orderBy('orderCount', descending: true)
+            .limit(minRecommendations * 2)
+            .get();
 
         await RecommendationLogger.logDataFetching(
           sessionId: 'content_only',
-          dataType: 'GeneralPets',
+          dataType: 'BestSellingPets',
           count: snapshot.docs.length,
           fetchTime: DateTime.now().difference(fetchStart),
         );
 
+        final addedIds = <String>{};
         for (final doc in snapshot.docs) {
+          if (addedIds.contains(doc.id)) continue;
           final data = doc.data();
           
-          // Only include available pets (not sold)
           if (!_isPetAvailable(data)) continue;
           
-          final item = RecommendationItem(
+          final orderCount = data['orderCount'] ?? 0;
+          items.add(RecommendationItem(
             petId: doc.id,
             name: data['name'] ?? 'Unknown Pet',
             category: data['category'] ?? 'Unknown',
             breed: data['breed'] ?? 'Mixed',
             price: _parsePrice(data['price']),
             imageUrl: data['imageUrl'] ?? '',
-            score: 0.6, // Lower score for general content-based fallback
-            reason: 'Khám phá các loại thú cưng mới',
+            score: 0.8 + (orderCount / 100).clamp(0, 0.2), // Score based on popularity
+            reason: orderCount > 0 
+                ? 'Được mua nhiều ($orderCount lượt)'
+                : 'Thú cưng phổ biến',
             type: RecommendationType.contentBased,
-          );
-          items.add(item);
+          ));
+          addedIds.add(doc.id);
+          
+          if (items.length >= minRecommendations) break;
+        }
+        
+        // Fallback if not enough best-selling pets
+        if (items.length < minRecommendations) {
+          final fallbackSnapshot = await firestore
+              .collection('Pets')
+              .limit(minRecommendations * 2)
+              .get();
+              
+          for (final doc in fallbackSnapshot.docs) {
+            if (addedIds.contains(doc.id)) continue;
+            final data = doc.data();
+            
+            if (!_isPetAvailable(data)) continue;
+            
+            items.add(RecommendationItem(
+              petId: doc.id,
+              name: data['name'] ?? 'Unknown Pet',
+              category: data['category'] ?? 'Unknown',
+              breed: data['breed'] ?? 'Mixed',
+              price: _parsePrice(data['price']),
+              imageUrl: data['imageUrl'] ?? '',
+              score: 0.6,
+              reason: 'Khám phá thú cưng mới',
+              type: RecommendationType.contentBased,
+            ));
+            addedIds.add(doc.id);
+            
+            if (items.length >= minRecommendations) break;
+          }
         }
       }
 
-      // Remove duplicates - keep highest score when duplicate IDs appear
+      // Remove duplicates and sort by score
       final uniqueItems = <String, RecommendationItem>{};
       for (final item in items) {
         final existing = uniqueItems[item.petId];
@@ -274,32 +352,26 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         }
       }
 
-      // Sort by score descending so breed-first (score=1.0) surfaces ahead of pure category (score=0.9)
       final result = uniqueItems.values.toList()
         ..sort((a, b) => b.score.compareTo(a.score));
-
-      // Respect limit
-      if (result.length > effectiveLimit) {
-        result.removeRange(effectiveLimit, result.length);
-      }
 
       // Log algorithm execution
       await RecommendationLogger.logAlgorithmExecution(
         sessionId: 'content_only',
         algorithmType: RecommendationType.contentBased,
-        inputCount: favoriteCategories.isEmpty
-            ? 1
-            : (favoriteCategories.take(3).length + favoriteBreeds.take(3).length),
+        inputCount: favoriteCategories.isEmpty ? 0 : favoriteCategories.length + favoriteBreeds.length,
         outputCount: result.length,
         executionTime: DateTime.now().difference(algoStart),
         weights: {
           'categoryPriority': 1.0,
           'breedPriority': 1.2,
+          'diversification': 0.8,
         },
       );
-      print(
-          '📝 Generated ${result.length} content-based recommendations based on preferences: ${userPreferences['favoriteCategories']}');
+      
+      print('📝 Generated ${result.length} recommendations (target: $minRecommendations+)');
       return result;
+      
     } catch (e) {
       print('❌ Error in content-based recommendations: $e');
       return [];
@@ -393,6 +465,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       // Analyze categories with weighted scoring and recency
       Map<String, int> categoryCount = {};
       Map<String, int> breedCount = {};
+      Map<String, String> breedToCategory = {}; // Track breed -> category mapping
       final now = DateTime.now();
 
       // 1. ORDERS (Highest weight + recency bonus)
@@ -441,6 +514,9 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
           if (breed.isNotEmpty) {
             final weightedScore = (5 * recencyMultiplier).round();
             breedCount[breed] = (breedCount[breed] ?? 0) + weightedScore;
+            if (category.isNotEmpty) {
+              breedToCategory[breed] = category; // Store breed -> category mapping
+            }
           }
         }
       }
@@ -472,6 +548,9 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
         if (breed.isNotEmpty) {
           final weightedScore = (2 * recencyMultiplier).round();
           breedCount[breed] = (breedCount[breed] ?? 0) + weightedScore;
+          if (category.isNotEmpty) {
+            breedToCategory[breed] = category; // Store mapping
+          }
         }
       }
 
@@ -526,6 +605,9 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
               if (breed.isNotEmpty) {
                 final weightedScore = (3 * recencyMultiplier).round();
                 breedCount[breed] = (breedCount[breed] ?? 0) + weightedScore;
+                if (category.isNotEmpty) {
+                  breedToCategory[breed] = category; // Store mapping
+                }
               }
             }
           } catch (e) {
@@ -576,6 +658,7 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
       return {
         'favoriteCategories': favoriteCategories,
         'favoriteBreeds': favoriteBreeds,
+        'breedToCategory': breedToCategory, // Include breed-category mapping
         'categoryScores': categoryCount,
         'breedScores': breedCount,
       };

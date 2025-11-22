@@ -29,7 +29,7 @@ class Pet {
     required this.weight,
     required this.price,
     this.color, // Nullable field
-    this.isAvailable = false,
+    this.isAvailable = true, // Mặc định true nếu không có giá trị
     this.status, // Nullable field
   });
 
@@ -48,7 +48,7 @@ class Pet {
       weight: data['weight']?.toString() ?? '',
       price: data['price'],
       color: data['color'], // Nullable field từ Firestore
-      isAvailable: data['isAvailable'] ?? false,
+      isAvailable: data['isAvailable'] ?? true, // null = true (mặc định có sẵn)
       status: data['status'], // Nullable field từ Firestore
     );
   }

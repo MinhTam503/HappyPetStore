@@ -35,17 +35,13 @@ class PetBloc extends Bloc<PetEvent, PetState> {
           .map((doc) => Pet.fromDocument(doc))
           .toList();
       
-      // Filter to show only available pets (not sold)
-      final availablePets = allPets.where((pet) {
-        // Consider both isAvailable and status
-        // A pet is shown if isAvailable is true AND status is not 'sold'
-        return pet.isAvailable != false && 
-               (pet.status == null || pet.status?.toLowerCase() != 'sold');
-      }).toList();
-
+      // ADMIN PANEL: Show ALL pets (including unavailable ones)
+      // Admin needs to see all pets to manage inventory
+      // Filter is only applied on customer-facing pages
+      
       emit(PetLoaded(
-        pets: availablePets,
-        filteredPets: availablePets,
+        pets: allPets,
+        filteredPets: allPets,
       ));
     } catch (e) {
       emit(PetError('Lỗi load pets: $e'));

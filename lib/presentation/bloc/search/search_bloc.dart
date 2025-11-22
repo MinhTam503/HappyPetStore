@@ -555,6 +555,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         final petBreed = (data['breed'] as String? ?? '').toLowerCase();
         final petCategory = (data['category'] as String? ?? '').toLowerCase();
 
+        // Filter out unavailable pets
+        final isAvailable = data['isAvailable'] ?? true;
+        final status = data['status']?.toString().toLowerCase() ?? '';
+        if (!isAvailable || status == 'sold') {
+          continue; // Skip unavailable pets
+        }
+
         print('Checking pet: "${data['name']}"');
         print('  - Name: "$petName"');
         print('  - Breed: "$petBreed"');
@@ -777,10 +784,17 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
           final allPetsSnapshot = await _firestore.collection('Pets').get();
           final allPets = allPetsSnapshot.docs.map((d) => d.data()).toList();
 
-          // Lọc pets có imageUrl chứa tên file tương tự
+          // Lọc pets có imageUrl chứa tên file tương tự VÀ available
           final results = allPets.where((item) {
             final imageUrl = item['imageUrl'] as String? ?? '';
-            return fileNames.any((fileName) => imageUrl.contains(fileName));
+            final matchesImage = fileNames.any((fileName) => imageUrl.contains(fileName));
+            
+            // Filter out unavailable pets
+            final isAvailable = item['isAvailable'] ?? true;
+            final status = item['status']?.toString().toLowerCase() ?? '';
+            final isNotSold = isAvailable && status != 'sold';
+            
+            return matchesImage && isNotSold;
           }).toList();
 
           print('Found ${results.length} matching pets');

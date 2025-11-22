@@ -55,6 +55,8 @@ class _DetailPetState extends State<DetailPet> {
           breed: pet['breed'],
           price: pet['price'],
           viewedAt: DateTime.now(),
+          isAvailable: pet['isAvailable'],
+          status: pet['status'],
         )));
   }
 

@@ -7,12 +7,14 @@ class PetInfoRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
+  final Color? valueColor;
 
   const PetInfoRow({
     super.key,
     required this.icon,
     required this.title,
     required this.value,
+    this.valueColor,
   });
 
   @override
@@ -32,7 +34,11 @@ class PetInfoRow extends StatelessWidget {
               value,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(
+                fontSize: 16,
+                color: valueColor,
+                fontWeight: valueColor != null ? FontWeight.bold : null,
+              ),
             ),
           ),
         ],

@@ -8,6 +8,8 @@ class ViewedPetModel {
   final String? breed;
   final dynamic price;
   final DateTime viewedAt;
+  final bool? isAvailable;
+  final String? status;
 
   const ViewedPetModel({
     required this.id,
@@ -17,6 +19,8 @@ class ViewedPetModel {
     this.category,
     this.breed,
     this.price,
+    this.isAvailable,
+    this.status,
   });
 
   Map<String, dynamic> toFirestore() => {
@@ -28,6 +32,8 @@ class ViewedPetModel {
         'price': price,
         'viewedAt': FieldValue.serverTimestamp(),
         'viewedAtMillis': DateTime.now().millisecondsSinceEpoch,
+        'isAvailable': isAvailable,
+        'status': status,
       };
 
   static ViewedPetModel fromFirestore(String id, Map<String, dynamic> data) {
@@ -65,6 +71,8 @@ class ViewedPetModel {
       viewedAt: ts is Timestamp
           ? ts.toDate()
           : DateTime.fromMillisecondsSinceEpoch(viewedAtMillis),
+      isAvailable: data['isAvailable'],
+      status: data['status'],
     );
   }
 }

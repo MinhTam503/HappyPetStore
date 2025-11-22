@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -8,7 +8,6 @@ import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
-import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
 
 import '../pet/detail_pet.dart';
 
@@ -21,6 +20,42 @@ class FavoriteScreen extends StatefulWidget {
 
 class _FavoriteScreenState extends State<FavoriteScreen> {
   late String? userIdentifier;
+
+  Future<List<Map<String, dynamic>>> _fetchAvailableFavorites(
+      List<Map<String, dynamic>> favoriteItems) async {
+    final List<Map<String, dynamic>> availableFavorites = [];
+    
+    for (final favorite in favoriteItems) {
+      final productId = favorite["productId"];
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection("Pets")
+            .doc(productId)
+            .get();
+        
+        if (doc.exists) {
+          final itemData = doc.data();
+          if (itemData != null) {
+            final isAvailable = itemData['isAvailable'] ?? true;
+            final status = itemData['status']?.toString().toLowerCase() ?? '';
+            
+            // Only include available pets (not sold and isAvailable = true)
+            if (isAvailable && status != 'sold') {
+              availableFavorites.add({
+                'productId': productId,
+                'data': itemData,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Skip failed fetches
+        continue;
+      }
+    }
+    
+    return availableFavorites;
+  }
 
   @override
   void initState() {
@@ -122,42 +157,54 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                   // final aspect =
                   //     _computeChildAspectRatio(crossAxisCount, width);
 
-                  return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 0.72, // responsive card ratio
-                    ),
-                    itemCount: favoriteItems.length,
-                    itemBuilder: (context, index) {
-                      final favorite = favoriteItems[index];
-                      final productId = favorite["productId"];
+                  return FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _fetchAvailableFavorites(favoriteItems),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                      return FutureBuilder<DocumentSnapshot>(
-                        future: FirebaseFirestore.instance
-                            .collection("Pets")
-                            .doc(productId)
-                            .get(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const _FavoriteSkeleton();
-                          }
-                          if (!snapshot.hasData ||
-                              !(snapshot.data?.exists ?? false)) {
-                            return const _ErrorCard(
-                                message: 'Error loading favorites');
-                          }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.favorite_border,
+                                  size: 56, color: Colors.black26),
+                              const SizedBox(height: 10),
+                              Text(
+                                AppLocalizations.of(context)!.noFavoriteYet,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                AppLocalizations.of(context)!.addFavoritePetsMessage,
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-                          final itemData =
-                              snapshot.data!.data() as Map<String, dynamic>?;
-                          if (itemData == null) {
-                            return const _ErrorCard(
-                                message: 'No data available for this favorite');
-                          }
+                      final availableFavorites = snapshot.data!;
+
+                      return GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.72, // responsive card ratio
+                        ),
+                        itemCount: availableFavorites.length,
+                        itemBuilder: (context, index) {
+                          final favoriteData = availableFavorites[index];
+                          final itemData = favoriteData['data'] as Map<String, dynamic>;
+                          final productId = favoriteData['productId'] as String;
 
                           return _FavoriteCard(
                             data: itemData,
@@ -441,144 +488,4 @@ class _CircleIconButton extends StatelessWidget {
   }
 }
 
-class _FavoriteSkeleton extends StatelessWidget {
-  const _FavoriteSkeleton();
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image skeleton
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const ColoredBox(color: Color(0xFFF3F4F6)),
-                Align(
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: CircularProgressIndicator(strokeWidth: 2.2),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Info skeleton
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Name
-                Container(
-                  height: 16,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                // Breed
-                Container(
-                  height: 13,
-                  width: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 4),
-
-                // Price
-                Container(
-                  height: 15,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Button skeleton
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
-            child: Container(
-              height: 38,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorCard extends StatelessWidget {
-  final String message;
-  const _ErrorCard({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.red.shade100),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: Colors.red.shade700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
