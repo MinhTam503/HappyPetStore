@@ -13,6 +13,11 @@ Pet Shop is a cross-platform Flutter application for pet adoption and management
 - Email sending functionality
 - Real-time updates with Firestore
 - Responsive UI for mobile and web
+- **🎤 Voice-enabled Chatbot** (Speech-to-Text on Android/iOS)
+  - Real-time transcription in Vietnamese & English
+  - On-device speech recognition
+  - Auto language detection based on locale
+  - See [Voice Chatbot Guide](docs/VOICE_CHATBOT_GUIDE.md) for details
 
 ## Getting StartedƯ
 

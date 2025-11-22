@@ -1,15 +1,19 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:pet_shop/core/service_locator.dart';
 import 'package:pet_shop/presentation/bloc/chatBot/chatbot_bloc.dart';
 import 'package:pet_shop/presentation/bloc/chatBot/chatbot_event.dart';
 import 'package:pet_shop/presentation/bloc/chatBot/chatbot_state.dart';
 import 'package:pet_shop/domain/entities/chatbot_entity.dart';
 import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ChatBotPage extends StatefulWidget {
   final String userId;
@@ -23,17 +27,261 @@ class ChatBotPage extends StatefulWidget {
   State<ChatBotPage> createState() => _ChatBotPageState();
 }
 
-class _ChatBotPageState extends State<ChatBotPage> {
+class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isUserScrolling = false;
   bool _autoScrollEnabled = true;
+  
+  // Speech recognition
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  bool _isInitializingListening = false; // Loading state while waiting for mic to start
+  bool _speechAvailable = false;
+  String _currentLocale = 'vi_VN'; // Default Vietnamese
+  
+  // Animation for listening indicator
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     // Listen to scroll events to detect user manual scrolling
     _scrollController.addListener(_scrollListener);
+    
+    // Initialize pulse animation
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
+    );
+    
+    _initializeSpeech();
+  }
+
+  Future<void> _initializeSpeech() async {
+    _speech = stt.SpeechToText();
+    
+    try {
+      debugPrint('🎤 [Voice] Starting speech initialization...');
+      
+      // Platform-specific permission handling
+      if (Platform.isIOS) {
+        // iOS: Let speech_to_text handle all permissions (mic + speech recognition)
+        // This is because permission_handler doesn't properly support iOS Speech Recognition
+        debugPrint('🎤 [Voice] iOS detected - letting SpeechToText handle permissions...');
+        
+        _speechAvailable = await _speech.initialize(
+          onError: (error) {
+            debugPrint('🎤 [Voice] Speech error: ${error.errorMsg}');
+            if (error.errorMsg.contains('not_allowed') || error.errorMsg.contains('denied')) {
+              if (mounted) {
+                _showPermissionDeniedDialog();
+              }
+            }
+            setState(() => _isListening = false);
+          },
+          onStatus: (status) {
+            debugPrint('🎤 [Voice] Speech status: $status');
+            if (status == 'listening') {
+              // Stop loading indicator when microphone starts listening
+              setState(() => _isInitializingListening = false);
+            }
+            if (status == 'done' || status == 'notListening') {
+              setState(() => _isListening = false);
+              _pulseController.stop();
+              _pulseController.reset();
+            }
+          },
+        );
+      } else {
+        // Android: Check microphone permission first
+        debugPrint('🎤 [Voice] Android detected - checking microphone permission...');
+        
+        final micStatus = await Permission.microphone.status;
+        debugPrint('🎤 [Voice] Current microphone permission: $micStatus');
+        
+        if (micStatus.isPermanentlyDenied) {
+          debugPrint('🎤 [Voice] ⚠️ Microphone permission permanently denied.');
+          if (mounted) {
+            _showPermissionDeniedDialog();
+          }
+          _speechAvailable = false;
+          setState(() {});
+          return;
+        }
+        
+        PermissionStatus finalMicStatus = micStatus;
+        if (!micStatus.isGranted) {
+          debugPrint('🎤 [Voice] Requesting microphone permission...');
+          finalMicStatus = await Permission.microphone.request();
+          debugPrint('🎤 [Voice] Microphone permission status: $finalMicStatus');
+        }
+        
+        if (!finalMicStatus.isGranted) {
+          debugPrint('🎤 [Voice] ⚠️ Microphone permission denied by user.');
+          _speechAvailable = false;
+          setState(() {});
+          return;
+        }
+        
+        // Initialize speech recognition
+        debugPrint('🎤 [Voice] Microphone permission granted, initializing SpeechToText...');
+        _speechAvailable = await _speech.initialize(
+          onError: (error) {
+            debugPrint('🎤 [Voice] Speech error: ${error.errorMsg}');
+            setState(() => _isListening = false);
+          },
+          onStatus: (status) {
+            debugPrint('🎤 [Voice] Speech status: $status');
+            if (status == 'listening') {
+              // Stop loading indicator when microphone starts listening
+              setState(() => _isInitializingListening = false);
+            }
+            if (status == 'done' || status == 'notListening') {
+              setState(() => _isListening = false);
+              _pulseController.stop();
+              _pulseController.reset();
+            }
+          },
+        );
+      }
+      
+      // Common code after initialization
+      if (_speechAvailable) {
+        debugPrint('🎤 [Voice] Both permissions granted, initializing SpeechToText...');
+        
+        // Initialize speech recognition
+        _speechAvailable = await _speech.initialize(
+          onError: (error) {
+            debugPrint('🎤 [Voice] Speech error: ${error.errorMsg}');
+            setState(() => _isListening = false);
+          },
+          onStatus: (status) {
+            debugPrint('🎤 [Voice] Speech status: $status');
+            if (status == 'done' || status == 'notListening') {
+              setState(() => _isListening = false);
+            }
+          },
+        );
+        
+        debugPrint('🎤 [Voice] Speech available: $_speechAvailable');
+        
+        // Get available locales and set based on app locale
+        if (_speechAvailable) {
+          final locales = await _speech.locales();
+          debugPrint('🎤 [Voice] Available locales: ${locales.length}');
+          if (locales.isNotEmpty) {
+            debugPrint('🎤 [Voice] First few locales: ${locales.take(5).map((l) => l.localeId).join(", ")}');
+          }
+          
+          final currentAppLocale = Localizations.localeOf(context).toString();
+          debugPrint('🎤 [Voice] Current app locale: $currentAppLocale');
+          
+          // Match app locale with speech locale
+          if (currentAppLocale.startsWith('vi')) {
+            _currentLocale = locales.firstWhere(
+              (l) => l.localeId.startsWith('vi'),
+              orElse: () => locales.isNotEmpty ? locales.first : stt.LocaleName('vi_VN', 'Vietnamese'),
+            ).localeId;
+          } else {
+            _currentLocale = locales.firstWhere(
+              (l) => l.localeId.startsWith('en'),
+              orElse: () => locales.isNotEmpty ? locales.first : stt.LocaleName('en_US', 'English'),
+            ).localeId;
+          }
+          
+          debugPrint('🎤 [Voice] Selected locale: $_currentLocale');
+        } else {
+          debugPrint('🎤 [Voice] ❌ Speech recognition not available after initialization');
+        }
+        
+        setState(() {});
+      } else {
+        debugPrint('🎤 [Voice] ❌ Speech recognition initialization failed');
+        _speechAvailable = false;
+        setState(() {});
+      }
+    } catch (e, stackTrace) {
+      debugPrint('🎤 [Voice] ❌ Error initializing speech: $e');
+      debugPrint('🎤 [Voice] Stack trace: $stackTrace');
+      _speechAvailable = false;
+      setState(() {});
+    }
+    
+    debugPrint('🎤 [Voice] Initialization complete. Speech available: $_speechAvailable');
+  }
+
+  void _startListening() async {
+    if (!_speechAvailable) {
+      final l10n = AppLocalizations.of(context)!;
+      _showSnack(l10n.speechNotAvailable);
+      debugPrint('🎤 [Voice] Cannot start listening: speech not available');
+      return;
+    }
+
+    // Check permissions before starting
+    // On iOS, speech_to_text handles permissions internally
+    // On Android, we check microphone permission
+    if (Platform.isAndroid) {
+      final micStatus = await Permission.microphone.status;
+      debugPrint('🎤 [Voice] Checking microphone permission before listening: $micStatus');
+      
+      if (!micStatus.isGranted) {
+        final l10n = AppLocalizations.of(context)!;
+        _showSnack(l10n.micPermissionDenied);
+        debugPrint('🎤 [Voice] Microphone permission not granted, cannot start');
+        return;
+      }
+    }
+
+    setState(() => _isListening = true);
+    _pulseController.repeat(); // Start pulse animation
+    
+    setState(() => _isInitializingListening = true);
+    debugPrint('🎤 [Voice] Starting to listen with locale: $_currentLocale');
+
+    try {
+      await _speech.listen(
+        onResult: (result) {
+          // Update UI with every partial result for real-time feedback
+          debugPrint('🎤 [Voice] Got result: ${result.recognizedWords} (final: ${result.finalResult})');
+          setState(() {
+            _messageController.text = result.recognizedWords;
+            // Move cursor to end
+            _messageController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _messageController.text.length),
+            );
+          });
+        },
+        localeId: _currentLocale,
+        listenMode: stt.ListenMode.confirmation,
+        cancelOnError: true,
+        partialResults: true, // Enable partial results for real-time update
+      );
+    } catch (e) {
+      debugPrint('Error starting speech recognition: $e');
+      final l10n = AppLocalizations.of(context)!;
+      _showSnack(l10n.speechError);
+      setState(() {
+        _isListening = false;
+        _isInitializingListening = false;
+      });
+      _pulseController.stop();
+    }
+  }
+
+  void _stopListening() async {
+    await _speech.stop();
+    setState(() {
+      _isListening = false;
+      _isInitializingListening = false;
+    });
+    _pulseController.stop();
+    _pulseController.reset();
   }
 
   void _scrollListener() {
@@ -58,6 +306,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _pulseController.dispose();
+    _speech.stop();
     super.dispose();
   }
 
@@ -93,6 +343,120 @@ class _ChatBotPageState extends State<ChatBotPage> {
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
+              // Debug button to check speech status
+              IconButton(
+                icon: Icon(_speechAvailable ? Icons.mic : Icons.mic_off),
+                color: _speechAvailable ? Colors.white : Colors.red,
+                onPressed: () async {
+                  // Get current permission status (platform-specific)
+                  final micStatus = await Permission.microphone.status;
+                  final isIOS = Platform.isIOS;
+                  
+                  if (!mounted) return;
+                  
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Row(
+                        children: [
+                          Icon(
+                            _speechAvailable ? Icons.check_circle : Icons.error,
+                            color: _speechAvailable ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Speech Status'),
+                        ],
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStatusRow('Speech Available', _speechAvailable),
+                          _buildStatusRow('Is Listening', _isListening),
+                          const Divider(height: 24),
+                          Text(
+                            'Permissions:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildPermissionRow('🎤 Microphone', micStatus),
+                          if (!isIOS) 
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Android: Only microphone permission needed',
+                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                              ),
+                            ),
+                          if (isIOS)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                'iOS: Speech permission handled by SpeechToText',
+                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                              ),
+                            ),
+                          const Divider(height: 24),
+                          Text(
+                            'Platform: ${isIOS ? "iOS" : "Android"}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          Text(
+                            'Locale: $_currentLocale',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          const SizedBox(height: 16),
+                          if (micStatus.isPermanentlyDenied)
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.warning, color: Colors.red[700], size: 20),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Cần mở Settings để bật quyền',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                      actions: [
+                        if (micStatus.isPermanentlyDenied)
+                          TextButton.icon(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              await openAppSettings();
+                            },
+                            icon: const Icon(Icons.settings),
+                            label: const Text('Open Settings'),
+                          ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            await _initializeSpeech();
+                          },
+                          child: const Text('Re-initialize'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
               BlocBuilder<ChatBotBloc, ChatBotState>(
                 builder: (blocContext, state) {
                   return IconButton(
@@ -379,6 +743,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
   }
 
   Widget _buildMessageInput() {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -394,12 +760,83 @@ class _ChatBotPageState extends State<ChatBotPage> {
       ),
       child: Row(
         children: [
+          // Voice Input Button
+          if (_speechAvailable)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: _isListening ? _stopListening : _startListening,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isListening 
+                        ? Colors.red.withOpacity(0.1)
+                        : Theme.of(context).primaryColor.withOpacity(0.1),
+                    border: Border.all(
+                      color: _isListening 
+                          ? Colors.red
+                          : Theme.of(context).primaryColor,
+                      width: 2,
+                    ),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Animated pulse effect when listening
+                      if (_isListening)
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Container(
+                              width: 48 * (1 + _pulseAnimation.value * 0.3),
+                              height: 48 * (1 + _pulseAnimation.value * 0.3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.red.withOpacity(0.3 * (1 - _pulseAnimation.value)),
+                              ),
+                            );
+                          },
+                        ),
+                      // Loading indicator while initializing microphone
+                      if (_isInitializingListening)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                          ),
+                        )
+                      else
+                        Icon(
+                          _isListening ? Icons.mic : Icons.mic_none,
+                          color: _isListening 
+                              ? Colors.red
+                              : Theme.of(context).primaryColor,
+                          size: 24,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Expanded(
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: 'Hỏi về thú cưng...',
-                hintStyle: TextStyle(color: Colors.grey[600]),
+                hintText: _isInitializingListening
+                    ? 'Đang khởi động micro...'
+                    : (_isListening 
+                        ? l10n.listening
+                        : 'Hỏi về thú cưng...'),
+                hintStyle: TextStyle(
+                  color: _isInitializingListening 
+                      ? Colors.orange
+                      : (_isListening ? Colors.red : Colors.grey[600]),
+                  fontStyle: (_isListening || _isInitializingListening) ? FontStyle.italic : FontStyle.normal,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
                   borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
@@ -422,6 +859,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
               ),
               maxLines: null,
               textCapitalization: TextCapitalization.sentences,
+              enabled: !_isListening && !_isInitializingListening, // Disable typing when listening or initializing
               onSubmitted: (value) {
                 final message = _messageController.text.trim();
                 if (message.isNotEmpty) {
@@ -456,7 +894,7 @@ class _ChatBotPageState extends State<ChatBotPage> {
                           ),
                         )
                       : const Icon(Icons.send, color: Colors.white),
-                  onPressed: isLoading
+                  onPressed: (isLoading || _isListening || _isInitializingListening)
                       ? null
                       : () {
                           final message = _messageController.text.trim();
@@ -941,6 +1379,195 @@ class _ChatBotPageState extends State<ChatBotPage> {
       SnackBar(
         content: Text(message),
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Helper method to show permission denied dialog
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.mic_off, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Cần quyền truy cập',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Để sử dụng tính năng nhập giọng nói, bạn cần cho phép:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            _buildPermissionItem('🎤 Microphone', 'Ghi âm giọng nói của bạn'),
+            const SizedBox(height: 8),
+            _buildPermissionItem('🗣️ Speech Recognition', 'Chuyển giọng nói thành văn bản'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Cách bật quyền:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '1. Chạm "Mở Cài đặt"\n'
+                    '2. Tìm mục "Microphone"\n'
+                    '3. Bật ON\n'
+                    '4. Tìm mục "Speech Recognition"\n'
+                    '5. Bật ON\n'
+                    '6. Quay lại app',
+                    style: TextStyle(fontSize: 13, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Để sau',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Open app settings
+              final opened = await openAppSettings();
+              if (!opened) {
+                _showSnack('Không thể mở cài đặt');
+              }
+            },
+            icon: const Icon(Icons.settings),
+            label: const Text('Mở Cài đặt'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionItem(String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            description,
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusRow(String label, bool value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 14)),
+          Icon(
+            value ? Icons.check_circle : Icons.cancel,
+            color: value ? Colors.green : Colors.red,
+            size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionRow(String label, PermissionStatus status) {
+    Color color;
+    IconData icon;
+    String statusText;
+
+    switch (status) {
+      case PermissionStatus.granted:
+        color = Colors.green;
+        icon = Icons.check_circle;
+        statusText = 'Granted';
+        break;
+      case PermissionStatus.denied:
+        color = Colors.orange;
+        icon = Icons.warning;
+        statusText = 'Denied';
+        break;
+      case PermissionStatus.permanentlyDenied:
+        color = Colors.red;
+        icon = Icons.block;
+        statusText = 'Permanently Denied';
+        break;
+      case PermissionStatus.restricted:
+        color = Colors.grey;
+        icon = Icons.lock;
+        statusText = 'Restricted';
+        break;
+      case PermissionStatus.limited:
+        color = Colors.blue;
+        icon = Icons.info;
+        statusText = 'Limited';
+        break;
+      default:
+        color = Colors.grey;
+        icon = Icons.help;
+        statusText = 'Unknown';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(fontSize: 13)),
+          const Spacer(),
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            statusText,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -48,6 +48,30 @@
   "@logout": {
     "description": "Logout button"
   },
+  "tapToSpeak": "Tap to speak",
+  "@tapToSpeak": {
+    "description": "Voice input button tooltip"
+  },
+  "listening": "Listening...",
+  "@listening": {
+    "description": "Listening status message"
+  },
+  "speechNotAvailable": "Speech recognition not available",
+  "@speechNotAvailable": {
+    "description": "Error when speech recognition is not available"
+  },
+  "micPermissionDenied": "Microphone permission denied",
+  "@micPermissionDenied": {
+    "description": "Error when microphone permission is denied"
+  },
+  "speechError": "Speech recognition error",
+  "@speechError": {
+    "description": "General speech recognition error"
+  },
+  "tapMicToSpeak": "Tap microphone to speak",
+  "@tapMicToSpeak": {
+    "description": "Hint for voice input"
+  },
   "confirm": "Confirm",
   "@confirm": {
     "description": "Confirm dialog title"

@@ -114,6 +114,12 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Ứng dụng cần quyền lưu ảnh vào thư viện để bạn chia sẻ hình thú cưng trong phòng.</string>
 	
+	<!-- Microphone and Speech Recognition permissions for voice chatbot -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập micro để bạn có thể nói chuyện với trợ lý ảo bằng giọng nói.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Ứng dụng cần quyền nhận diện giọng nói để chuyển đổi lời nói thành văn bản khi bạn trò chuyện với trợ lý.</string>
+	
 	<!-- ARKit requirement for iOS AR features -->
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>

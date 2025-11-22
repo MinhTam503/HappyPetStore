@@ -88,6 +88,8 @@ dependencies:
   image_gallery_saver: ^2.0.3
   model_viewer_plus: ^1.8.0
   # vnpay_flutter: ^2.0.0  # Removed - có vấn đề AndroidX compatibility
+  speech_to_text: ^7.0.0
+  permission_handler: ^11.3.1
 
 
 
