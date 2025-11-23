@@ -219,15 +219,28 @@ class GroupChatBloc extends Bloc<GroupChatEvent, GroupChatState> {
     Emitter<GroupChatState> emit,
   ) async {
     try {
-      // Update reaction in Firestore
-      await FirebaseFirestore.instance
+      final messageRef = FirebaseFirestore.instance
           .collection('groupConversations')
           .doc(event.groupId)
           .collection('messages')
-          .doc(event.messageId)
-          .update({
-        'reactions.${event.userId}': event.emoji,
-      });
+          .doc(event.messageId);
+
+      // Get current message to check existing reaction
+      final messageDoc = await messageRef.get();
+      final data = messageDoc.data();
+      final reactions = data?['reactions'] as Map<String, dynamic>? ?? {};
+
+      // Toggle: if user already reacted with same emoji, remove it
+      if (reactions[event.userId] == event.emoji) {
+        await messageRef.set({
+          'reactions': {event.userId: FieldValue.delete()},
+        }, SetOptions(merge: true));
+      } else {
+        // Add or update reaction
+        await messageRef.set({
+          'reactions': {event.userId: event.emoji},
+        }, SetOptions(merge: true));
+      }
 
       // Messages will auto-update via stream
     } catch (e) {

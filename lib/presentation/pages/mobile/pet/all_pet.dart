@@ -28,12 +28,44 @@ class _AllPetState extends State<AllPet> {
   List<Map<String, dynamic>> filterItems = [];
   String selectedCategoryFilter = 'All';
   String priceSortOrder = 'none'; // 'asc', 'desc', 'none'
+  List<String> availableCategories = ['All']; // Will be loaded dynamically
+  bool _categoriesLoaded = false;
 
   @override
   void initState() {
     super.initState();
+    _loadCategories();
     fetchAllProduct();
     _loadUserFavorites();
+  }
+  
+  Future<void> _loadCategories() async {
+    if (_categoriesLoaded) return;
+    
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Category')
+          .get();
+      
+      if (mounted) {
+        setState(() {
+          availableCategories = ['All'];
+          availableCategories.addAll(
+            snapshot.docs.map((doc) => doc.data()['name'] as String? ?? '').where((name) => name.isNotEmpty)
+          );
+          _categoriesLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('Error loading categories: $e');
+      // Keep default categories if load fails
+      if (mounted) {
+        setState(() {
+          availableCategories = ['All', 'Dogs', 'Cats', 'Fish', 'Birds'];
+          _categoriesLoaded = true;
+        });
+      }
+    }
   }
 
   void _loadUserFavorites() async {
@@ -276,6 +308,7 @@ class _AllPetState extends State<AllPet> {
                   // Filter bar (tự wrap)
                   _FilterBar(
                     selectedCategory: selectedCategoryFilter,
+                    availableCategories: availableCategories,
                     onCategoryChanged: (v) {
                       setState(() {
                         selectedCategoryFilter = v;
@@ -333,12 +366,14 @@ class _FilterBar extends StatelessWidget {
   final ValueChanged<String> onCategoryChanged;
   final String priceSortOrder;
   final ValueChanged<String> onPriceOrderChanged;
+  final List<String> availableCategories;
 
   const _FilterBar({
     required this.selectedCategory,
     required this.onCategoryChanged,
     required this.priceSortOrder,
     required this.onPriceOrderChanged,
+    required this.availableCategories,
   });
 
   @override
@@ -354,7 +389,7 @@ class _FilterBar extends StatelessWidget {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: selectedCategory,
-              items: ['All', 'Dogs', 'Cats', 'Fish', 'Birds']
+              items: availableCategories
                   .map((cat) => DropdownMenuItem<String>(
                         value: cat,
                         child: Text(cat),

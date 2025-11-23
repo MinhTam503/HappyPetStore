@@ -343,120 +343,120 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
-              // Debug button to check speech status
-              IconButton(
-                icon: Icon(_speechAvailable ? Icons.mic : Icons.mic_off),
-                color: _speechAvailable ? Colors.white : Colors.red,
-                onPressed: () async {
-                  // Get current permission status (platform-specific)
-                  final micStatus = await Permission.microphone.status;
-                  final isIOS = Platform.isIOS;
+              // // Debug button to check speech status
+              // IconButton(
+              //   icon: Icon(_speechAvailable ? Icons.mic : Icons.mic_off),
+              //   color: _speechAvailable ? Colors.white : Colors.red,
+              //   onPressed: () async {
+              //     // Get current permission status (platform-specific)
+              //     final micStatus = await Permission.microphone.status;
+              //     final isIOS = Platform.isIOS;
                   
-                  if (!mounted) return;
+              //     if (!mounted) return;
                   
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Row(
-                        children: [
-                          Icon(
-                            _speechAvailable ? Icons.check_circle : Icons.error,
-                            color: _speechAvailable ? Colors.green : Colors.red,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text('Speech Status'),
-                        ],
-                      ),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildStatusRow('Speech Available', _speechAvailable),
-                          _buildStatusRow('Is Listening', _isListening),
-                          const Divider(height: 24),
-                          Text(
-                            'Permissions:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildPermissionRow('🎤 Microphone', micStatus),
-                          if (!isIOS) 
-                            const Padding(
-                              padding: EdgeInsets.only(top: 4),
-                              child: Text(
-                                'Android: Only microphone permission needed',
-                                style: TextStyle(fontSize: 11, color: Colors.grey),
-                              ),
-                            ),
-                          if (isIOS)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 4),
-                              child: Text(
-                                'iOS: Speech permission handled by SpeechToText',
-                                style: TextStyle(fontSize: 11, color: Colors.grey),
-                              ),
-                            ),
-                          const Divider(height: 24),
-                          Text(
-                            'Platform: ${isIOS ? "iOS" : "Android"}',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                          Text(
-                            'Locale: $_currentLocale',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                          const SizedBox(height: 16),
-                          if (micStatus.isPermanentlyDenied)
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.warning, color: Colors.red[700], size: 20),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
-                                    child: Text(
-                                      'Cần mở Settings để bật quyền',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                      actions: [
-                        if (micStatus.isPermanentlyDenied)
-                          TextButton.icon(
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              await openAppSettings();
-                            },
-                            icon: const Icon(Icons.settings),
-                            label: const Text('Open Settings'),
-                          ),
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.pop(context);
-                            await _initializeSpeech();
-                          },
-                          child: const Text('Re-initialize'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+              //     showDialog(
+              //       context: context,
+              //       builder: (context) => AlertDialog(
+              //         title: Row(
+              //           children: [
+              //             Icon(
+              //               _speechAvailable ? Icons.check_circle : Icons.error,
+              //               color: _speechAvailable ? Colors.green : Colors.red,
+              //             ),
+              //             const SizedBox(width: 8),
+              //             const Text('Speech Status'),
+              //           ],
+              //         ),
+              //         content: Column(
+              //           mainAxisSize: MainAxisSize.min,
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             _buildStatusRow('Speech Available', _speechAvailable),
+              //             _buildStatusRow('Is Listening', _isListening),
+              //             const Divider(height: 24),
+              //             Text(
+              //               'Permissions:',
+              //               style: TextStyle(
+              //                 fontWeight: FontWeight.bold,
+              //                 color: Colors.grey[700],
+              //               ),
+              //             ),
+              //             const SizedBox(height: 8),
+              //             _buildPermissionRow('🎤 Microphone', micStatus),
+              //             if (!isIOS) 
+              //               const Padding(
+              //                 padding: EdgeInsets.only(top: 4),
+              //                 child: Text(
+              //                   'Android: Only microphone permission needed',
+              //                   style: TextStyle(fontSize: 11, color: Colors.grey),
+              //                 ),
+              //               ),
+              //             if (isIOS)
+              //               const Padding(
+              //                 padding: EdgeInsets.only(top: 4),
+              //                 child: Text(
+              //                   'iOS: Speech permission handled by SpeechToText',
+              //                   style: TextStyle(fontSize: 11, color: Colors.grey),
+              //                 ),
+              //               ),
+              //             const Divider(height: 24),
+              //             Text(
+              //               'Platform: ${isIOS ? "iOS" : "Android"}',
+              //               style: const TextStyle(fontSize: 13),
+              //             ),
+              //             Text(
+              //               'Locale: $_currentLocale',
+              //               style: const TextStyle(fontSize: 13),
+              //             ),
+              //             const SizedBox(height: 16),
+              //             if (micStatus.isPermanentlyDenied)
+              //               Container(
+              //                 padding: const EdgeInsets.all(8),
+              //                 decoration: BoxDecoration(
+              //                   color: Colors.red.withOpacity(0.1),
+              //                   borderRadius: BorderRadius.circular(8),
+              //                 ),
+              //                 child: Row(
+              //                   children: [
+              //                     Icon(Icons.warning, color: Colors.red[700], size: 20),
+              //                     const SizedBox(width: 8),
+              //                     const Expanded(
+              //                       child: Text(
+              //                         'Cần mở Settings để bật quyền',
+              //                         style: TextStyle(fontSize: 12),
+              //                       ),
+              //                     ),
+              //                   ],
+              //                 ),
+              //               ),
+              //           ],
+              //         ),
+              //         actions: [
+              //           if (micStatus.isPermanentlyDenied)
+              //             TextButton.icon(
+              //               onPressed: () async {
+              //                 Navigator.pop(context);
+              //                 await openAppSettings();
+              //               },
+              //               icon: const Icon(Icons.settings),
+              //               label: const Text('Open Settings'),
+              //             ),
+              //           TextButton(
+              //             onPressed: () async {
+              //               Navigator.pop(context);
+              //               await _initializeSpeech();
+              //             },
+              //             child: const Text('Re-initialize'),
+              //           ),
+              //           TextButton(
+              //             onPressed: () => Navigator.pop(context),
+              //             child: const Text('Close'),
+              //           ),
+              //         ],
+              //       ),
+              //     );
+              //   },
+              // ),
               BlocBuilder<ChatBotBloc, ChatBotState>(
                 builder: (blocContext, state) {
                   return IconButton(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../../../domain/repositories/user_chat_repository.dart';
 import '../../../domain/repositories/social_repository.dart';
 import '../../../domain/entities/chat_entities.dart';
@@ -229,18 +230,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
-      // Update reaction in Firestore
-      await FirebaseFirestore.instance
-          .collection('conversations')
+      final messageRef = FirebaseFirestore.instance
+          .collection('chatConversations')
           .doc(event.conversationId)
           .collection('messages')
-          .doc(event.messageId)
-          .update({
-        'reactions.${event.userId}': event.emoji,
-      });
+          .doc(event.messageId);
+
+      // Get current message to check existing reaction
+      final messageDoc = await messageRef.get();
+      final data = messageDoc.data();
+      final reactions = data?['reactions'] as Map<String, dynamic>? ?? {};
+
+      // Toggle: if user already reacted with same emoji, remove it
+      if (reactions[event.userId] == event.emoji) {
+        await messageRef.set({
+          'reactions': {event.userId: FieldValue.delete()},
+        }, SetOptions(merge: true));
+      } else {
+        // Add or update reaction
+        await messageRef.set({
+          'reactions': {event.userId: event.emoji},
+        }, SetOptions(merge: true));
+      }
 
       // Messages will auto-update via stream
     } catch (e) {
+      if (kDebugMode) print('❌ Error adding reaction: $e');
       emit(ChatError(e.toString()));
     }
   }
@@ -252,7 +267,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       // Delete message from Firestore
       await FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('chatConversations')
           .doc(event.conversationId)
           .collection('messages')
           .doc(event.messageId)

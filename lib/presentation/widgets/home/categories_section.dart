@@ -9,6 +9,18 @@ class CategoriesSection extends StatelessWidget {
     super.key,
     required this.categories,
   });
+  
+  String _getCategoryDisplayName(BuildContext context, Map<String, dynamic> category) {
+    final locale = Localizations.localeOf(context).languageCode;
+    
+    // If Vietnamese locale, try to use nameVi field, fallback to name
+    if (locale == 'vi' && category.containsKey('nameVi') && category['nameVi'] != null) {
+      return category['nameVi'];
+    }
+    
+    // Default to English name
+    return category['name'] ?? '';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +80,7 @@ class CategoriesSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          categories[index]['name'] ?? '',
+                          _getCategoryDisplayName(context, categories[index]),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

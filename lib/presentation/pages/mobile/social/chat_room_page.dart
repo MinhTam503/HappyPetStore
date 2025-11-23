@@ -628,57 +628,62 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 message.imageUrl!.isNotEmpty && 
                 (message.text == null || message.text!.isEmpty) &&
                 repliedMessage == null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  message.imageUrl!,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      width: 200,
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 150,
-                      width: 150,
-                      color: Colors.grey[200],
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error, color: Colors.red),
-                          SizedBox(height: 8),
-                          Text('Failed to load'),
-                        ],
-                      ),
-                    );
-                  },
+              GestureDetector(
+                onLongPress: () => _showMessageOptions(context, message, l10n),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    message.imageUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: 200,
+                        width: 200,
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 150,
+                        width: 150,
+                        color: Colors.grey[200],
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error, color: Colors.red),
+                            SizedBox(height: 8),
+                            Text('Failed to load'),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             
             // Messages with text (or replied message) - show in colored bubble
             if (message.text != null && message.text!.isNotEmpty ||
                 repliedMessage != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isMe ? const Color(0xFF00A86B) : Colors.grey[200],
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(18),
-                    topRight: const Radius.circular(18),
-                    bottomLeft: Radius.circular(isMe ? 18 : 4),
-                    bottomRight: Radius.circular(isMe ? 4 : 18),
+              GestureDetector(
+                onLongPress: () => _showMessageOptions(context, message, l10n),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isMe ? const Color(0xFF00A86B) : Colors.grey[200],
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(18),
+                      topRight: const Radius.circular(18),
+                      bottomLeft: Radius.circular(isMe ? 18 : 4),
+                      bottomRight: Radius.circular(isMe ? 4 : 18),
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   // Replied message indicator
                   if (repliedMessage != null)
                     Container(
@@ -774,6 +779,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                   ],
                 ),
               ),
+            ),
 
             // Reactions
             if (hasReactions)

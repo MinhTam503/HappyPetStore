@@ -32,8 +32,9 @@ class _PetsState extends State<PetsAdmin> {
   final CollectionReference petsCollection =
       FirebaseFirestore.instance.collection('Pets');
 
-  final List<String> categories = const ['All', 'Dogs', 'Cats', 'Fish', 'Birds'];
+  List<String> categories = ['All']; // Will be loaded dynamically
   final TextEditingController _searchController = TextEditingController();
+  bool _categoriesLoaded = false;
 
   List<String> breedsList = [];
   String? selectedBreed;
@@ -45,6 +46,36 @@ class _PetsState extends State<PetsAdmin> {
   // Pagination
   int _currentPage = 0;
   static const int _itemsPerPage = 12;
+
+  // ===== Load Categories from Firestore =====
+  Future<void> _loadCategories() async {
+    if (_categoriesLoaded) return;
+    
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Category')
+          .get();
+      
+      if (mounted) {
+        setState(() {
+          categories = ['All'];
+          categories.addAll(
+            snapshot.docs.map((doc) => doc.data()['name'] as String? ?? '').where((name) => name.isNotEmpty)
+          );
+          _categoriesLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('Error loading categories: $e');
+      // Keep default categories if load fails
+      if (mounted) {
+        setState(() {
+          categories = ['All', 'Dogs', 'Cats', 'Fish', 'Birds'];
+          _categoriesLoaded = true;
+        });
+      }
+    }
+  }
 
   // ===== Storage =====
   Future<void> _pickImage() async {
@@ -77,6 +108,12 @@ class _PetsState extends State<PetsAdmin> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    
+    // Load categories dynamically on first build
+    if (!_categoriesLoaded) {
+      _loadCategories();
+    }
+    
     return BlocProvider(
       create: (context) => PetBloc()..add(LoadPetsEvent()),
       child: Builder(

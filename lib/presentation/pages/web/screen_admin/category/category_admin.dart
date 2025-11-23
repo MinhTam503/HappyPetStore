@@ -19,6 +19,7 @@ class CategoryAdmin extends StatefulWidget {
 
 class _CategoryAdminState extends State<CategoryAdmin> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _nameViController = TextEditingController();
   final TextEditingController _imageUrlController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
@@ -276,8 +277,9 @@ class _CategoryAdminState extends State<CategoryAdmin> {
 
   // Add/Edit category dialog
   void _showCategoryDialog(
-      {String? id, String? initialName, String? initialImageUrl}) {
+      {String? id, String? initialName, String? initialNameVi, String? initialImageUrl}) {
     _nameController.text = initialName ?? '';
+    _nameViController.text = initialNameVi ?? '';
     _imageUrlController.text = initialImageUrl ?? '';
     _imageBytes = null; // reset preview bytes khi mở dialog mới
 
@@ -301,6 +303,14 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                         controller: _nameController,
                         decoration: InputDecoration(
                           labelText: AppLocalizations.of(context)!.categoryName,
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _nameViController,
+                        decoration: const InputDecoration(
+                          labelText: 'Tên danh mục (Tiếng Việt)',
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -393,6 +403,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
 
                     final data = {
                       'name': _nameController.text.trim(),
+                      'nameVi': _nameViController.text.trim(),
                       'imageUrl': imageUrl
                     };
 
@@ -520,6 +531,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                         final doc = docs[i];
                         final id = doc.id;
                         final name = doc['name'] as String;
+                        final nameVi = doc['nameVi'] as String?;
                         final imageUrl = doc['imageUrl'] as String;
                         final breeds = List<String>.from(doc['breeds'] ?? []);
 
@@ -530,6 +542,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                           onEdit: () => _showCategoryDialog(
                               id: id,
                               initialName: name,
+                              initialNameVi: nameVi,
                               initialImageUrl: imageUrl),
                           onDelete: () async {
                             final ok = await showDialog<bool>(

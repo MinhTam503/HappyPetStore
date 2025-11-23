@@ -1,0 +1,1 @@
+/Volumes/mintam/Subjects/HappyPetStore/build/app/intermediates/cxx/Debug/21336341/obj/arm64-v8a
