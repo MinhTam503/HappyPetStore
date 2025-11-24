@@ -4,7 +4,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/cart_screen.dart';
-import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/home/home_page.dart'
     show HomePage;
 import 'package:pet_shop/presentation/pages/mobile/tab/profile_screen.dart';
@@ -98,8 +97,8 @@ class _HomePageState extends State<BottomNavigator> {
   }
 }
 
-/// Fancy curved bottom bar with a center notch and elevated middle action, inspired by the provided design.
-class _FancyBottomBar extends StatelessWidget {
+/// Modern bottom bar with gradient, smooth animations inspired by Viettel design
+class _FancyBottomBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final List<String> labels;
@@ -115,119 +114,191 @@ class _FancyBottomBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final height = 82.0;
-    final notchRadius = 32.0;
-    final circleSize = 56.0;
+  State<_FancyBottomBar> createState() => _FancyBottomBarState();
+}
 
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: height + 12,
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            // Background with center notch
-            SizedBox(
-              height: height,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: _NavBarPainter(
-                  background: secondaryColor,
-                  shadowColor: Colors.black.withOpacity(0.06),
-                  notchRadius: notchRadius,
-                  notchDepth: 18,
+class _FancyBottomBarState extends State<_FancyBottomBar> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void didUpdateWidget(_FancyBottomBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _animationController.reset();
+      _animationController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final circleSize = 56.0;
+    final elevationHeight = 25.0; // Nửa circle nhô lên
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height:60,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Main bar with items
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    // Left items (Home, Social)
+                    for (int i = 0; i < 2; i++)
+                      Expanded(
+                        child: _BarItem(
+                          icon: widget.icons[i],
+                          activeIcon: widget.activeIcons[i],
+                          label: widget.labels[i],
+                          selected: widget.currentIndex == i,
+                          onTap: () => widget.onTap(i),
+                        ),
+                      ),
+                    
+                    // Center space for QR button
+                    SizedBox(width: circleSize + 5),
+                    
+                    // Right items (Cart, Profile)
+                    for (int i = 3; i < 5; i++)
+                      Expanded(
+                        child: _BarItem(
+                          icon: widget.icons[i],
+                          activeIcon: widget.activeIcons[i],
+                          label: widget.labels[i],
+                          selected: widget.currentIndex == i,
+                          onTap: () => widget.onTap(i),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ),
 
-            // Row of items (leave gap for center circle)
-            Positioned.fill(
-              bottom: 6,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (int i = 0; i < 5; i++)
-                    if (i == 2)
-                      SizedBox(
-                          width: circleSize +
-                              16) // gap for center (QR Scanner at index 2)
-                    else
-                      _BarItem(
-                        icon: icons[i],
-                        activeIcon: activeIcons[i],
-                        label: labels[i],
-                        selected: currentIndex == i,
-                        onTap: () => onTap(i),
+              // Center elevated circle button (QR Scanner)
+              Positioned(
+                left: MediaQuery.of(context).size.width / 2 - circleSize / 2,
+                top: -elevationHeight,
+                child: AnimatedBuilder(
+                  animation: _scaleAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: widget.currentIndex == 2 ? _scaleAnimation.value : 1.0,
+                      child: GestureDetector(
+                        onTap: () => widget.onTap(2),
+                        child: Container(
+                          width: circleSize,
+                          height: circleSize,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                primaryColor,
+                                primaryColor.withOpacity(0.85),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.3),
+                                blurRadius: 12,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 3,
+                            ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(circleSize / 2),
+                              onTap: () => widget.onTap(2),
+                              child: Center(
+                                child: Icon(
+                                  widget.currentIndex == 2
+                                      ? widget.activeIcons[2]
+                                      : widget.icons[2],
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                ],
+                    );
+                  },
+                ),
               ),
-            ),
 
-            // Center elevated circle button (QR Scanner at index 2)
-            Positioned(
-              bottom: height - notchRadius - 15,
-              child: GestureDetector(
-                onTap: () => onTap(2),
-                child: Container(
-                  width: circleSize,
-                  height: circleSize,
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 6),
+              // Center label below circle
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 7,
+                child: GestureDetector(
+                  onTap: () => widget.onTap(2),
+                  child: Center(
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: widget.currentIndex == 2
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        color: widget.currentIndex == 2
+                            ? primaryColor
+                            : Colors.grey[600],
                       ),
-                    ],
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.9),
-                      width: 3,
+                      child: Text(widget.labels[2]),
                     ),
                   ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    currentIndex == 2 ? activeIcons[2] : icons[2],
-                    color: Colors.white,
-                    size: 24, // slightly smaller center icon
-                  ),
                 ),
               ),
-            ),
-
-            // Center label under the circle
-            Positioned(
-              bottom: 16, // align baseline with other labels
-              child: GestureDetector(
-                onTap: () => onTap(2),
-                child: Text(
-                  labels[2],
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight:
-                        currentIndex == 2 ? FontWeight.w700 : FontWeight.w500,
-                    color: currentIndex == 2
-                        ? primaryColor
-                        : Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withOpacity(0.7),
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _BarItem extends StatelessWidget {
+class _BarItem extends StatefulWidget {
   final IconData icon;
   final IconData activeIcon;
   final String label;
@@ -243,110 +314,121 @@ class _BarItem extends StatelessWidget {
   });
 
   @override
+  State<_BarItem> createState() => _BarItemState();
+}
+
+class _BarItemState extends State<_BarItem> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _iconScaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+
+    if (widget.selected) {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_BarItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selected != oldWidget.selected) {
+      if (widget.selected) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final color = selected
-        ? primaryColor
-        : Theme.of(context).iconTheme.color?.withOpacity(0.6);
-    return Expanded(
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(selected ? activeIcon : icon, color: color),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected
-                      ? primaryColor
-                      : Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.color
-                          ?.withOpacity(0.7),
-                ),
+        onTap: widget.onTap,
+        splashColor: primaryColor.withOpacity(0.1),
+        highlightColor: primaryColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon with background
+                  SizedBox(
+                    height: 32,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Background circle when selected
+                        if (widget.selected)
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        // Icon
+                        Transform.scale(
+                          scale: widget.selected ? _iconScaleAnimation.value : 1.0,
+                          child: Icon(
+                            widget.selected ? widget.activeIcon : widget.icon,
+                            color: widget.selected
+                                ? primaryColor
+                                : Colors.grey[600],
+                            size: 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Label
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: widget.selected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: widget.selected
+                          ? primaryColor
+                          : Colors.grey[600],
+                    ),
+                    child: Text(
+                      widget.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
-}
-
-class _NavBarPainter extends CustomPainter {
-  final Color background;
-  final Color shadowColor;
-  final double notchRadius;
-  final double notchDepth;
-
-  _NavBarPainter({
-    required this.background,
-    required this.shadowColor,
-    required this.notchRadius,
-    required this.notchDepth,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = background
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final w = size.width;
-    final h = size.height;
-    final centerX = w / 2;
-
-    // Rounded rectangle with a smooth concave notch at the top center
-    path.moveTo(0, 12);
-    path.quadraticBezierTo(0, 0, 12, 0);
-    // Left to notch start
-    final notchStart = centerX - notchRadius * 1.4;
-    final notchEnd = centerX + notchRadius * 1.4;
-    path.lineTo(notchStart, 0);
-
-    // Notch curve down and back up
-    path.cubicTo(
-      notchStart + notchRadius * 0.4,
-      0,
-      centerX - notchRadius * 0.9,
-      notchDepth,
-      centerX,
-      notchDepth + 2,
-    );
-    path.cubicTo(
-      centerX + notchRadius * 0.9,
-      notchDepth,
-      notchEnd - notchRadius * 0.4,
-      0,
-      notchEnd,
-      0,
-    );
-
-    // Top-right corner
-    path.lineTo(w - 12, 0);
-    path.quadraticBezierTo(w, 0, w, 12);
-    path.lineTo(w, h - 12);
-    path.quadraticBezierTo(w, h, w - 12, h);
-    path.lineTo(12, h);
-    path.quadraticBezierTo(0, h, 0, h - 12);
-    path.close();
-
-    // Shadow
-    canvas.drawShadow(path, shadowColor, 6, true);
-    // Fill
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

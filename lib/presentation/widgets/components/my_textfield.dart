@@ -19,18 +19,20 @@ class MyTextField extends StatelessWidget {
       controller: controller,
       obscureText: obsecureText,
       decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(
-            color: Colors.grey.shade900,
-          ),
-          prefixIcon: icon,
-          prefixIconColor: Colors.grey.shade900,
-          enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-            color: Colors.grey.shade900,
-          )),
-          focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey.shade900))),
+        hintText: hintText,
+        hintStyle: TextStyle(
+          color: Colors.grey.shade900,
+        ),
+        prefixIcon: icon,
+        prefixIconColor: Colors.grey.shade900,
+        // enabledBorder: UnderlineInputBorder(
+        //     borderSide: BorderSide(
+        //   color: Colors.grey.shade900,
+        // )),
+        // focusedBorder: UnderlineInputBorder(
+        //   borderSide: BorderSide(color: Colors.grey.shade900),
+        // ),
+      ),
     );
   }
 }

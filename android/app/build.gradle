@@ -27,6 +27,7 @@ if (flutterVersionName == null) {
 }
 
 android {
+
     namespace = "com.example.pet_shop"
     compileSdk = 36
     ndkVersion = "26.3.11579264"

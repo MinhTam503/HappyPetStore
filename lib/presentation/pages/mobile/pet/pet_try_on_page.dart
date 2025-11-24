@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_storage/firebase_storage.dart';
@@ -309,7 +309,8 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(pngBytes);
 
-      await ImageGallerySaver.saveImage(pngBytes, name: fileName, quality: 100);
+      // Save to gallery using gal package
+      await Gal.putImageBytes(pngBytes, album: 'PetTryOn');
        
       if (mounted) {
         NotificationHelper.showSuccess(context, l10n.photoSaved(fileName));

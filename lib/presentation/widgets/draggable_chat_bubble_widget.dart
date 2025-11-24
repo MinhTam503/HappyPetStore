@@ -57,11 +57,12 @@ class _DraggableChatBubbleWidgetState extends State<DraggableChatBubbleWidget>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _screenSize = MediaQuery.of(context).size;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     
-    // Position bubble at bottom-right initially
+    // Position bubble at bottom-right initially with safe area
     _position = Offset(
       _screenSize.width - _bubbleSize - 20,
-      _screenSize.height - _bubbleSize - 100, // Account for bottom navigation
+      _screenSize.height - _bubbleSize - 120 - bottomPadding, // Account for new smaller bottom navigation + safe area
     );
   }
 
@@ -73,10 +74,11 @@ class _DraggableChatBubbleWidgetState extends State<DraggableChatBubbleWidget>
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     setState(() {
       _position = Offset(
         (_position.dx + details.delta.dx).clamp(0.0, _screenSize.width - _bubbleSize),
-        (_position.dy + details.delta.dy).clamp(0.0, _screenSize.height - _bubbleSize - 80),
+        (_position.dy + details.delta.dy).clamp(0.0, _screenSize.height - _bubbleSize - 120 - bottomPadding),
       );
     });
   }
