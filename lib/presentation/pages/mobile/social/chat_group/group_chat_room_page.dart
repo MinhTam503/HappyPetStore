@@ -7,11 +7,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../core/services/user_manager.dart';
-import '../../../bloc/group_chat/group_chat_bloc.dart';
-import '../../../bloc/group_chat/group_chat_event.dart';
-import '../../../bloc/group_chat/group_chat_state.dart';
-import '../../../../domain/entities/group_chat_entities.dart';
+import '../../../../../core/services/user_manager.dart';
+import '../../../../bloc/group_chat/group_chat_bloc.dart';
+import '../../../../bloc/group_chat/group_chat_event.dart';
+import '../../../../bloc/group_chat/group_chat_state.dart';
+import '../../../../../domain/entities/group_chat_entities.dart';
 import 'group_info_page.dart';
 
 class GroupChatRoomPage extends StatefulWidget {

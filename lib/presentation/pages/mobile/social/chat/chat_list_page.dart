@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import '../../../../core/services/user_manager.dart';
-import '../../../bloc/chat/chat_bloc.dart';
-import '../../../bloc/chat/chat_event.dart';
-import '../../../bloc/chat/chat_state.dart';
+import '../../../../../core/services/user_manager.dart';
+import '../../../../bloc/chat/chat_bloc.dart';
+import '../../../../bloc/chat/chat_event.dart';
+import '../../../../bloc/chat/chat_state.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});

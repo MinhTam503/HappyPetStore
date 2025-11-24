@@ -41,8 +41,8 @@ import 'package:pet_shop/presentation/pages/mobile/social/edit_social_profile_pa
 import 'package:pet_shop/presentation/pages/mobile/social/edit_post_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/followers_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/chat_list_page_with_tabs.dart';
-import 'package:pet_shop/presentation/pages/mobile/social/chat_room_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/social/group_chat_room_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/chat/chat_room_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/chat_group/group_chat_room_page.dart';
 // import 'package:pet_shop/presentation/pages/mobile/pet/ar_viewer_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/get_started/get_started_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';

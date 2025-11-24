@@ -7,7 +7,7 @@ import 'package:pet_shop/presentation/pages/mobile/tab/cart_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/home/home_page.dart'
     show HomePage;
 import 'package:pet_shop/presentation/pages/mobile/tab/profile_screen.dart';
-import 'package:pet_shop/presentation/pages/mobile/social/social_home_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/home/social_home_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/qr_scanner/qr_scanner_screen.dart';
 import 'package:pet_shop/presentation/widgets/conditional_draggable_chat_bubble.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';

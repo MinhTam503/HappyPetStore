@@ -7,11 +7,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../core/services/user_manager.dart';
-import '../../../../domain/entities/chat_entities.dart';
-import '../../../bloc/chat/chat_bloc.dart';
-import '../../../bloc/chat/chat_event.dart';
-import '../../../bloc/chat/chat_state.dart';
+import '../../../../../core/services/user_manager.dart';
+import '../../../../../domain/entities/chat_entities.dart';
+import '../../../../bloc/chat/chat_bloc.dart';
+import '../../../../bloc/chat/chat_event.dart';
+import '../../../../bloc/chat/chat_state.dart';
 
 class ChatRoomPage extends StatefulWidget {
   final String conversationId;

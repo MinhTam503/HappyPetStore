@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../domain/entities/group_chat_entities.dart';
+import '../../../../../domain/entities/group_chat_entities.dart';
 
 class GroupInfoPage extends StatefulWidget {
   final GroupConversation groupInfo;

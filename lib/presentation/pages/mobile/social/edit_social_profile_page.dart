@@ -256,18 +256,18 @@ class _EditSocialProfilePageState extends State<EditSocialProfilePage> {
               ),
             ),
             
-            const SizedBox(height: 16),
+            // const SizedBox(height: 16),
             
-            // Website
-            TextFormField(
-              controller: _websiteController,
-              decoration: InputDecoration(
-                labelText: l10n.website,
-                prefixIcon: const Icon(Icons.link),
-                border: const OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.url,
-            ),
+            // // Website
+            // TextFormField(
+            //   controller: _websiteController,
+            //   decoration: InputDecoration(
+            //     labelText: l10n.website,
+            //     prefixIcon: const Icon(Icons.link),
+            //     border: const OutlineInputBorder(),
+            //   ),
+            //   keyboardType: TextInputType.url,
+            // ),
             
             const SizedBox(height: 16),
             

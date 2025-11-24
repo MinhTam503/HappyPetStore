@@ -686,7 +686,7 @@
   "loginButton": "ĐĂNG NHẬP",
     "socialNetwork": "Mạng xã hội thú cưng",
   "whatsOnYourMind": "Bạn đang nghĩ gì?",
-  "following": "Following",
+  "following": "Đang theo dõi",
   "explore": "Khám phá",
   "search": "Tìm kiếm",
   "searchPets": "Tìm kiếm thú cưng...",
@@ -862,7 +862,7 @@
   "editPostInfo": "Bạn chỉ có thể chỉnh sửa chú thích và thẻ. Hình ảnh không thể thay đổi.",
   "errorUploadingImage": "Lỗi khi tải lên hình ảnh",
   "oopsSomethingWrong": "Rất tiếc! Đã xảy ra lỗi",
-  "petTryOn": "Pet Try-On - {name}",
+  "petTryOn": "Thử - {name}",
   "@petTryOn": {
     "placeholders": {
       "name": {

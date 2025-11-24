@@ -581,55 +581,55 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
             ),
             
-            const SizedBox(height: 24),
+            // const SizedBox(height: 24),
             
-            // Tips Section
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: (isDark ? darkPrimaryColor : primaryColor)
-                      .withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline,
-                          color: isDark ? darkPrimaryColor : primaryColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Tips',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? darkPrimaryColor : primaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '• ${l10n?.writeCaption ?? 'Write engaging captions'}\n'
-                      '• Use #hashtags to reach more people\n'
-                      '• Add clear, bright photos\n'
-                      '• Share your pet moments',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // // Tips Section
+            // Padding(
+            //   padding: const EdgeInsets.all(16),
+            //   child: Container(
+            //     padding: const EdgeInsets.all(16),
+            //     decoration: BoxDecoration(
+            //       color: (isDark ? darkPrimaryColor : primaryColor)
+            //           .withOpacity(0.1),
+            //       borderRadius: BorderRadius.circular(12),
+            //     ),
+            //     child: Column(
+            //       crossAxisAlignment: CrossAxisAlignment.start,
+            //       children: [
+            //         // Row(
+            //         //   children: [
+            //         //     Icon(
+            //         //       Icons.lightbulb_outline,
+            //         //       color: isDark ? darkPrimaryColor : primaryColor,
+            //         //       size: 20,
+            //         //     ),
+            //         //     const SizedBox(width: 8),
+            //         //     Text(
+            //         //       'Tips',
+            //         //       style: TextStyle(
+            //         //         fontSize: 15,
+            //         //         fontWeight: FontWeight.bold,
+            //         //         color: isDark ? darkPrimaryColor : primaryColor,
+            //         //       ),
+            //         //     ),
+            //         //   ],
+            //         // ),
+            //         // const SizedBox(height: 8),
+            //         // Text(
+            //         //   '• ${l10n?.writeCaption ?? 'Write engaging captions'}\n'
+            //         //   '• Use #hashtags to reach more people\n'
+            //         //   '• Add clear, bright photos\n'
+            //         //   '• Share your pet moments',
+            //         //   style: TextStyle(
+            //         //     fontSize: 13,
+            //         //     color: Colors.grey[700],
+            //         //     height: 1.5,
+            //         //   ),
+            //         // ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
             const SizedBox(height: 24),
           ],
         ),
