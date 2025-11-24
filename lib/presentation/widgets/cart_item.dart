@@ -8,6 +8,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
+import 'package:pet_shop/core/utils/gender_localizer.dart';
 import '../../data/models/cart_model.dart';
 
 class CartItem extends StatelessWidget {

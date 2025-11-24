@@ -21,6 +21,7 @@ import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_state.dart';
+import 'package:pet_shop/core/utils/gender_localizer.dart';
 
 class DetailPet extends StatefulWidget {
   final Map<String, dynamic> pet;
@@ -171,6 +172,11 @@ class _DetailPetState extends State<DetailPet> {
 
       // Chuẩn bị dữ liệu giỏ hàng
       final data = widget.pet;
+      
+      // Normalize gender to standard 'male' or 'female' for storage
+      final rawGender = data['sex'] ?? data['gender'] ?? 'male';
+      final normalizedGender = GenderLocalizer.normalizeGenderForStorage(rawGender.toString());
+      
       final cartItem = {
         'productId': data['id'] ?? data['productId'] ?? '',
         'name': data['name'] ?? '',
@@ -179,7 +185,7 @@ class _DetailPetState extends State<DetailPet> {
         'breed': data['breed'] ?? '',
         'age': data['age'] ?? '',
         'weight': data['weight'] ?? '',
-        'gender': data['sex'] ?? data['gender'] ?? '',
+        'gender': normalizedGender, // Store as 'male' or 'female'
         'color': data['color'] ?? '',
         'description':
             data['about'] ?? data['breed'] ?? 'Sản phẩm gợi ý từ hệ thống',
@@ -397,8 +403,11 @@ class _DetailPetState extends State<DetailPet> {
                                     : (l10n?.unknown ?? 'Không xác định'))),
                             _buildInfoRow(
                                 l10n?.gender ?? 'Giới tính',
-                                (data['sex'] ?? data['gender'])?.toString() ??
-                                    (l10n?.unknown ?? 'Không xác định')),
+                                GenderLocalizer.getLocalizedGender(
+                                  l10n!,
+                                  data['category']?.toString(),
+                                  (data['sex'] ?? data['gender'])?.toString()
+                                )),
                             _buildColorInfoRow(l10n?.color ?? 'Màu sắc',
                                 data['color'] ?? 'colorMixed'),
                           ],

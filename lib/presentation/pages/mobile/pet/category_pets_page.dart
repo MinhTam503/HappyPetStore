@@ -4,6 +4,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
 import 'package:pet_shop/presentation/widgets/pet_items_all.dart';
+import 'package:pet_shop/core/utils/gender_localizer.dart';
 
 class CategoryPetsPage extends StatefulWidget {
   final String categoryName;
@@ -137,7 +138,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
   }
 
   void _showSortOptions() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     
     showModalBottomSheet(
       context: context,
@@ -158,7 +159,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n?.sortBy ?? 'Sắp xếp theo',
+                    l10n.sortBy,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -178,7 +179,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                       shrinkWrap: true,
                       children: [
                         _buildMultiSortOption('name', 'Tên', Icons.sort_by_alpha, setModalState),
-                        _buildMultiSortOption('price', l10n?.priceAsc ?? 'Giá', Icons.attach_money, setModalState),
+                        _buildMultiSortOption('price', l10n.priceAsc, Icons.attach_money, setModalState),
                         _buildMultiSortOption('age', 'Tuổi', Icons.cake, setModalState),
                         _buildMultiSortOption('sex', 'Giới tính', Icons.pets, setModalState),
                       ],
@@ -195,7 +196,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                             Navigator.pop(context);
                           },
                           icon: const Icon(Icons.arrow_upward),
-                          label: Text(l10n?.priceAsc ?? 'Tăng dần'),
+                          label: Text(l10n.priceAsc),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: isAscending ? primaryColor : Colors.grey,
                             side: BorderSide(
@@ -213,7 +214,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                             Navigator.pop(context);
                           },
                           icon: const Icon(Icons.arrow_downward),
-                          label: Text(l10n?.priceDesc ?? 'Giảm dần'),
+                          label: Text(l10n.priceDesc),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: !isAscending ? primaryColor : Colors.grey,
                             side: BorderSide(
@@ -306,14 +307,16 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    // Get localized category name
+    final localizedCategoryName = GenderLocalizer.getLocalizedCategory(l10n, widget.categoryName);
 
     return Scaffold(
       backgroundColor: secondaryColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        title: Text(widget.categoryName),
+        title: Text(localizedCategoryName),
         elevation: 0,
         actions: [
           IconButton(
@@ -369,7 +372,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              l10n?.noResults ?? 'Không có thú cưng nào',
+                              l10n.noResults,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey.shade600,

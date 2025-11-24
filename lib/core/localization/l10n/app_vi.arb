@@ -335,6 +335,8 @@
   "genderAll": "Tất cả",
   "male": "Đực", 
   "female": "Cái",
+  "maleBird": "Trống",
+  "femaleBird": "Mái",
   "age": "Tuổi",
   "name": "Tên",
   "ascending": "Tăng dần",

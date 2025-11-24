@@ -1391,6 +1391,14 @@
   "@female": {
     "description": "Female gender option"
   },
+  "maleBird": "Male",
+  "@maleBird": {
+    "description": "Male bird gender"
+  },
+  "femaleBird": "Female",
+  "@femaleBird": {
+    "description": "Female bird gender"
+  },
   "age": "Age",
   "@age": {
     "description": "Age label"
