@@ -360,12 +360,12 @@ class _AccountAdminState extends State<AccountAdmin> {
           ),
           if (isLoading)
             Container(
-              color: Colors.black38,
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
               alignment: Alignment.center,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
+                  CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                   SizedBox(height: 8),
                   Text(AppLocalizations.of(context)!.processing, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 ],
@@ -590,7 +590,7 @@ class _AccountAdminState extends State<AccountAdmin> {
                                 const SizedBox(height: 8),
                                 Text(AppLocalizations.of(context)!.avatarPreview,
                                     style: TextStyle(
-                                        fontSize: 12, color: Colors.black54)),
+                                        fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54))),
                               ],
                             ),
                           ),

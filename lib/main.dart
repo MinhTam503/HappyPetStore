@@ -161,6 +161,20 @@ Future<void> main() async {
     }
   }
 
+  // Load initial theme preference on mobile
+  if (!kIsWeb) {
+    try {
+      final settingsService = SettingsService();
+      final useAdminTheme = await settingsService.getUseAdminTheme();
+      // Ensure stream gets initial value by setting it
+      await settingsService.setUseAdminTheme(useAdminTheme);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load theme preference: $e');
+      }
+    }
+  }
+
   runApp(const MyApp());
 }
 
@@ -210,15 +224,29 @@ class MyApp extends StatelessWidget {
       child: Consumer2<LocaleProvider, ThemeProvider>(
           builder: (context, localeProvider, themeProvider, child) {
         final themeManager = ThemeManager();
+        final settingsService = SettingsService();
+        
         return StreamBuilder<SeasonalTheme>(
           stream: themeManager.stream,
           initialData: themeManager.current,
-          builder: (context, snapshot) {
-            final currentTheme = snapshot.data ?? SeasonalTheme.defaultTheme;
-            final lightScheme =
-                themeManager.colorSchemeFor(currentTheme, Brightness.light);
-            final darkScheme =
-                themeManager.colorSchemeFor(currentTheme, Brightness.dark);
+          builder: (context, themeSnapshot) {
+            return StreamBuilder<bool>(
+              stream: settingsService.useAdminThemeStream,
+              initialData: true,
+              builder: (context, settingsSnapshot) {
+                final useAdminTheme = settingsSnapshot.data ?? true;
+                final adminTheme = themeSnapshot.data ?? SeasonalTheme.defaultTheme;
+                
+                // On web (admin panel), always use default theme
+                // On mobile, use admin theme if enabled, otherwise default
+                final currentTheme = kIsWeb 
+                    ? SeasonalTheme.defaultTheme 
+                    : (useAdminTheme ? adminTheme : SeasonalTheme.defaultTheme);
+                
+                final lightScheme =
+                    themeManager.colorSchemeFor(currentTheme, Brightness.light, isWebAdmin: kIsWeb);
+                final darkScheme =
+                    themeManager.colorSchemeFor(currentTheme, Brightness.dark, isWebAdmin: kIsWeb);
 
             return MaterialApp(
               navigatorKey: _navKey,
@@ -578,6 +606,8 @@ class MyApp extends StatelessWidget {
                   }
                   return PaymentSuccessScreen(sessionId: sessionId);
                 },
+              },
+            );
               },
             );
           },

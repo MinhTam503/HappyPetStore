@@ -190,7 +190,7 @@ class _DraggableChatBubbleWidgetState extends State<DraggableChatBubbleWidget>
       case SeasonalTheme.autumn:
         return Icons.eco; // Leaf for Autumn
       case SeasonalTheme.defaultTheme:
-        return Icons.pets;
+        return Icons.smart_toy; // Robot/chatbot icon
     }
   }
 

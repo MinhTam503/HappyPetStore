@@ -84,11 +84,11 @@ class _MapPickerState extends State<MapPicker> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.9),
+                color: Theme.of(context).cardColor.withOpacity(.9),
                 borderRadius: BorderRadius.circular(8),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(.06), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: Theme.of(context).shadowColor.withOpacity(.06), blurRadius: 8, offset: const Offset(0, 2))],
               ),
-              child: Text(l10n.tapMapToSelectLocation, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+              child: Text(l10n.tapMapToSelectLocation, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87))),
             ),
           ),
           // Simple zoom controls
@@ -142,7 +142,7 @@ class _ZoomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       shape: const CircleBorder(),
       elevation: 2,
       child: InkWell(
@@ -151,7 +151,7 @@ class _ZoomButton extends StatelessWidget {
         child: SizedBox(
           width: 44,
           height: 44,
-          child: Icon(icon, color: Colors.black87),
+          child: Icon(icon, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87)),
         ),
       ),
     );

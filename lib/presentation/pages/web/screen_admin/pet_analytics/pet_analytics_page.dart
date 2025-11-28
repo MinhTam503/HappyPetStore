@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/components/breed_performance_chart.dart';
@@ -39,17 +38,18 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
         centerTitle: true,
         title: Text(
           AppLocalizations.of(context)!.petAnalytics,
-          style:
-              const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          style: TextStyle(
+              fontWeight: FontWeight.bold, 
+              color: Theme.of(context).colorScheme.onSurface),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.black,
-          unselectedLabelColor: Colors.black,
-          indicatorColor: primaryColor,
+          labelColor: Theme.of(context).colorScheme.onSurface,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          indicatorColor: Theme.of(context).colorScheme.primary,
           tabs: [
             Tab(
                 icon: const Icon(Icons.analytics),
@@ -112,7 +112,7 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
                         AppLocalizations.of(context)!.totalPets,
                         totalPets.toString(),
                         Icons.pets,
-                        const Color(0xff08A045),
+                        Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -141,7 +141,7 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
                             ? '${((soldPets / totalPets) * 100).toStringAsFixed(1)}%'
                             : '0%',
                         Icons.trending_up,
-                        Colors.green,
+                        Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ],
@@ -263,6 +263,7 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildStatisticsTab() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('Pets').snapshots(),
@@ -308,11 +309,11 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -364,11 +365,11 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -425,9 +426,9 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
                       Expanded(
                         child: Text(
                           '${total > 0 ? ((sold / total) * 100).toStringAsFixed(1) : 0}%',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -481,11 +482,11 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Theme.of(context).shadowColor.withOpacity(0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -644,11 +645,11 @@ class _PetAnalyticsPageState extends State<PetAnalyticsPage>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

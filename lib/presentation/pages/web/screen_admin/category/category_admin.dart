@@ -452,12 +452,12 @@ class _CategoryAdminState extends State<CategoryAdmin> {
             FilledButton.icon(
               style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).cardColor,
-                foregroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Theme.of(context).colorScheme.primary,
               ),
               onPressed: () => _showCategoryDialog(),
-              icon: Icon(Icons.add, color: Theme.of(context).primaryColor),
+              icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
               label: Text(AppLocalizations.of(context)!.createNew,
-                  style: TextStyle(color: Theme.of(context).primaryColor)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),
           ],
         ),
@@ -580,7 +580,7 @@ class _CategoryAdminState extends State<CategoryAdmin> {
           ),
           if (_loading)
             Container(
-              color: Colors.black38,
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
               alignment: Alignment.center,
               child: Column(
                 mainAxisSize: MainAxisSize.min,

@@ -775,7 +775,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
           ),
           if (isLoading)
             Container(
-              color: Colors.black38,
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
               alignment: Alignment.center,
               child: Column(
                 mainAxisSize: MainAxisSize.min,

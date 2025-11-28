@@ -2,8 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-import 'package:pet_shop/core/constants/app_constants.dart';
-
 class AccountCard extends StatelessWidget {
   final String name;
   final String email;
@@ -25,8 +23,8 @@ class AccountCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _roleColor(String r) =>
-      r.toLowerCase() == 'admin' ? Colors.orange : primaryColor;
+  Color _roleColor(BuildContext context, String r) =>
+      r.toLowerCase() == 'admin' ? Colors.orange : Theme.of(context).colorScheme.primary;
 
   String _getLocalizedRole(BuildContext context, String rawRole) {
     final l10n = AppLocalizations.of(context)!;
@@ -49,7 +47,7 @@ class AccountCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: secondaryColor,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     backgroundImage:
                     imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
                     child: imageUrl.isEmpty
@@ -73,7 +71,7 @@ class AccountCard extends StatelessWidget {
                         Text(phone,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.black54)),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54))),
                       ],
                     ),
                   ),
@@ -86,7 +84,7 @@ class AccountCard extends StatelessWidget {
                     padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _roleColor(role).withOpacity(.12),
+                      color: _roleColor(context, role).withOpacity(.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -96,9 +94,9 @@ class AccountCard extends StatelessWidget {
                                 ? Icons.security
                                 : Icons.person,
                             size: 16,
-                            color: _roleColor(role)),
+                            color: _roleColor(context, role)),
                         const SizedBox(width: 4),
-                        Text(_getLocalizedRole(context, role), style: TextStyle(color: _roleColor(role))),
+                        Text(_getLocalizedRole(context, role), style: TextStyle(color: _roleColor(context, role))),
                       ],
                     ),
                   ),

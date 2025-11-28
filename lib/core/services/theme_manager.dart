@@ -87,51 +87,80 @@ class ThemeManager {
     }
   }
 
-  ColorScheme colorSchemeFor(SeasonalTheme theme, Brightness brightness) {
+  ColorScheme colorSchemeFor(SeasonalTheme theme, Brightness brightness, {bool isWebAdmin = false}) {
+    // Web admin always uses white background with default colors
+    if (isWebAdmin) {
+      return ColorScheme.fromSeed(
+        brightness: brightness,
+        seedColor: const Color(0xff08A045),
+        primary: const Color(0xff08A045),
+      );
+    }
+    
     switch (theme) {
       case SeasonalTheme.noel:
         return ColorScheme.fromSeed(
           seedColor: const Color(0xFFB71C1C), // deep red
-          brightness: Brightness.light,
+          brightness: brightness,
           primary: const Color(0xFFD32F2F),
           secondary: const Color(0xFF2E7D32), // pine green
-          surface: const Color.fromARGB(255, 251, 247, 247), // Very light red/pink background
-          background: const Color(0xFFFFF5F5),
+          surface: brightness == Brightness.light 
+              ? const Color.fromARGB(255, 251, 247, 247) 
+              : const Color(0xFF1A1212),
+          background: brightness == Brightness.light 
+              ? const Color(0xFFFFF5F5) 
+              : const Color(0xFF1A1212),
         );
       case SeasonalTheme.tet:
         return ColorScheme.fromSeed(
           seedColor: const Color(0xFFFFA000), // amber/gold
-          brightness: Brightness.light,
+          brightness: brightness,
           primary: const Color(0xFFFFA000), // Amber gold
           secondary: const Color(0xFFFFD54F), // Light gold
-          surface: const Color(0xFFFFF8E1), // Very light amber background
-          background: const Color(0xFFFFF8E1),
+          surface: brightness == Brightness.light 
+              ? const Color(0xFFFFF8E1) 
+              : const Color(0xFF1A1612),
+          background: brightness == Brightness.light 
+              ? const Color(0xFFFFF8E1) 
+              : const Color(0xFF1A1612),
         );
       case SeasonalTheme.summer:
         return ColorScheme.fromSeed(
           seedColor: const Color(0xFF00BCD4), // cyan blue
-          brightness: Brightness.light,
+          brightness: brightness,
           primary: const Color(0xFF00ACC1),
           secondary: const Color(0xFFFFEB3B), // sunny yellow
-          surface: const Color(0xFFE0F7FA), // Very light cyan background
-          background: const Color(0xFFE0F7FA),
+          surface: brightness == Brightness.light 
+              ? const Color(0xFFE0F7FA) 
+              : const Color(0xFF121A1A),
+          background: brightness == Brightness.light 
+              ? const Color(0xFFE0F7FA) 
+              : const Color(0xFF121A1A),
         );
       case SeasonalTheme.autumn:
         return ColorScheme.fromSeed(
           seedColor: const Color(0xFFFF6F00), // deep orange
-          brightness: Brightness.light,
+          brightness: brightness,
           primary: const Color(0xFFFF8F00),
           secondary: const Color(0xFF8D6E63), // brown
-          surface: const Color(0xFFFFF3E0), // Very light orange background
-          background: const Color(0xFFFFF3E0),
+          surface: brightness == Brightness.light 
+              ? const Color(0xFFFFF3E0) 
+              : const Color(0xFF1A1612),
+          background: brightness == Brightness.light 
+              ? const Color(0xFFFFF3E0) 
+              : const Color(0xFF1A1612),
         );
       case SeasonalTheme.defaultTheme:
         return ColorScheme.fromSeed(
-          brightness: Brightness.light,
-          seedColor: const Color(0xff08A045), // Original green color
+          brightness: brightness,
+          seedColor: const Color(0xff08A045),
           primary: const Color(0xff08A045),
-          surface: const Color(0xFFE7FAE7), // Light green background
-          background: const Color(0xFFE7FAE7),
+          surface: brightness == Brightness.light 
+              ? Colors.white 
+              : const Color(0xFF121212),
+          background: brightness == Brightness.light 
+              ? Colors.white 
+              : const Color(0xFF121212),
         );
     }
   }

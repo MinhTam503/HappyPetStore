@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/settings_service.dart';
 import 'package:pet_shop/core/providers/locale_provider.dart';
 
@@ -18,6 +17,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _selectedLanguage = 'vi';
   bool _searchHistoryEnabled = true;
   bool _viewedPetsHistoryEnabled = true;
+  bool _useAdminTheme = true; // true = follow admin, false = default
   bool _isLoading = true;
 
   final SettingsService _settingsService = SettingsService();
@@ -37,6 +37,7 @@ class _SettingsPageState extends State<SettingsPage> {
           await _settingsService.getSearchHistoryEnabled();
       final viewedPetsHistoryEnabled =
           await _settingsService.getViewedPetsHistoryEnabled();
+      final useAdminTheme = await _settingsService.getUseAdminTheme();
 
       if (mounted) {
         // Sync with LocaleProvider
@@ -54,6 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _selectedLanguage = finalLanguage;
           _searchHistoryEnabled = searchHistoryEnabled;
           _viewedPetsHistoryEnabled = viewedPetsHistoryEnabled;
+          _useAdminTheme = useAdminTheme;
           _isLoading = false;
         });
 
@@ -228,6 +230,40 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _saveThemePreference(bool useAdminTheme) async {
+    try {
+      await _settingsService.setUseAdminTheme(useAdminTheme);
+      setState(() {
+        _useAdminTheme = useAdminTheme;
+      });
+
+      // Show feedback to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              useAdminTheme
+                  ? 'Sử dụng giao diện theo quản trị viên'
+                  : 'Sử dụng giao diện mặc định',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving theme preference: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Lỗi khi lưu cài đặt'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -243,7 +279,7 @@ class _SettingsPageState extends State<SettingsPage> {
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.surface,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (_) => const BottomNavigator(initialIndex: 4),
@@ -255,7 +291,7 @@ class _SettingsPageState extends State<SettingsPage> {
           l10n?.settings ?? 'Settings',
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
             letterSpacing: .3,
           ),
         ),
@@ -303,6 +339,23 @@ class _SettingsPageState extends State<SettingsPage> {
                     _LanguageSelector(
                       selectedLanguage: _selectedLanguage,
                       onLanguageChanged: _saveLanguageSetting,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Theme Preference Section
+                _SectionHeader(
+                  title: 'Giao diện theo mùa',
+                  icon: Icons.palette_outlined,
+                ),
+                const SizedBox(height: 12),
+                _SettingsCard(
+                  children: [
+                    _ThemePreferenceSelector(
+                      useAdminTheme: _useAdminTheme,
+                      onChanged: _saveThemePreference,
                     ),
                   ],
                 ),
@@ -419,7 +472,7 @@ class _SectionHeader extends StatelessWidget {
           title,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
             letterSpacing: 0.2,
           ),
         ),
@@ -484,13 +537,13 @@ class _SettingsToggle extends StatelessWidget {
         title,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: Colors.black,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: Colors.black54,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54),
         ),
       ),
       trailing: Switch.adaptive(
@@ -543,17 +596,17 @@ class _SettingsItem extends StatelessWidget {
         title,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: Colors.black,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: Colors.black54,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54),
         ),
       ),
       trailing:
-          trailing ?? const Icon(Icons.chevron_right, color: Colors.black38),
+          trailing ?? Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.38)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       horizontalTitleGap: 12,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -658,6 +711,120 @@ class _LanguageOption extends StatelessWidget {
         ),
       ),
       trailing: Radio<String>(
+        value: value,
+        groupValue: groupValue,
+        onChanged: (value) => onChanged(value!),
+        activeColor: Theme.of(context).colorScheme.primary,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      horizontalTitleGap: 12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+  }
+}
+
+// Theme Preference Selector Widget
+class _ThemePreferenceSelector extends StatelessWidget {
+  final bool useAdminTheme;
+  final ValueChanged<bool> onChanged;
+
+  const _ThemePreferenceSelector({
+    required this.useAdminTheme,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _ThemeOption(
+          icon: Icons.admin_panel_settings,
+          title: 'Theo quản trị viên',
+          subtitle: 'Giao diện thay đổi theo mùa do admin thiết lập',
+          value: true,
+          groupValue: useAdminTheme,
+          onChanged: onChanged,
+        ),
+        const Divider(
+          height: 0,
+          indent: 16 + 44 + 12,
+          endIndent: 12,
+        ),
+        _ThemeOption(
+          icon: Icons.palette,
+          title: 'Giao diện mặc định',
+          subtitle: 'Luôn sử dụng giao diện màu xanh lá truyền thống',
+          value: false,
+          groupValue: useAdminTheme,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+// Theme Option Widget
+class _ThemeOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final bool groupValue;
+  final ValueChanged<bool> onChanged;
+
+  const _ThemeOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.groupValue,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isSelected = value == groupValue;
+
+    return ListTile(
+      onTap: () => onChanged(value),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1) 
+              : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected 
+              ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) 
+              : null,
+        ),
+        child: Icon(
+          icon,
+          color: isSelected 
+              ? Theme.of(context).colorScheme.primary 
+              : Colors.grey.shade600,
+          size: 24,
+        ),
+      ),
+      title: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: isSelected 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.8) 
+              : Colors.black54,
+        ),
+      ),
+      trailing: Radio<bool>(
         value: value,
         groupValue: groupValue,
         onChanged: (value) => onChanged(value!),

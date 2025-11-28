@@ -26,11 +26,11 @@ class PetStatusChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -113,8 +113,8 @@ class PetStatusChart extends StatelessWidget {
                 child: Center(
                   child: Text(
                     '${(percentage * 100).toStringAsFixed(1)}%',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),

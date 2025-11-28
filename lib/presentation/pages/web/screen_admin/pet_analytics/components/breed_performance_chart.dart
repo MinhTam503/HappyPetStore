@@ -26,11 +26,11 @@ class BreedPerformanceChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -172,7 +172,7 @@ class BreedPerformanceChart extends StatelessWidget {
     final colors = [
       Colors.blue,
       Colors.orange,
-      Colors.green,
+      const Color(0xff08A045), // Primary green
       Colors.purple,
       Colors.red,
       Colors.teal,
@@ -185,7 +185,7 @@ class BreedPerformanceChart extends StatelessWidget {
   }
 
   Color _getSuccessRateColor(double rate) {
-    if (rate >= 70) return Colors.green;
+    if (rate >= 70) return const Color(0xff08A045); // Primary green for high success
     if (rate >= 50) return Colors.orange;
     if (rate >= 30) return Colors.red;
     return Colors.grey;

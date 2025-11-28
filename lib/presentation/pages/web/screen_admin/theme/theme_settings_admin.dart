@@ -90,7 +90,7 @@ class _ThemeSettingsAdminState extends State<ThemeSettingsAdmin> {
       case SeasonalTheme.noel:
         return const Color(0xFFD32F2F); // Christmas red
       case SeasonalTheme.tet:
-        return const Color(0xFFFFD700); // Gold
+        return const Color(0xFFFFA000); // Amber gold
       case SeasonalTheme.summer:
         return const Color(0xFF00BCD4); // Cyan
       case SeasonalTheme.autumn:
@@ -253,7 +253,7 @@ class _ThemeCard extends StatelessWidget {
         colors = [const Color(0xFFD32F2F), const Color(0xFF1B5E20)];
         break;
       case SeasonalTheme.tet:
-        colors = [const Color(0xFFD32F2F), const Color(0xFFFFD700)];
+        colors = [const Color(0xFFFFA000), const Color(0xFFFFD54F)];
         break;
       case SeasonalTheme.summer:
         colors = [const Color(0xFF00BCD4), const Color(0xFFFFEB3B)];

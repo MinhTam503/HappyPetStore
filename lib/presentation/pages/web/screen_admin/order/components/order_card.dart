@@ -91,7 +91,7 @@ class OrderCard extends StatelessWidget {
                         Text(email,
                             maxLines: 1, 
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 14, color: Colors.black87)), // Tăng từ 12 lên 14
+                            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87))), // Tăng từ 12 lên 14
                       ],
                     ),
                   ),
@@ -133,12 +133,12 @@ class OrderCard extends StatelessWidget {
                       address,
                       maxLines: 2, // Tăng từ 1 lên 2 để hiển thị nhiều hơn
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.black54, fontSize: 13), // Tăng từ 11 lên 13
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54), fontSize: 13), // Tăng từ 11 lên 13
                     )
                   ),
                   const SizedBox(width: 8),
                   Text(_formatDate(createdAt),
-                      style: const TextStyle(color: Colors.black54, fontSize: 13)), // Tăng từ 11 lên 13
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54), fontSize: 13)), // Tăng từ 11 lên 13
                 ],
               ),
               const SizedBox(height: 10), // Tăng từ 8 lên 10

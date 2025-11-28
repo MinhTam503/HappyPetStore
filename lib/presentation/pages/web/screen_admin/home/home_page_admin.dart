@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
-import 'package:pet_shop/core/constants/app_constants.dart'; // Chứa primaryColor, secondaryColor
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/dashboard/dashboard_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/notification/notification_management_panel.dart';
@@ -427,7 +426,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
 
       if (_loading) {
         return const Scaffold(
-          body: Center(child: CircularProgressIndicator(color: primaryColor)),
+          body: Center(child: CircularProgressIndicator()),
         );
       }
       

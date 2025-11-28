@@ -50,7 +50,7 @@ class PetCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black54,
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(pet.category, style: const TextStyle(color: Colors.white, fontSize: 12)),

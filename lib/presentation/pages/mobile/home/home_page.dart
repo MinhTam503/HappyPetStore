@@ -19,6 +19,7 @@ import 'package:pet_shop/presentation/bloc/popularBloc/popular_event.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_bloc.dart';
 import 'package:pet_shop/presentation/bloc/notification/notification_event.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/presentation/widgets/seasonal_effects_overlay.dart';
 import '../../../bloc/favBloc/fav_bloc.dart';
 import '../../../bloc/favBloc/fav_event.dart';
 
@@ -146,8 +147,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+    return SeasonalEffectsOverlay(
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
       key: _scaffoldKey,
       drawer: const AppDrawer(),
       drawerEnableOpenDragGesture: true,
@@ -211,7 +213,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildAppBarWithSearch(AppLocalizations? l10n) {

@@ -6,6 +6,7 @@ class SettingsService {
   static const String _languageKey = 'selected_language';
   static const String _searchHistoryKey = 'save_search_history';
   static const String _viewedPetsHistoryKey = 'save_viewed_pets_history';
+  static const String _useAdminThemeKey = 'use_admin_theme'; // true = follow admin, false = default theme
 
   // Singleton instance
   static final SettingsService _instance = SettingsService._internal();
@@ -17,12 +18,14 @@ class SettingsService {
   final _languageController = StreamController<String>.broadcast();
   final _searchHistoryController = StreamController<bool>.broadcast();
   final _viewedPetsHistoryController = StreamController<bool>.broadcast();
+  final _useAdminThemeController = StreamController<bool>.broadcast();
 
   // Streams for listening to changes
   Stream<bool> get chatBubbleVisibilityStream => _chatBubbleController.stream;
   Stream<String> get languageStream => _languageController.stream;
   Stream<bool> get searchHistoryStream => _searchHistoryController.stream;
   Stream<bool> get viewedPetsHistoryStream => _viewedPetsHistoryController.stream;
+  Stream<bool> get useAdminThemeStream => _useAdminThemeController.stream;
 
   // Chat Bubble Settings
   Future<bool> getChatBubbleVisibility() async {
@@ -108,11 +111,33 @@ class SettingsService {
     }
   }
 
+  // Theme Preference Settings
+  Future<bool> getUseAdminTheme() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_useAdminThemeKey) ?? true; // Default to follow admin theme
+    } catch (e) {
+      return true; // Default fallback
+    }
+  }
+
+  Future<void> setUseAdminTheme(bool useAdminTheme) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_useAdminThemeKey, useAdminTheme);
+      // Notify listeners
+      _useAdminThemeController.add(useAdminTheme);
+    } catch (e) {
+      // Handle error silently or log
+    }
+  }
+
   // Dispose method to close stream controllers
   void dispose() {
     _chatBubbleController.close();
     _languageController.close();
     _searchHistoryController.close();
     _viewedPetsHistoryController.close();
+    _useAdminThemeController.close();
   }
 }

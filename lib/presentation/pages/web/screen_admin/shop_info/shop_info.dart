@@ -6,7 +6,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pet_shop/auth/firestore_service.dart';
-import 'package:pet_shop/core/constants/app_constants.dart'; // dùng primaryColor, secondaryColor nếu có
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/MapPicker.dart';
 
 
@@ -223,12 +222,12 @@ class _ShopInfoState extends State<ShopInfo> {
                           children: [
                             CircleAvatar(
                               radius: 72,
-                              backgroundColor: secondaryColor,
+                              backgroundColor: Theme.of(context).colorScheme.surface,
                               backgroundImage: (shopInfo!['avatar'] != null && (shopInfo!['avatar'] as String).isNotEmpty)
                                   ? NetworkImage(shopInfo!['avatar'])
                                   : null,
                               child: (shopInfo!['avatar'] == null || (shopInfo!['avatar'] as String).isEmpty)
-                                  ? const Icon(Icons.storefront, size: 48, color: primaryColor)
+                                  ? Icon(Icons.storefront, size: 48, color: Theme.of(context).colorScheme.primary)
                                   : null,
                               onBackgroundImageError: (_, __) {},
                             ),
@@ -236,7 +235,7 @@ class _ShopInfoState extends State<ShopInfo> {
                               right: -4,
                               bottom: -4,
                               child: Material(
-                                color: primaryColor,
+                                color: Theme.of(context).colorScheme.primary,
                                 borderRadius: BorderRadius.circular(24),
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(24),
@@ -326,7 +325,7 @@ class _ShopInfoState extends State<ShopInfo> {
                       children: [
                         Row(
                           children:  [
-                            const Icon(Icons.map_outlined, color: primaryColor),
+                            const Icon(Icons.map_outlined, color: null),
                             const SizedBox(width: 8),
                             Text(l10n.shopLocation, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                           ],
@@ -392,8 +391,8 @@ class _ShopInfoState extends State<ShopInfo> {
                             icon: const Icon(Icons.edit_location_alt_outlined),
                             label: Text(l10n.selectOnMap),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: primaryColor,
-                              side: const BorderSide(color: primaryColor),
+                              foregroundColor: Theme.of(context).colorScheme.primary,
+                              side: BorderSide(color: Theme.of(context).colorScheme.primary),
                             ),
                           ),
                         ),
