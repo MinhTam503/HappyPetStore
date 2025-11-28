@@ -1,0 +1,2 @@
+/Users/minhtam/Subjects/HappyPetStore/android/app/.cxx/RelWithDebInfo/343r4s6j/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/minhtam/Subjects/HappyPetStore/android/app/.cxx/RelWithDebInfo/343r4s6j/armeabi-v7a/CMakeFiles/rebuild_cache.dir

@@ -333,6 +333,7 @@
   "findPerfectCompanion": "Hãy tìm người bạn đồng hành hoàn hảo cho gia đình bạn",
   "searchPetsPlaceholder": "Tìm kiếm thú cưng",
   "genderAll": "Tất cả",
+  "all": "Tất cả",
   "male": "Đực", 
   "female": "Cái",
   "maleBird": "Trống",
@@ -923,6 +924,7 @@
     }
   },
   "shareText": "Xem thú cưng trong phòng của tôi!",
+  "comment": "Bình luận",
   "collapseControls": "Thu gọn",
   "expandControls": "Mở rộng",
   "flip": "Lật",
@@ -1152,7 +1154,21 @@
     "contentViolation": "Nội dung chứa từ ngữ bị cấm",
     "totalSensitiveWords": "Tổng số từ nhạy cảm",
     "noSensitiveWordsFound": "Không tìm thấy từ nhạy cảm nào",
-    "addFirstWord": "Thêm từ nhạy cảm đầu tiên"
+    "addFirstWord": "Thêm từ nhạy cảm đầu tiên",
+    "downloadApp": "Tải ứng dụng di động",
+    "@downloadApp": {"description": "Download mobile app title"},
+    "downloadAppSubtitle": "Trải nghiệm tốt nhất trên thiết bị di động của bạn",
+    "@downloadAppSubtitle": {"description": "Download app subtitle"},
+    "downloadForAndroid": "Tải về cho Android",
+    "@downloadForAndroid": {"description": "Download for Android button"},
+    "downloadForIOS": "Tải về cho iOS",
+    "@downloadForIOS": {"description": "Download for iOS button"},
+    "downloadingAndroid": "Đang tải ứng dụng Android...",
+    "@downloadingAndroid": {"description": "Downloading Android app message"},
+    "openingAppStore": "Đang mở App Store...",
+    "@openingAppStore": {"description": "Opening App Store message"},
+    "downloadError": "Lỗi khi tải ứng dụng",
+    "@downloadError": {"description": "Download error message"}
 }
 
 

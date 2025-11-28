@@ -562,7 +562,7 @@ class _LoginPageNewState extends State<LoginPageNew>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text("Not a member? "),
+                              const Text("Chưa có tài khoản? "),
                               GestureDetector(
                                 onTap: widget.onTap,
                                 child: Text(

@@ -1383,6 +1383,10 @@
   "@genderAll": {
     "description": "All gender filter option"
   },
+  "all": "All",
+  "@all": {
+    "description": "All items filter option"
+  },
   "male": "Male",
   "@male": {
     "description": "Male gender option"
@@ -1863,8 +1867,8 @@
   "passwordResetStep3": "3. Then update a new password in account settings",
   "passwordResetNote": "Note: SMS-based password reset is not supported yet.",
   "gotIt": "Got it",
-  "ok": "OK"
-  ,
+  "ok": "OK",
+  "comment": "Comment",
   "you": "you",
   "somethingWentWrong": "Something went wrong",
   "loginButton": "LOGIN",
@@ -2324,7 +2328,21 @@
   "contentViolation": "Content contains prohibited words",
   "totalSensitiveWords": "Total Sensitive Words",
   "noSensitiveWordsFound": "No sensitive words found",
-  "addFirstWord": "Add your first sensitive word"
+  "addFirstWord": "Add your first sensitive word",
+  "downloadApp": "Download Mobile App",
+  "@downloadApp": {"description": "Download mobile app title"},
+  "downloadAppSubtitle": "Get the best experience on your mobile device",
+  "@downloadAppSubtitle": {"description": "Download app subtitle"},
+  "downloadForAndroid": "Download for Android",
+  "@downloadForAndroid": {"description": "Download for Android button"},
+  "downloadForIOS": "Download for iOS",
+  "@downloadForIOS": {"description": "Download for iOS button"},
+  "downloadingAndroid": "Downloading Android app...",
+  "@downloadingAndroid": {"description": "Downloading Android app message"},
+  "openingAppStore": "Opening App Store...",
+  "@openingAppStore": {"description": "Opening App Store message"},
+  "downloadError": "Error downloading app",
+  "@downloadError": {"description": "Download error message"}
 }
 
 

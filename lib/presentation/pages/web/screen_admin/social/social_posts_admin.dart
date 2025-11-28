@@ -709,11 +709,9 @@ class _PostDetailsDialogState extends State<_PostDetailsDialog> with SingleTicke
         // Stats
         Row(
           children: [
-            _StatItem(icon: Icons.favorite, label: 'Likes', value: widget.post.likeCount),
+            _StatItem(icon: Icons.favorite, label:l10n.like, value: widget.post.likeCount),
             const SizedBox(width: 24),
-            _StatItem(icon: Icons.comment, label: 'Comments', value: widget.post.commentCount),
-            const SizedBox(width: 24),
-            _StatItem(icon: Icons.remove_red_eye, label: 'Views', value: widget.post.viewCount),
+            _StatItem(icon: Icons.comment, label: l10n.comment, value: widget.post.commentCount),
           ],
         ),
         const SizedBox(height: 16),

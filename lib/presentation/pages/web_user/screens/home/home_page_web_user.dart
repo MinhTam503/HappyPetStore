@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/utils/gender_localizer.dart';
 import 'package:pet_shop/presentation/pages/web_user/widgets/pet_card_web_user.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:pet_shop/presentation/widgets/download_app_section.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 /// Trang chủ dành cho Web User: hiển thị danh sách thú cưng + tìm kiếm + lọc + download app
 class HomePageWebUser extends StatefulWidget {
@@ -16,7 +18,7 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
   List<Map<String, dynamic>> _allPets = [];
   List<Map<String, dynamic>> _filteredPets = [];
   bool _isLoading = true;
-  List<String> _availableCategories = ['All'];
+  List<String> _availableCategories = [];
   bool _categoriesLoaded = false;
   String _selectedCategory = 'All';
   String _priceSortOrder = 'none'; // none | asc | desc
@@ -130,16 +132,6 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
     Navigator.pushNamed(context, '/home/pet/$petId');
   }
 
-  Future<void> _launchURL(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể mở liên kết: $url')),
-      );
-    }
-  }
-
   int _gridCount(double width) {
     if (width < 600) return 2; // phone
     if (width < 900) return 3; // small tablet
@@ -211,21 +203,7 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Row(
-              children: [
-                _DownloadButton(
-                  icon: Icons.android,
-                  label: 'Android',
-                  onPressed: () => _launchURL('https://your-domain.com/app-release.apk'), // TODO replace
-                ),
-                const SizedBox(width: 8),
-                _DownloadButton(
-                  icon: Icons.apple,
-                  label: 'iOS',
-                  onPressed: () => _launchURL('https://apps.apple.com/app/your-app-id'), // TODO replace
-                ),
-              ],
-            ),
+            child: DownloadAppSection(isMobile: true),
           ),
         ],
       ),
@@ -255,6 +233,7 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
                             _applyFilters();
                           },
                         ),
+                        SizedBox(height: 10,),
                         _filteredPets.isEmpty
                             ? Center(
                                 child: Padding(
@@ -323,6 +302,11 @@ class _HomePageWebUserState extends State<HomePageWebUser> {
                               ),
                             ),
                           ),
+                        ],
+                        // Desktop Download Section
+                        if (width >= 600) ...[
+                          const SizedBox(height: 16),
+                          Center(child: const DownloadAppSection(isMobile: false)),
                         ],
                       ],
                     ),
@@ -474,35 +458,6 @@ class _PaginationControls extends StatelessWidget {
   }
 }
 
-class _DownloadButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  const _DownloadButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 20),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: primaryColor,
-        side: const BorderSide(color: primaryColor, width: 1.5),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-}
-
 class _FilterBar extends StatelessWidget {
   final List<String> availableCategories;
   final String selectedCategory;
@@ -520,6 +475,8 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Wrap(
       spacing: 12,
       runSpacing: 8,
@@ -531,10 +488,21 @@ class _FilterBar extends StatelessWidget {
             child: DropdownButton<String>(
               value: selectedCategory,
               items: availableCategories
-                  .map((cat) => DropdownMenuItem<String>(
-                        value: cat,
-                        child: Text(cat),
-                      ))
+                  .map((cat) {
+                    // Localize category names and "All"
+                    String displayName;
+                    if (cat == 'All') {
+                      displayName = l10n?.all ?? 'All';
+                    } else if (l10n != null) {
+                      displayName = GenderLocalizer.getLocalizedCategory(l10n, cat);
+                    } else {
+                      displayName = cat;
+                    }
+                    return DropdownMenuItem<String>(
+                      value: cat,
+                      child: Text(displayName),
+                    );
+                  })
                   .toList(),
               onChanged: (v) => onCategoryChanged(v ?? 'All'),
             ),

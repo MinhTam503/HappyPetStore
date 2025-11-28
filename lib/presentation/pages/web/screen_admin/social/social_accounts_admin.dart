@@ -504,7 +504,7 @@ class _AccountDetailsDialog extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _StatColumn(
-                          label: 'Posts',
+                          label: l10n.post,
                           value: account.stats.posts.toString(),
                         ),
                         _StatColumn(
