@@ -100,12 +100,12 @@ class ThemeManager {
         );
       case SeasonalTheme.tet:
         return ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFFD700), // golden yellow
+          seedColor: const Color(0xFFFFA000), // amber/gold
           brightness: Brightness.light,
-          primary: const Color(0xFFFFD700), // Gold
-          secondary: const Color(0xFFFFC107), // Yellow
-          surface: const Color(0xFFFFFAF0), // Very light yellow background
-          background: const Color(0xFFFFFAF0),
+          primary: const Color(0xFFFFA000), // Amber gold
+          secondary: const Color(0xFFFFD54F), // Light gold
+          surface: const Color(0xFFFFF8E1), // Very light amber background
+          background: const Color(0xFFFFF8E1),
         );
       case SeasonalTheme.summer:
         return ColorScheme.fromSeed(
