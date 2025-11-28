@@ -422,9 +422,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final total = subtotal + shippingFee;
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
   title: const Text('Thanh toán'),

@@ -24,7 +24,8 @@ class PersonalInfoCard extends StatelessWidget {
     required this.onGenderChanged,
   });
 
-  InputDecoration _inputDecorationWithIcon({required String label, required IconData icon}) {
+  InputDecoration _inputDecorationWithIcon(BuildContext context,
+      {required String label, required IconData icon}) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
@@ -37,9 +38,10 @@ class PersonalInfoCard extends StatelessWidget {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      focusedBorder: const OutlineInputBorder(
+      focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.all(Radius.circular(12)),
-        borderSide: BorderSide(color: primaryColor, width: 1.6),
+        borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary, width: 1.6),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     );
@@ -60,12 +62,14 @@ class PersonalInfoCard extends StatelessWidget {
           children: [
             const Text(
               'Thông tin cá nhân',
-              style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black),
+              style:
+                  TextStyle(fontWeight: FontWeight.w800, color: Colors.black),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: displayNameController,
               decoration: _inputDecorationWithIcon(
+                context,
                 label: 'Tên hiển thị',
                 icon: Icons.person_outline,
               ),
@@ -77,6 +81,7 @@ class PersonalInfoCard extends StatelessWidget {
               onTap: onSelectBirthDate,
               child: InputDecorator(
                 decoration: _inputDecorationWithIcon(
+                  context,
                   label: 'Ngày sinh',
                   icon: Icons.cake_outlined,
                 ),
@@ -85,7 +90,9 @@ class PersonalInfoCard extends StatelessWidget {
                       ? DateFormat('dd/MM/yyyy').format(selectedBirthDate!)
                       : 'Chưa chọn ngày sinh',
                   style: TextStyle(
-                    color: selectedBirthDate != null ? Colors.black : Colors.grey[600],
+                    color: selectedBirthDate != null
+                        ? Colors.black
+                        : Colors.grey[600],
                   ),
                 ),
               ),
@@ -94,6 +101,7 @@ class PersonalInfoCard extends StatelessWidget {
             DropdownButtonFormField<String>(
               value: selectedGender,
               decoration: _inputDecorationWithIcon(
+                context,
                 label: 'Giới tính',
                 icon: Icons.person_outline,
               ),

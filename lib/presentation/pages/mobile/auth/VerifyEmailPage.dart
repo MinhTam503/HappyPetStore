@@ -53,9 +53,9 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         title: Text(AppLocalizations.of(context)!.verifyEmail, 
                    style: TextStyle(color: Colors.black)),

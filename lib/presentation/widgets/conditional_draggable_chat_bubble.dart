@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pet_shop/presentation/widgets/draggable_chat_bubble_widget.dart';
 import 'package:pet_shop/core/services/settings_service.dart';
+import 'package:pet_shop/core/services/theme_manager.dart';
 import 'dart:async';
 
 class ConditionalDraggableChatBubble extends StatefulWidget {
@@ -75,6 +76,14 @@ class _ConditionalDraggableChatBubbleState extends State<ConditionalDraggableCha
       return const SizedBox.shrink();
     }
     
-    return const DraggableChatBubbleWidget();
+    final themeManager = ThemeManager();
+    return StreamBuilder<SeasonalTheme>(
+      stream: themeManager.stream,
+      initialData: themeManager.current,
+      builder: (context, snapshot) {
+        final theme = snapshot.data ?? SeasonalTheme.defaultTheme;
+        return DraggableChatBubbleWidget(seasonalTheme: theme);
+      },
+    );
   }
 }

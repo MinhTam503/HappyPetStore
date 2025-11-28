@@ -102,11 +102,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? imageUrl = (userInfo?['imageUrl'] as String?);
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n?.profile ?? "Hồ sơ",
           style: theme.textTheme.titleLarge?.copyWith(

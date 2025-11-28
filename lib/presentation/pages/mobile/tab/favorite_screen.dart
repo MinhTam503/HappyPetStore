@@ -101,7 +101,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         iconTheme: const IconThemeData(
           color: primaryColor,
@@ -109,7 +109,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
         ),
         key: _scaffoldKey,
         centerTitle: true,
-        backgroundColor: secondaryColor,
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         title: Text(
           AppLocalizations.of(context)!.favorites,

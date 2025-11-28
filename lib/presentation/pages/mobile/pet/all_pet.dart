@@ -250,9 +250,9 @@ class _AllPetState extends State<AllPet> {
     final double aspect = _aspectForCrossCount(cross); // tỷ lệ card theo cột
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         title: const Text(
           "All Pets",

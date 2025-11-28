@@ -73,10 +73,10 @@ class CartItem extends StatelessWidget {
                             const SizedBox(height: 8),
                             Text(
                               priceText,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: primaryColor,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ],

@@ -486,9 +486,9 @@ class _EditProfileState extends State<EditProfile> {
             // Email verification UI moved to ContactInfoCard; state.emailVerified retained for compatibility
 
             return Scaffold(
-              backgroundColor: secondaryColor,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               appBar: AppBar(
-                backgroundColor: secondaryColor,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 elevation: 0,
                 centerTitle: true,
                 iconTheme: const IconThemeData(color: Colors.black),

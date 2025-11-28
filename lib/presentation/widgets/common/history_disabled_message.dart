@@ -68,8 +68,8 @@ class HistoryDisabledMessage extends StatelessWidget {
               AppLocalizations.of(context)?.goToSettings ?? 'Đi tới cài đặt',
             ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: primaryColor,
-              side: const BorderSide(color: primaryColor),
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              side: BorderSide(color: Theme.of(context).colorScheme.primary),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),

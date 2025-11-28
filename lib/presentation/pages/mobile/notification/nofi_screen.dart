@@ -162,9 +162,9 @@ class _NofiScreenState extends State<NofiScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         centerTitle: true,
         elevation: 0,
         title: Text(

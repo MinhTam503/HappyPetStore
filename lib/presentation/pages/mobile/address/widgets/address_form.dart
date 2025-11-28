@@ -54,11 +54,11 @@ class AddressForm extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Thông tin liên hệ',
+                  Text('Thông tin liên hệ',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: primaryColor)),
+                          color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: nameController,
@@ -105,11 +105,11 @@ class AddressForm extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Địa chỉ',
+                  Text('Địa chỉ',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: primaryColor)),
+                          color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: 16),
                   SearchableDropdownField(
                     labelText: 'Tỉnh/Thành phố *',
@@ -180,11 +180,11 @@ class AddressForm extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Vị trí trên bản đồ',
+                  Text('Vị trí trên bản đồ',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: primaryColor)),
+                          color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -203,7 +203,7 @@ class AddressForm extends StatelessWidget {
                       ),
                       IconButton(
                         onPressed: onPickLocation,
-                        icon: const Icon(Icons.map, color: primaryColor),
+                        icon: Icon(Icons.map, color: Theme.of(context).colorScheme.primary),
                         tooltip: 'Chọn vị trí trên bản đồ',
                       ),
                     ],
@@ -215,7 +215,7 @@ class AddressForm extends StatelessWidget {
                         'Địa chỉ này sẽ được chọn mặc định khi đặt hàng'),
                     value: isDefault,
                     onChanged: onDefaultChanged,
-                    activeColor: primaryColor,
+                    activeColor: Theme.of(context).colorScheme.primary,
                     contentPadding: EdgeInsets.zero,
                   ),
                 ],

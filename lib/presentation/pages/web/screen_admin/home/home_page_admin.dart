@@ -9,6 +9,7 @@ import 'package:pet_shop/presentation/pages/web/screen_admin/pet/pets_admin.dart
 import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_analytics_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/revenue/revenue_page.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/theme/theme_settings_admin.dart';
 import 'package:pet_shop/presentation/widgets/settings_menu.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/social/social_posts_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/social/social_accounts_admin.dart';
@@ -72,6 +73,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       const SocialAccountsAdmin(), // Social Network - Accounts Management
       const CommunityGroupsAdmin(), // Social Network - Groups Management
       const SensitiveWordsAdmin(), // Social Network - Sensitive Words
+      const ThemeSettingsAdmin(), // Theme Settings
       //  const ShippingManagementPage(),
       //  const GHNTestPage(), // GHN Test page
     ];
@@ -216,6 +218,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             label: l10n.manageSensitiveWords,
           ),
         ],
+      ),
+      NavigationItem(
+        icon: Icons.palette_outlined,
+        selectedIcon: Icons.palette,
+        label: 'Giao diện',
       ),
       // NavigationItem(
       //   icon: Icons.local_shipping_outlined,
@@ -542,7 +549,22 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         itemCount: items.length,
-                        itemBuilder: (context, i) => _buildNavigationItem(i, items[i]),
+                        itemBuilder: (context, i) {
+                          // Calculate actual page index
+                          // Parent items with subitems don't have their own page
+                          // Only count actual pages before this item
+                          int pageIndex = 0;
+                          for (int j = 0; j < i; j++) {
+                            if (items[j].subItems != null && items[j].subItems!.isNotEmpty) {
+                              // Parent with subitems: count subitems but not parent itself
+                              pageIndex += items[j].subItems!.length;
+                            } else {
+                              // Regular item: count it
+                              pageIndex += 1;
+                            }
+                          }
+                          return _buildNavigationItem(pageIndex, items[i]);
+                        },
                       ),
                     ),
                   ),

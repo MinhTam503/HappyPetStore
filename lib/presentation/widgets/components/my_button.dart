@@ -15,7 +15,7 @@ class MyButton extends StatelessWidget {
         ElevatedButton(
             style: ElevatedButton.styleFrom(
 
-                backgroundColor: primaryColor,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white),
             onPressed: onPressed,
             child: Text(text))

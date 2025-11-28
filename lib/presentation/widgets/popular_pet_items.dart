@@ -400,8 +400,8 @@ class _PrimaryButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          foregroundColor: primaryColor,
-          side: BorderSide(color: primaryColor, width: 1.2),
+          foregroundColor: Theme.of(context).colorScheme.primary,
+          side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.2),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(fontWeight: FontWeight.w700),

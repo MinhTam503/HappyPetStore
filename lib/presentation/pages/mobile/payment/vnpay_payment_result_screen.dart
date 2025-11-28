@@ -32,9 +32,9 @@ class _VnpayPaymentResultScreenState extends State<VnpayPaymentResultScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         title: const Text(
           'Kết quả thanh toán',

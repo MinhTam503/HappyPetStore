@@ -197,9 +197,9 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
   Widget build(BuildContext context) {
     final canResend = _resendSeconds == 0;
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
         title: const Text('Đổi số điện thoại',

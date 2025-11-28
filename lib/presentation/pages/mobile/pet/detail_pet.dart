@@ -363,10 +363,10 @@ class _DetailPetState extends State<DetailPet> {
                         ),
                         Text(
                           CurrencyHelper.formatVND(data['price'] ?? 0),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ],
@@ -466,7 +466,7 @@ class _DetailPetState extends State<DetailPet> {
                     // Thông tin cửa hàng
                     Card(
                       child: ListTile(
-                        leading: const Icon(Icons.store, color: primaryColor),
+                        leading: Icon(Icons.store, color: Theme.of(context).colorScheme.primary),
                         title: const Text('Thông tin cửa hàng'),
                         subtitle: const Text('Xem chi tiết về cửa hàng'),
                         trailing: const Icon(Icons.arrow_forward_ios),
@@ -552,7 +552,7 @@ class _DetailPetState extends State<DetailPet> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: secondaryColor,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -561,15 +561,15 @@ class _DetailPetState extends State<DetailPet> {
                   elevation: 4,
                   minimumSize: const Size.fromHeight(65),
                 ),
-                child: const Column(
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.message, color: primaryColor, size: 24),
+                    Icon(Icons.message, color: Theme.of(context).colorScheme.primary, size: 24),
                     Text(
                       'Liên hệ',
                       style: TextStyle(
                         fontSize: 15,
-                        color: primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

@@ -127,9 +127,9 @@ class _AddressListPageState extends State<AddressListPage> {
         },
         builder: (context, state) {
           return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -142,7 +142,7 @@ class _AddressListPageState extends State<AddressListPage> {
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: primaryColor),
+            icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
             onPressed: () => _navigateToEdit(context),
           ),
         ],
@@ -178,7 +178,7 @@ class _AddressListPageState extends State<AddressListPage> {
                         icon: const Icon(Icons.add),
                         label: Text(AppLocalizations.of(context)!.addAddress),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         ),
@@ -201,7 +201,7 @@ class _AddressListPageState extends State<AddressListPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: isSelected ? primaryColor : Colors.transparent,
+                          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
                           width: 2,
                         ),
                       ),
@@ -233,7 +233,7 @@ class _AddressListPageState extends State<AddressListPage> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: primaryColor,
+                                        color: Theme.of(context).colorScheme.primary,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(

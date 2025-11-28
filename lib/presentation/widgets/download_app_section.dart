@@ -60,13 +60,13 @@ class _DesktopDownloadButtons extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            primaryColor.withOpacity(0.05),
+            Theme.of(context).colorScheme.primary.withOpacity(0.05),
             secondaryColor.withOpacity(0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: primaryColor.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -218,8 +218,8 @@ class _AnimatedDownloadButtonState extends State<_AnimatedDownloadButton>
                 end: Alignment.bottomRight,
                 colors: _isHovering
                     ? [
-                        isDark ? Colors.black : primaryColor,
-                        isDark ? Colors.grey[900]! : primaryColor.withOpacity(0.8),
+                        isDark ? Colors.black : Theme.of(context).colorScheme.primary,
+                        isDark ? Colors.grey[900]! : Theme.of(context).colorScheme.primary.withOpacity(0.8),
                       ]
                     : [
                         Colors.white,
@@ -230,13 +230,13 @@ class _AnimatedDownloadButtonState extends State<_AnimatedDownloadButton>
               border: Border.all(
                 color: _isHovering
                     ? Colors.transparent
-                    : (isDark ? Colors.black : primaryColor),
+                    : (isDark ? Colors.black : Theme.of(context).colorScheme.primary),
                 width: 1.5,
               ),
               boxShadow: _isHovering
                   ? [
                       BoxShadow(
-                        color: (isDark ? Colors.black : primaryColor).withOpacity(0.3),
+                        color: (isDark ? Colors.black : Theme.of(context).colorScheme.primary).withOpacity(0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -256,7 +256,7 @@ class _AnimatedDownloadButtonState extends State<_AnimatedDownloadButton>
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        _isHovering ? Colors.white : (isDark ? Colors.black : primaryColor),
+                        _isHovering ? Colors.white : (isDark ? Colors.black : Theme.of(context).colorScheme.primary),
                       ),
                     ),
                   )
@@ -269,7 +269,7 @@ class _AnimatedDownloadButtonState extends State<_AnimatedDownloadButton>
                         size: widget.compact ? 20 : 32,
                         color: _isHovering
                             ? Colors.white
-                            : (isDark ? Colors.black : primaryColor),
+                            : (isDark ? Colors.black : Theme.of(context).colorScheme.primary),
                       ),
                       SizedBox(width: widget.compact ? 6 : 12),
                       Column(
@@ -283,7 +283,7 @@ class _AnimatedDownloadButtonState extends State<_AnimatedDownloadButton>
                               fontWeight: FontWeight.w600,
                               color: _isHovering
                                   ? Colors.white
-                                  : (isDark ? Colors.black : primaryColor),
+                                  : (isDark ? Colors.black : Theme.of(context).colorScheme.primary),
                             ),
                           ),
                           if (!widget.compact && widget.subtitle != null)
@@ -343,7 +343,7 @@ Future<void> _downloadApp(BuildContext context, String platform) async {
                   ? (l10n?.downloadingAndroid ?? 'Downloading Android app...')
                   : (l10n?.openingAppStore ?? 'Opening App Store...'),
             ),
-            backgroundColor: primaryColor,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
           ),

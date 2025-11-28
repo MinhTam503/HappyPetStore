@@ -188,12 +188,12 @@ class _SearchRecommendationsSectionState extends State<SearchRecommendationsSect
               children: [
                 // Icon(Icons.recommend, color: primaryColor, size: 20),
                 // const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Có thể bạn quan tâm',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const Spacer(),

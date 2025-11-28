@@ -312,7 +312,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
     final localizedCategoryName = GenderLocalizer.getLocalizedCategory(l10n, widget.categoryName);
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,

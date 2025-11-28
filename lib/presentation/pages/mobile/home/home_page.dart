@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/auth/auth_service.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 // Removed LocalizationHelper after migration to AppLocalizations
 import 'package:pet_shop/presentation/pages/mobile/search/search_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
@@ -148,7 +147,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       key: _scaffoldKey,
       drawer: const AppDrawer(),
       drawerEnableOpenDragGesture: true,
@@ -163,7 +162,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 floating: true,
                 pinned: true,
                 snap: true,
-                backgroundColor: secondaryColor,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 elevation: 0,
                 toolbarHeight: 55,
                 expandedHeight: 55,
@@ -217,7 +216,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildAppBarWithSearch(AppLocalizations? l10n) {
     return Container(
-      color: secondaryColor,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.only(top: 12, right: 10, bottom: 10, left: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -226,7 +225,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           SizedBox.square(
             dimension: 28,
             child: IconButton(
-              icon: const Icon(Icons.menu, color: primaryColor),
+              icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.primary),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               iconSize: 28,
@@ -340,7 +339,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 TextSpan(text: "${l10n?.hello ?? 'Hello'}, "),
                 TextSpan(
                   text: "$userName\n",
-                  style: const TextStyle(color: primaryColor),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
                 TextSpan(
                   text: l10n?.welcomeToHappyPets ?? 'Welcome to Happy Pets Shop!',
@@ -432,7 +431,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildTabBar(AppLocalizations? l10n) {
     return Container(
-      color: secondaryColor,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -489,7 +488,7 @@ class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Material(
-      color: secondaryColor,
+      color: Theme.of(context).colorScheme.surface,
       child: child,
     );
   }

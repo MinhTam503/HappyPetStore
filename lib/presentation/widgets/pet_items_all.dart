@@ -177,10 +177,10 @@ class _PetItemsAllState extends State<PetItemsAll> {
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
                                 priceStr,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
-                                  color: primaryColor,
+                                  color: Theme.of(context).colorScheme.primary,
                                   letterSpacing: 0.2,
                                 ),
                               ),
@@ -362,7 +362,7 @@ class _PrimaryButton extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

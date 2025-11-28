@@ -47,9 +47,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     final horizontal = isWide ? size.width * 0.2 : 20.0;
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         centerTitle: true,
         elevation: 0,
         title: Text(

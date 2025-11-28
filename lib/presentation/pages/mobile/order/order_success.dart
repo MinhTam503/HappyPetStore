@@ -127,9 +127,9 @@ class _OrderSuccessState extends State<OrderSuccess> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         centerTitle: true,
         title: const Text("Thanh Toán Thành Công   "),
       ),

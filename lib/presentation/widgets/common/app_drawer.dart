@@ -278,8 +278,8 @@ class _AppDrawerState extends State<AppDrawer> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  primaryColor,
-                  primaryColor.withOpacity(0.8),
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary.withOpacity(0.8),
                 ],
               ),
             ),
@@ -307,10 +307,10 @@ class _AppDrawerState extends State<AppDrawer> {
                     child: avatarUrl.isEmpty
                         ? Text(
                             _getInitials(displayName),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           )
                         : null,
@@ -513,7 +513,7 @@ class _DrawerItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       hoverColor:
-          isDestructive ? Colors.red.shade50 : primaryColor.withOpacity(0.1),
+          isDestructive ? Colors.red.shade50 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
     );
   }
 }

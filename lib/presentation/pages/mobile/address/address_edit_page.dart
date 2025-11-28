@@ -271,7 +271,7 @@ class _AddressEditPageState extends State<AddressEditPage> {
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                         ),
                         child: const Text('Xác nhận'),
@@ -337,9 +337,9 @@ class _AddressEditPageState extends State<AddressEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -400,7 +400,7 @@ class _AddressEditPageState extends State<AddressEditPage> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

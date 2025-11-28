@@ -96,9 +96,9 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           }
         },
         child: Scaffold(
-          backgroundColor: secondaryColor,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           appBar: AppBar(
-            backgroundColor: secondaryColor,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             elevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.black),

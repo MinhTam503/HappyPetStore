@@ -104,9 +104,9 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: true,
         title: const Text('Đổi email', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
@@ -148,7 +148,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                 child: ElevatedButton(
                   onPressed: _isSubmitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isSubmitting

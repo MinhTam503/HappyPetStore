@@ -164,7 +164,7 @@ class _PetItemsState extends State<PetItems> {
                             onPressed: _addToCart,
                             icon: Icon(
                               Icons.shopping_cart_outlined,
-                              color: primaryColor,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],

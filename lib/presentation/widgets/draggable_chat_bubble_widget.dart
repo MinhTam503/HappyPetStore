@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:pet_shop/presentation/pages/mobile/chatBot/chatbot_page.dart';
+import 'package:pet_shop/core/services/theme_manager.dart';
 
 class DraggableChatBubbleWidget extends StatefulWidget {
-  const DraggableChatBubbleWidget({super.key});
+  final SeasonalTheme seasonalTheme;
+  
+  const DraggableChatBubbleWidget({
+    super.key,
+    this.seasonalTheme = SeasonalTheme.defaultTheme,
+  });
 
   @override
   State<DraggableChatBubbleWidget> createState() => _DraggableChatBubbleWidgetState();
@@ -127,8 +133,73 @@ class _DraggableChatBubbleWidgetState extends State<DraggableChatBubbleWidget>
     }
   }
 
+  // Get colors based on seasonal theme
+  List<Color> _getBubbleGradient() {
+    switch (widget.seasonalTheme) {
+      case SeasonalTheme.noel:
+        return [
+          const Color(0xFFD32F2F), // Christmas red
+          const Color(0xFF1B5E20), // Christmas green
+        ];
+      case SeasonalTheme.tet:
+        return [
+          const Color(0xFFFFD700), // Gold
+          const Color(0xFFFFC107), // Yellow
+        ];
+      case SeasonalTheme.summer:
+        return [
+          const Color(0xFF00BCD4), // Cyan blue
+          const Color(0xFF4DD0E1), // Light cyan
+        ];
+      case SeasonalTheme.autumn:
+        return [
+          const Color(0xFFFF8F00), // Orange
+          const Color(0xFFD84315), // Deep orange
+        ];
+      case SeasonalTheme.defaultTheme:
+        return [
+          const Color(0xff08A045), // App green
+          const Color(0xff06803A), // Darker green
+        ];
+    }
+  }
+
+  Color _getBubbleShadowColor() {
+    switch (widget.seasonalTheme) {
+      case SeasonalTheme.noel:
+        return const Color(0xFFD32F2F);
+      case SeasonalTheme.tet:
+        return const Color(0xFFFFD700); // Gold
+      case SeasonalTheme.summer:
+        return const Color(0xFF00BCD4);
+      case SeasonalTheme.autumn:
+        return const Color(0xFFFF8F00);
+      case SeasonalTheme.defaultTheme:
+        return const Color(0xff08A045);
+    }
+  }
+
+  IconData _getBubbleIcon() {
+    switch (widget.seasonalTheme) {
+      case SeasonalTheme.noel:
+        return Icons.card_giftcard; // Gift for Christmas
+      case SeasonalTheme.tet:
+        return Icons.spa; // Flower/blossom for Tet
+      case SeasonalTheme.summer:
+        return Icons.beach_access; // Beach umbrella for Summer
+      case SeasonalTheme.autumn:
+        return Icons.eco; // Leaf for Autumn
+      case SeasonalTheme.defaultTheme:
+        return Icons.pets;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final gradientColors = _getBubbleGradient();
+    final shadowColor = _getBubbleShadowColor();
+    final iconData = _getBubbleIcon();
+
     return Positioned(
       left: _position.dx,
       top: _position.dy,
@@ -149,14 +220,11 @@ class _DraggableChatBubbleWidgetState extends State<DraggableChatBubbleWidget>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ],
+                    colors: gradientColors,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3 * _pulseAnimation.value),
+                      color: shadowColor.withOpacity(0.4 * _pulseAnimation.value),
                       spreadRadius: 8 * _pulseAnimation.value,
                       blurRadius: 20,
                       offset: const Offset(0, 2),
@@ -180,9 +248,9 @@ class _DraggableChatBubbleWidgetState extends State<DraggableChatBubbleWidget>
                       ),
                       child: Stack(
                         children: [
-                          const Center(
+                          Center(
                             child: Icon(
-                              Icons.pets,
+                              iconData,
                               color: Colors.white,
                               size: 30,
                             ),

@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/firestore_service.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -103,9 +102,9 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
     final LatLng initialLatLng = _getShopLatLng();
     print("initialLatLng (trong build):  $initialLatLng");
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         centerTitle: true,
         elevation: 0,
         title: Text(
@@ -138,7 +137,7 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: primaryColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -148,8 +147,8 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.location_on,
-                          color: primaryColor, size: 20),
+                      Icon(Icons.location_on,
+                          color: Theme.of(context).colorScheme.primary, size: 20),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -182,7 +181,7 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                             icon: const Icon(Icons.chat_bubble_outline),
                             label: const Text('Nhắn tin'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
@@ -195,12 +194,12 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _openMap,
-                            icon: const Icon(Icons.map_outlined,
-                                color: primaryColor),
-                            label: const Text('Mở bản đồ',
-                                style: TextStyle(color: primaryColor)),
+                            icon: Icon(Icons.map_outlined,
+                                color: Theme.of(context).colorScheme.primary),
+                            label: Text('Mở bản đồ',
+                                style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: primaryColor),
+                              side: BorderSide(color: Theme.of(context).colorScheme.primary),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12)),
@@ -298,7 +297,7 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                               'Giới thiệu',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: primaryColor,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                             const SizedBox(height: 10),

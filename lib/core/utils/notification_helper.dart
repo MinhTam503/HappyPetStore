@@ -71,7 +71,7 @@ class NotificationHelper {
       title: title,
       message: message,
       icon: Icons.info,
-      backgroundColor: primaryColor,
+      backgroundColor: Theme.of(context).colorScheme.primary,
       iconColor: Colors.white,
       duration: duration ?? const Duration(seconds: 3),
     );

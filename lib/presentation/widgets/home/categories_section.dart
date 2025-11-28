@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/pet/category_pets_page.dart';
 
 class CategoriesSection extends StatelessWidget {
@@ -30,7 +29,7 @@ class CategoriesSection extends StatelessWidget {
 
     return Container(
       height: 90,
-      color: secondaryColor,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.only(top: 5, bottom: 10),
       child: Center(
         child: SingleChildScrollView(
@@ -58,8 +57,8 @@ class CategoriesSection extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(width: 2, color: primaryColor),
-                      color: secondaryColor,
+                      border: Border.all(width: 2, color: Theme.of(context).colorScheme.primary),
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -69,7 +68,7 @@ class CategoriesSection extends StatelessWidget {
                           width: 40,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: secondaryColor,
+                            color: Theme.of(context).colorScheme.surface,
                             image: DecorationImage(
                               fit: BoxFit.scaleDown,
                               image: NetworkImage(

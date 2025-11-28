@@ -108,7 +108,7 @@ class _VnpayWebViewScreenState extends State<VnpayWebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,

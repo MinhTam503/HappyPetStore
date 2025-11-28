@@ -41,14 +41,14 @@ class _SocialHomePageState extends State<SocialHomePage>
     // Ensure user profile exists (auto-sync from Users collection)
     if (_currentUserId != null) {
       context.read<SocialBloc>().add(EnsureUserProfile(_currentUserId!));
-      
+
       // Load user avatar
       try {
         final profileDoc = await FirebaseFirestore.instance
             .collection('socialPetProfiles')
             .doc(_currentUserId)
             .get();
-        
+
         if (profileDoc.exists && mounted) {
           final data = profileDoc.data();
           setState(() {
@@ -86,7 +86,7 @@ class _SocialHomePageState extends State<SocialHomePage>
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 22,
-            color: isDark ? darkPrimaryColor : primaryColor,
+            color: theme.colorScheme.primary,
           ),
         ),
         actions: [
@@ -120,9 +120,9 @@ class _SocialHomePageState extends State<SocialHomePage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: isDark ? darkPrimaryColor : primaryColor,
+          indicatorColor: theme.colorScheme.primary,
           indicatorWeight: 3,
-          labelColor: isDark ? darkPrimaryColor : primaryColor,
+          labelColor: theme.colorScheme.primary,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 15,
@@ -171,14 +171,18 @@ class _SocialHomePageState extends State<SocialHomePage>
                           color: theme.scaffoldBackgroundColor,
                           child: InkWell(
                             onTap: () {
-                              Navigator.pushNamed(context, '/social/create-post');
+                              Navigator.pushNamed(
+                                  context, '/social/create-post');
                             },
                             borderRadius: BorderRadius.circular(24),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                                  color: isDark
+                                      ? Colors.grey[700]!
+                                      : Colors.grey[300]!,
                                 ),
                                 borderRadius: BorderRadius.circular(24),
                               ),
@@ -186,18 +190,22 @@ class _SocialHomePageState extends State<SocialHomePage>
                                 children: [
                                   CircleAvatar(
                                     radius: 18,
-                                    backgroundColor: isDark ? darkPrimaryColor : primaryColor,
-                                    backgroundImage: _userAvatar != null && _userAvatar!.isNotEmpty
+                                    backgroundColor: theme.colorScheme.primary,
+                                    backgroundImage: _userAvatar != null &&
+                                            _userAvatar!.isNotEmpty
                                         ? NetworkImage(_userAvatar!)
                                         : null,
-                                    child: _userAvatar == null || _userAvatar!.isEmpty
-                                        ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                    child: _userAvatar == null ||
+                                            _userAvatar!.isEmpty
+                                        ? const Icon(Icons.person,
+                                            size: 20, color: Colors.white)
                                         : null,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      l10n?.whatsOnYourMind ?? 'Bạn đang nghĩ gì?',
+                                      l10n?.whatsOnYourMind ??
+                                          'Bạn đang nghĩ gì?',
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: 15,
@@ -217,7 +225,8 @@ class _SocialHomePageState extends State<SocialHomePage>
                         Expanded(
                           child: FollowingFeed(
                             currentUserId: _currentUserId,
-                            onCommentTap: (postId) => _showCommentsSheet(context, postId),
+                            onCommentTap: (postId) =>
+                                _showCommentsSheet(context, postId),
                             onProfileTap: (petId) => Navigator.pushNamed(
                               context,
                               '/social/profile',
@@ -229,55 +238,73 @@ class _SocialHomePageState extends State<SocialHomePage>
                     ),
                     // Explore Tab without TextField
                     ExploreGrid(
-                onPostTap: (post) {
-                  final isOwnPost = _currentUserId != null && post.authorId == _currentUserId;
-                  return PostDetailSheet.show(
-                    context,
-                    post: post,
-                    currentUserId: _currentUserId,
-                    onCommentTap: (postId) => _showCommentsSheet(context, postId),
-                    onDelete: isOwnPost
-                        ? () {
-                            Navigator.pop(context); // Close detail sheet
-                            showDialog(
-                              context: context,
-                              builder: (dialogContext) => AlertDialog(
-                                title: Text(AppLocalizations.of(context)!.deletePost),
-                                content: Text(AppLocalizations.of(context)!.deletePostConfirm),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(dialogContext),
-                                    child: Text(AppLocalizations.of(context)!.cancel),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(dialogContext);
-                                      context.read<SocialBloc>().add(DeletePost(post.id));
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(AppLocalizations.of(context)!.postDeleted)),
-                                      );
-                                    },
-                                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                                    child: Text(AppLocalizations.of(context)!.deletePost),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        : null,
-                    onEdit: isOwnPost
-                        ? () {
-                            Navigator.pop(context); // Close detail sheet
-                            Navigator.pushNamed(
-                              context,
-                              '/social/edit-post',
-                              arguments: post,
-                            );
-                          }
-                        : null,
-                  );
-                },
-              ),
+                      onPostTap: (post) {
+                        final isOwnPost = _currentUserId != null &&
+                            post.authorId == _currentUserId;
+                        return PostDetailSheet.show(
+                          context,
+                          post: post,
+                          currentUserId: _currentUserId,
+                          onCommentTap: (postId) =>
+                              _showCommentsSheet(context, postId),
+                          onDelete: isOwnPost
+                              ? () {
+                                  Navigator.pop(context); // Close detail sheet
+                                  showDialog(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: Text(AppLocalizations.of(context)!
+                                          .deletePost),
+                                      content: Text(
+                                          AppLocalizations.of(context)!
+                                              .deletePostConfirm),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(dialogContext),
+                                          child: Text(
+                                              AppLocalizations.of(context)!
+                                                  .cancel),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(dialogContext);
+                                            context
+                                                .read<SocialBloc>()
+                                                .add(DeletePost(post.id));
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(
+                                                      AppLocalizations.of(
+                                                              context)!
+                                                          .postDeleted)),
+                                            );
+                                          },
+                                          style: TextButton.styleFrom(
+                                              foregroundColor: Colors.red),
+                                          child: Text(
+                                              AppLocalizations.of(context)!
+                                                  .deletePost),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              : null,
+                          onEdit: isOwnPost
+                              ? () {
+                                  Navigator.pop(context); // Close detail sheet
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/social/edit-post',
+                                    arguments: post,
+                                  );
+                                }
+                              : null,
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -302,7 +329,7 @@ class _SocialHomePageState extends State<SocialHomePage>
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setState) {                              
+          builder: (context, setState) {
             return DraggableScrollableSheet(
               initialChildSize: 0.75,
               minChildSize: 0.5,
@@ -480,48 +507,49 @@ class _SocialHomePageState extends State<SocialHomePage>
                               .doc(currentUser?.uid)
                               .get(),
                           builder: (context, snapshot) {
-                          String? userAvatar;
-                          String? userName;
+                            String? userAvatar;
+                            String? userName;
 
-                          if (snapshot.hasData && snapshot.data!.exists) {
-                            final userData =
-                                snapshot.data!.data() as Map<String, dynamic>;
-                            userAvatar = userData['avatar'] as String?;
-                            userName = userData['name'] as String?;
-                          }
+                            if (snapshot.hasData && snapshot.data!.exists) {
+                              final userData =
+                                  snapshot.data!.data() as Map<String, dynamic>;
+                              userAvatar = userData['avatar'] as String?;
+                              userName = userData['name'] as String?;
+                            }
 
-                          return CommentInput(
-                            currentUserAvatar: userAvatar,
-                            currentUserName: userName,
-                            replyingTo: replyingToUser,
-                            onCancelReply: () {
-                              setState(() {
-                                replyingToUser = null;
-                                replyingToCommentId = null;
-                              });
-                            },
-                            onSubmit: (text) {
-                              if (text.isNotEmpty) {
-                                String commentText = text;
-                                if (replyingToUser != null) {
-                                  commentText = '@$replyingToUser $text';
-                                }
-
-                                context.read<SocialBloc>().add(
-                                      AddComment(
-                                        postId,
-                                        commentText,
-                                        parentId: replyingToCommentId, // Pass parentId for replies
-                                      ),
-                                    );
-
+                            return CommentInput(
+                              currentUserAvatar: userAvatar,
+                              currentUserName: userName,
+                              replyingTo: replyingToUser,
+                              onCancelReply: () {
                                 setState(() {
                                   replyingToUser = null;
                                   replyingToCommentId = null;
                                 });
-                              }
-                            },
-                          );
+                              },
+                              onSubmit: (text) {
+                                if (text.isNotEmpty) {
+                                  String commentText = text;
+                                  if (replyingToUser != null) {
+                                    commentText = '@$replyingToUser $text';
+                                  }
+
+                                  context.read<SocialBloc>().add(
+                                        AddComment(
+                                          postId,
+                                          commentText,
+                                          parentId:
+                                              replyingToCommentId, // Pass parentId for replies
+                                        ),
+                                      );
+
+                                  setState(() {
+                                    replyingToUser = null;
+                                    replyingToCommentId = null;
+                                  });
+                                }
+                              },
+                            );
                           },
                         ),
                       ),

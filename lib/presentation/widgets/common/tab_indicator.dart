@@ -21,10 +21,10 @@ class TabIndicator extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor : Colors.transparent,
+          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? primaryColor : Colors.grey.shade300,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
             width: 1,
           ),
         ),

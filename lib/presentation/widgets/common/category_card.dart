@@ -22,7 +22,7 @@ class CategoryCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: primaryColor
+            color: Theme.of(context).colorScheme.primary
           ),
           boxShadow: [
             BoxShadow(
@@ -40,7 +40,7 @@ class CategoryCard extends StatelessWidget {
               width: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: primaryColor.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 image: DecorationImage(
                   fit: BoxFit.cover,
                   image: NetworkImage(category['imageUrl'] ?? ''),

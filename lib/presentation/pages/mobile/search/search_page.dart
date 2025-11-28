@@ -226,9 +226,9 @@ class _NewSearchPageState extends State<SearchPage> {
           }
 
           return Scaffold(
-            backgroundColor: secondaryColor,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
-              backgroundColor: secondaryColor,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
               title: Row(
                 children: [

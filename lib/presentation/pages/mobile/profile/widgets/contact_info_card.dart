@@ -70,7 +70,7 @@ class ContactInfoCard extends StatelessWidget {
         color: Colors.white,
       ),
       child: ListTile(
-        leading: Icon(icon, color: primaryColor),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(
           label,
           style: const TextStyle(fontWeight: FontWeight.w600),
@@ -86,7 +86,7 @@ class ContactInfoCard extends StatelessWidget {
           onPressed: onPressed,
           icon: Icon(
             hasValue ? Icons.edit_outlined : Icons.add_circle_outline,
-            color: primaryColor,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
       ),

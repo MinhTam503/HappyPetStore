@@ -30,7 +30,7 @@ class ShippingInfoSection extends StatelessWidget {
               icon: const Icon(Icons.add_location_alt_outlined, size: 18),
               label: const Text('Chỉnh sửa'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

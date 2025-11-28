@@ -190,7 +190,7 @@ class _SearchableDropdownFieldView extends StatelessWidget {
                 ),
               Icon(
                 Icons.arrow_drop_down,
-                color: enabled ? primaryColor : Colors.grey,
+                color: enabled ? Theme.of(context).colorScheme.primary : Colors.grey,
               ),
             ],
           ),

@@ -60,6 +60,9 @@ import 'package:pet_shop/presentation/pages/web/screen_admin/pet_analytics/pet_a
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/inbox_page_admin.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/chat/ChatDetailPage.dart';
 import 'package:pet_shop/presentation/pages/web/screen_admin/shop_info/shop_info.dart';
+import 'package:pet_shop/presentation/pages/web/screen_admin/theme/theme_settings_admin.dart';
+import 'package:pet_shop/core/services/theme_manager.dart';
+import 'package:pet_shop/presentation/widgets/seasonal_effects_overlay.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/cart_screen_web_new.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/home/home_page_web_user.dart';
 import 'package:pet_shop/presentation/pages/web_user/screens/payment_success_screen.dart';
@@ -80,7 +83,7 @@ import 'core/services/push_notification_service.dart';
 
 final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Use path URL strategy on web to remove the `#` from routes.
@@ -205,356 +208,381 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: Consumer2<LocaleProvider, ThemeProvider>(
-        builder: (context, localeProvider, themeProvider, child) {
-          return MaterialApp(
-            navigatorKey: _navKey,
-            debugShowCheckedModeBanner: false,
-            initialRoute: '/',
-            theme: themeProvider.lightTheme,
-            darkTheme: themeProvider.darkTheme,
-            themeMode:
-                themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            locale: localeProvider.locale,
-            supportedLocales: LocaleProvider.supportedLocales,
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            onGenerateRoute: (settings) {
-              // Handle payment success URL with query parameters
-              if (settings.name != null &&
-                  settings.name!.startsWith('/payment-success')) {
-                final uri = Uri.parse(settings.name!);
-                final sessionId = uri.queryParameters['session_id'];
-                return MaterialPageRoute(
-                  builder: (context) =>
-                      PaymentSuccessScreen(sessionId: sessionId),
-                  settings: settings,
-                );
-              }
+          builder: (context, localeProvider, themeProvider, child) {
+        final themeManager = ThemeManager();
+        return StreamBuilder<SeasonalTheme>(
+          stream: themeManager.stream,
+          initialData: themeManager.current,
+          builder: (context, snapshot) {
+            final currentTheme = snapshot.data ?? SeasonalTheme.defaultTheme;
+            final lightScheme =
+                themeManager.colorSchemeFor(currentTheme, Brightness.light);
+            final darkScheme =
+                themeManager.colorSchemeFor(currentTheme, Brightness.dark);
 
-              // Web User deep links
-              if (kIsWeb && settings.name != null) {
-                final uri = Uri.parse(settings.name!);
-                final segs = uri.pathSegments;
-                // Preferred: /home/pet/:id
-                if (segs.length >= 3 && segs[0] == 'home' && segs[1] == 'pet') {
-                  final petId = segs[2];
+            return MaterialApp(
+              navigatorKey: _navKey,
+              debugShowCheckedModeBanner: false,
+              initialRoute: '/',
+              theme: ThemeData(colorScheme: lightScheme, useMaterial3: true),
+              darkTheme: ThemeData(colorScheme: darkScheme, useMaterial3: true),
+              themeMode:
+                  themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+              locale: localeProvider.locale,
+              supportedLocales: LocaleProvider.supportedLocales,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              onGenerateRoute: (settings) {
+                // Handle payment success URL with query parameters
+                if (settings.name != null &&
+                    settings.name!.startsWith('/payment-success')) {
+                  final uri = Uri.parse(settings.name!);
+                  final sessionId = uri.queryParameters['session_id'];
                   return MaterialPageRoute(
-                    builder: (_) => PetDetailScreenWeb(petId: petId),
+                    builder: (context) =>
+                        PaymentSuccessScreen(sessionId: sessionId),
                     settings: settings,
                   );
                 }
-                // Backward-compat: /pet/:id
-                if (segs.length >= 2 && segs[0] == 'pet') {
-                  final petId = segs[1];
-                  return MaterialPageRoute(
-                    builder: (_) => PetDetailScreenWeb(petId: petId),
-                    settings: settings,
-                  );
-                }
-              }
 
-              // Web Admin deep links: /admin/*
-              if (kIsWeb && settings.name != null) {
-                final uri = Uri.parse(settings.name!);
-                final segs = uri.pathSegments;
-                if (segs.isNotEmpty && segs.first == 'admin') {
-                  // /admin
-                  if (segs.length == 1) {
+                // Web User deep links
+                if (kIsWeb && settings.name != null) {
+                  final uri = Uri.parse(settings.name!);
+                  final segs = uri.pathSegments;
+                  // Preferred: /home/pet/:id
+                  if (segs.length >= 3 &&
+                      segs[0] == 'home' &&
+                      segs[1] == 'pet') {
+                    final petId = segs[2];
                     return MaterialPageRoute(
-                        builder: (_) => const HomePageAdmin(),
-                        settings: settings);
+                      builder: (_) => PetDetailScreenWeb(petId: petId),
+                      settings: settings,
+                    );
                   }
-                  final section = segs[1];
-                  switch (section) {
-                    case 'home':
+                  // Backward-compat: /pet/:id
+                  if (segs.length >= 2 && segs[0] == 'pet') {
+                    final petId = segs[1];
+                    return MaterialPageRoute(
+                      builder: (_) => PetDetailScreenWeb(petId: petId),
+                      settings: settings,
+                    );
+                  }
+                }
+
+                // Web Admin deep links: /admin/*
+                if (kIsWeb && settings.name != null) {
+                  final uri = Uri.parse(settings.name!);
+                  final segs = uri.pathSegments;
+                  if (segs.isNotEmpty && segs.first == 'admin') {
+                    // /admin
+                    if (segs.length == 1) {
                       return MaterialPageRoute(
                           builder: (_) => const HomePageAdmin(),
                           settings: settings);
-                    case 'dashboard':
-                      return MaterialPageRoute(
-                          builder: (_) => const DashboardPage(),
-                          settings: settings);
-                    case 'order':
-                    case 'orders':
-                      return MaterialPageRoute(
-                          builder: (_) => const OrdersAdmin(),
-                          settings: settings);
-                    case 'shipping':
-                      return MaterialPageRoute(
-                          builder: (_) => const ShippingManagementPage(),
-                          settings: settings);
-                    case 'pet':
-                    case 'pets':
-                      return MaterialPageRoute(
-                          builder: (_) => const PetsAdmin(),
-                          settings: settings);
-                    case 'category':
-                      return MaterialPageRoute(
-                          builder: (_) => const CategoryAdmin(),
-                          settings: settings);
-                    case 'account':
-                    case 'accounts':
-                      return MaterialPageRoute(
-                          builder: (_) => const AccountAdmin(),
-                          settings: settings);
-                    case 'notification':
-                    case 'notifications':
-                      return MaterialPageRoute(
-                          builder: (_) => const NotificationManagementPanel(),
-                          settings: settings);
-                    case 'revenue':
-                      return MaterialPageRoute(
-                          builder: (_) => const RevenuePage(),
-                          settings: settings);
-                    case 'analytics':
-                    case 'pet-analytics':
-                      return MaterialPageRoute(
-                          builder: (_) => const PetAnalyticsPage(),
-                          settings: settings);
-                    case 'shop-info':
-                      return MaterialPageRoute(
-                          builder: (_) => const ShopInfo(), settings: settings);
-                    case 'chat':
-                    case 'inbox':
-                      // /admin/chat/:email -> Chat detail; otherwise inbox
-                      if (section == 'chat' && segs.length >= 3) {
-                        final email =
-                            Uri.decodeComponent(segs.sublist(2).join('/'));
+                    }
+                    final section = segs[1];
+                    switch (section) {
+                      case 'home':
                         return MaterialPageRoute(
-                            builder: (_) =>
-                                ChatDetailPage(customerEmail: email),
+                            builder: (_) => const HomePageAdmin(),
                             settings: settings);
-                      }
-                      return MaterialPageRoute(
-                          builder: (_) => const InboxPageAdmin(),
-                          settings: settings);
-                    default:
-                      // Fallback to admin home
-                      return MaterialPageRoute(
-                          builder: (_) => const HomePageAdmin(),
-                          settings: settings);
+                      case 'dashboard':
+                        return MaterialPageRoute(
+                            builder: (_) => const DashboardPage(),
+                            settings: settings);
+                      case 'order':
+                      case 'orders':
+                        return MaterialPageRoute(
+                            builder: (_) => const OrdersAdmin(),
+                            settings: settings);
+                      case 'shipping':
+                        return MaterialPageRoute(
+                            builder: (_) => const ShippingManagementPage(),
+                            settings: settings);
+                      case 'pet':
+                      case 'pets':
+                        return MaterialPageRoute(
+                            builder: (_) => const PetsAdmin(),
+                            settings: settings);
+                      case 'category':
+                        return MaterialPageRoute(
+                            builder: (_) => const CategoryAdmin(),
+                            settings: settings);
+                      case 'account':
+                      case 'accounts':
+                        return MaterialPageRoute(
+                            builder: (_) => const AccountAdmin(),
+                            settings: settings);
+                      case 'notification':
+                      case 'notifications':
+                        return MaterialPageRoute(
+                            builder: (_) => const NotificationManagementPanel(),
+                            settings: settings);
+                      case 'revenue':
+                        return MaterialPageRoute(
+                            builder: (_) => const RevenuePage(),
+                            settings: settings);
+                      case 'analytics':
+                      case 'pet-analytics':
+                        return MaterialPageRoute(
+                            builder: (_) => const PetAnalyticsPage(),
+                            settings: settings);
+                      case 'shop-info':
+                        return MaterialPageRoute(
+                            builder: (_) => const ShopInfo(),
+                            settings: settings);
+                      case 'theme':
+                        return MaterialPageRoute(
+                            builder: (_) => const ThemeSettingsAdmin(),
+                            settings: settings);
+                      case 'chat':
+                      case 'inbox':
+                        // /admin/chat/:email -> Chat detail; otherwise inbox
+                        if (section == 'chat' && segs.length >= 3) {
+                          final email =
+                              Uri.decodeComponent(segs.sublist(2).join('/'));
+                          return MaterialPageRoute(
+                              builder: (_) =>
+                                  ChatDetailPage(customerEmail: email),
+                              settings: settings);
+                        }
+                        return MaterialPageRoute(
+                            builder: (_) => const InboxPageAdmin(),
+                            settings: settings);
+                      default:
+                        // Fallback to admin home
+                        return MaterialPageRoute(
+                            builder: (_) => const HomePageAdmin(),
+                            settings: settings);
+                    }
                   }
                 }
-              }
 
-              // Social Network routes
-              if (settings.name == '/social/create-post') {
-                return MaterialPageRoute(
-                  builder: (_) => const CreatePostPage(),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/search') {
-                return MaterialPageRoute(
-                  builder: (_) => const SocialSearchPage(),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/profile') {
-                final userId = settings.arguments as String;
-                return MaterialPageRoute(
-                  builder: (_) => SocialProfilePage(userId: userId),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/edit-profile') {
-                final profile = settings.arguments as SocialPetProfile;
-                return MaterialPageRoute(
-                  builder: (_) => EditSocialProfilePage(profile: profile),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/edit-post') {
-                final post = settings.arguments as SocialPost;
-                return MaterialPageRoute(
-                  builder: (_) => EditPostPage(post: post),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/followers') {
-                final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(
-                  builder: (_) => FollowersListPage(
-                    userId: args['userId'],
-                    isFollowersMode: args['isFollowersMode'],
-                  ),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/chat') {
-                return MaterialPageRoute(
-                  builder: (_) => const ChatListPageWithTabs(),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/chat/room') {
-                final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(
-                  builder: (_) => ChatRoomPage(
-                    conversationId: args['conversationId'],
-                    otherUserId: args['otherUserId'],
-                    otherUserName: args['otherUserName'],
-                    otherUserAvatar: args['otherUserAvatar'],
-                  ),
-                  settings: settings,
-                );
-              }
-
-              if (settings.name == '/social/chat/group') {
-                final args = settings.arguments as Map<String, dynamic>;
-                return MaterialPageRoute(
-                  builder: (_) => GroupChatRoomPage(
-                    groupId: args['groupId'],
-                    groupName: args['groupName'],
-                    groupAvatar: args['groupAvatar'],
-                  ),
-                  settings: settings,
-                );
-              }
-
-              // if (settings.name == '/pet/ar-viewer') {
-              //   final args = settings.arguments as Map<String, dynamic>?;
-              //   return MaterialPageRoute(
-              //     builder: (_) => ArViewerPage(
-              //       modelPath: args?['modelPath'],
-              //       petName: args?['petName'],
-              //     ),
-              //     settings: settings,
-              //   );
-              // }
-
-              // Default routes
-              return null;
-            },
-            routes: {
-              '/': (context) {
-                return kIsWeb
-                    ? const WebAppWrapper()
-                    : FutureBuilder<bool>(
-                        future: OnboardingService.hasSeenGetStarted(),
-                        builder: (context, onboardingSnapshot) {
-                          // Show loading while checking onboarding status
-                          if (onboardingSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Scaffold(
-                              body: Center(
-                                child: CircularProgressIndicator(
-                                    color: Colors.pink),
-                              ),
-                            );
-                          }
-
-                          final hasSeenOnboarding =
-                              onboardingSnapshot.data ?? false;
-
-                          // If first time opening app, show GetStarted
-                          if (!hasSeenOnboarding) {
-                            return const GetStartedPage();
-                          }
-
-                          // Otherwise check auth state
-                          return StreamBuilder<User?>(
-                            stream: FirebaseAuth.instance.authStateChanges(),
-                            builder: (context, snapshot) {
-                              if (kDebugMode) {
-                                debugPrint(
-                                    ' AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
-                              }
-
-                              // Show loading during connection state waiting
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Scaffold(
-                                  body: Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        CircularProgressIndicator(
-                                            color: Colors.pink),
-                                        SizedBox(height: 16),
-                                        Text(
-                                            'Đang kiểm tra trạng thái đăng nhập...'),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              // User is authenticated
-                              if (snapshot.hasData) {
-                                final user = snapshot.data!;
-
-                                if (kDebugMode) {
-                                  debugPrint(
-                                      'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
-                                }
-
-                                // Check authentication provider
-                                List<String> providers = user.providerData
-                                    .map((info) => info.providerId)
-                                    .toList();
-                                bool isSocialLogin =
-                                    providers.contains('google.com') ||
-                                        providers.contains('facebook.com') ||
-                                        providers.contains('phone');
-
-                                // Allow social login users to bypass email verification
-                                // Email/password users still need email verification
-                                if (user.emailVerified || isSocialLogin) {
-                                  if (kDebugMode) {
-                                    debugPrint(
-                                        ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
-                                  }
-                                  return const BottomNavigator();
-                                } else {
-                                  if (kDebugMode) {
-                                    debugPrint(
-                                        ' Email not verified and not social login, showing LoginOrRegister');
-                                  }
-                                  return const LoginOrRegister();
-                                }
-                              } else {
-                                // User is not authenticated
-                                if (kDebugMode) {
-                                  debugPrint(
-                                      ' User not authenticated, showing LoginOrRegister');
-                                }
-                                return const LoginOrRegister();
-                              }
-                            },
-                          );
-                        },
-                      );
-              },
-              '/home': (context) => const HomePageWebUser(),
-              '/cart': (context) => const CartScreenWeb(),
-              '/shipping': (context) => const ShippingManagementPage(),
-              '/payment-success': (context) {
-                // Parse session_id from URL
-                String? sessionId;
-                if (kIsWeb) {
-                  final uri = Uri.parse(
-                      WidgetsBinding.instance.window.defaultRouteName);
-                  sessionId = uri.queryParameters['session_id'];
+                // Social Network routes
+                if (settings.name == '/social/create-post') {
+                  return MaterialPageRoute(
+                    builder: (_) => const CreatePostPage(),
+                    settings: settings,
+                  );
                 }
-                return PaymentSuccessScreen(sessionId: sessionId);
+
+                if (settings.name == '/social/search') {
+                  return MaterialPageRoute(
+                    builder: (_) => const SocialSearchPage(),
+                    settings: settings,
+                  );
+                }
+
+                if (settings.name == '/social/profile') {
+                  final userId = settings.arguments as String;
+                  return MaterialPageRoute(
+                    builder: (_) => SocialProfilePage(userId: userId),
+                    settings: settings,
+                  );
+                }
+
+                if (settings.name == '/social/edit-profile') {
+                  final profile = settings.arguments as SocialPetProfile;
+                  return MaterialPageRoute(
+                    builder: (_) => EditSocialProfilePage(profile: profile),
+                    settings: settings,
+                  );
+                }
+
+                if (settings.name == '/social/edit-post') {
+                  final post = settings.arguments as SocialPost;
+                  return MaterialPageRoute(
+                    builder: (_) => EditPostPage(post: post),
+                    settings: settings,
+                  );
+                }
+
+                if (settings.name == '/social/followers') {
+                  final args = settings.arguments as Map<String, dynamic>;
+                  return MaterialPageRoute(
+                    builder: (_) => FollowersListPage(
+                      userId: args['userId'],
+                      isFollowersMode: args['isFollowersMode'],
+                    ),
+                    settings: settings,
+                  );
+                }
+
+                if (settings.name == '/social/chat') {
+                  return MaterialPageRoute(
+                    builder: (_) => const ChatListPageWithTabs(),
+                    settings: settings,
+                  );
+                }
+
+                if (settings.name == '/social/chat/room') {
+                  final args = settings.arguments as Map<String, dynamic>;
+                  return MaterialPageRoute(
+                    builder: (_) => ChatRoomPage(
+                      conversationId: args['conversationId'],
+                      otherUserId: args['otherUserId'],
+                      otherUserName: args['otherUserName'],
+                      otherUserAvatar: args['otherUserAvatar'],
+                    ),
+                    settings: settings,
+                  );
+                }
+
+                if (settings.name == '/social/chat/group') {
+                  final args = settings.arguments as Map<String, dynamic>;
+                  return MaterialPageRoute(
+                    builder: (_) => GroupChatRoomPage(
+                      groupId: args['groupId'],
+                      groupName: args['groupName'],
+                      groupAvatar: args['groupAvatar'],
+                    ),
+                    settings: settings,
+                  );
+                }
+
+                // if (settings.name == '/pet/ar-viewer') {
+                //   final args = settings.arguments as Map<String, dynamic>?;
+                //   return MaterialPageRoute(
+                //     builder: (_) => ArViewerPage(
+                //       modelPath: args?['modelPath'],
+                //       petName: args?['petName'],
+                //     ),
+                //     settings: settings,
+                //   );
+                // }
+
+                // Default routes
+                return null;
               },
-            },
-          );
-        },
-      ),
+              routes: {
+                '/': (context) {
+                  return kIsWeb
+                      ? const WebAppWrapper()
+                      : FutureBuilder<bool>(
+                          future: OnboardingService.hasSeenGetStarted(),
+                          builder: (context, onboardingSnapshot) {
+                            // Show loading while checking onboarding status
+                            if (onboardingSnapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Scaffold(
+                                body: Center(
+                                  child: CircularProgressIndicator(
+                                      color: Colors.pink),
+                                ),
+                              );
+                            }
+
+                            final hasSeenOnboarding =
+                                onboardingSnapshot.data ?? false;
+
+                            // If first time opening app, show GetStarted
+                            if (!hasSeenOnboarding) {
+                              return const GetStartedPage();
+                            }
+
+                            // Otherwise check auth state
+                            return StreamBuilder<User?>(
+                              stream: FirebaseAuth.instance.authStateChanges(),
+                              builder: (context, snapshot) {
+                                if (kDebugMode) {
+                                  debugPrint(
+                                      ' AuthState: ${snapshot.connectionState}, hasData: ${snapshot.hasData}, user: ${snapshot.data?.uid}');
+                                }
+
+                                // Show loading during connection state waiting
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Scaffold(
+                                    body: Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          CircularProgressIndicator(
+                                              color: Colors.pink),
+                                          SizedBox(height: 16),
+                                          Text(
+                                              'Đang kiểm tra trạng thái đăng nhập...'),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                // User is authenticated
+                                if (snapshot.hasData) {
+                                  final user = snapshot.data!;
+
+                                  if (kDebugMode) {
+                                    debugPrint(
+                                        'User authenticated: ${user.uid}, emailVerified: ${user.emailVerified}');
+                                  }
+
+                                  // Check authentication provider
+                                  List<String> providers = user.providerData
+                                      .map((info) => info.providerId)
+                                      .toList();
+                                  bool isSocialLogin =
+                                      providers.contains('google.com') ||
+                                          providers.contains('facebook.com') ||
+                                          providers.contains('phone');
+
+                                  // Allow social login users to bypass email verification
+                                  // Email/password users still need email verification
+                                  if (user.emailVerified || isSocialLogin) {
+                                    if (kDebugMode) {
+                                      debugPrint(
+                                          ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
+                                    }
+                                    return SeasonalEffectsOverlay(
+                                      child: const BottomNavigator(),
+                                    );
+                                  } else {
+                                    if (kDebugMode) {
+                                      debugPrint(
+                                          ' Email not verified and not social login, showing LoginOrRegister');
+                                    }
+                                    return SeasonalEffectsOverlay(
+                                      child: const LoginOrRegister(),
+                                    );
+                                  }
+                                } else {
+                                  // User is not authenticated
+                                  if (kDebugMode) {
+                                    debugPrint(
+                                        ' User not authenticated, showing LoginOrRegister');
+                                  }
+                                  return SeasonalEffectsOverlay(
+                                    child: const LoginOrRegister(),
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        );
+                },
+                '/home': (context) => const HomePageWebUser(),
+                '/cart': (context) => const CartScreenWeb(),
+                '/shipping': (context) => const ShippingManagementPage(),
+                '/payment-success': (context) {
+                  // Parse session_id from URL
+                  String? sessionId;
+                  if (kIsWeb) {
+                    final uri = Uri.parse(
+                        WidgetsBinding.instance.window.defaultRouteName);
+                    sessionId = uri.queryParameters['session_id'];
+                  }
+                  return PaymentSuccessScreen(sessionId: sessionId);
+                },
+              },
+            );
+          },
+        );
+      }),
     );
   }
 }

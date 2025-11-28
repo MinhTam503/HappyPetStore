@@ -69,7 +69,7 @@ class PostCard extends StatelessWidget {
       leading: GestureDetector(
         onTap: onProfileTap,
         child: CircleAvatar(
-          backgroundColor: isDark ? darkPrimaryColor : primaryColor,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           backgroundImage: petAvatarUrl != null && petAvatarUrl!.isNotEmpty
               ? NetworkImage(petAvatarUrl!)
               : null,

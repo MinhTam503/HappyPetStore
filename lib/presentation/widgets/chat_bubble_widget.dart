@@ -107,7 +107,7 @@ class _ChatBubbleWidgetState extends State<ChatBubbleWidget>
                   boxShadow: [
                     // Glowing effect
                     BoxShadow(
-                      color: primaryColor
+                      color: Theme.of(context).colorScheme.primary
                           .withOpacity(0.3 + (_pulseAnimation.value * 0.2)),
                       spreadRadius: 2 + (_pulseAnimation.value * 4),
                       blurRadius: 8 + (_pulseAnimation.value * 8),
@@ -128,8 +128,8 @@ class _ChatBubbleWidgetState extends State<ChatBubbleWidget>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        primaryColor,
-                        primaryColor.withOpacity(0.8),
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
                       ],
                     ),
                     shape: BoxShape.circle,

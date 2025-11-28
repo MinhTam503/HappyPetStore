@@ -132,7 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ? (l10n?.switchedToVietnamese ?? 'Đã chuyển sang Tiếng Việt')
                   : (l10n?.switchedToEnglish ?? 'Switched to English'),
             ),
-            backgroundColor: primaryColor,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -237,11 +237,11 @@ class _SettingsPageState extends State<SettingsPage> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.of(context).pushAndRemoveUntil(
@@ -263,7 +263,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xff08A045)),
               ),
             )
           : ListView(
@@ -366,14 +366,14 @@ class _SettingsPageState extends State<SettingsPage> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
+                        child: Text(
                           'v1.0.0',
                           style: TextStyle(
                             fontSize: 12,
-                            color: primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -405,13 +405,13 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             icon,
             size: 20,
-            color: primaryColor,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(width: 12),
@@ -496,7 +496,7 @@ class _SettingsToggle extends StatelessWidget {
       trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
-        activeColor: primaryColor,
+        activeColor: Theme.of(context).colorScheme.primary,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -633,9 +633,9 @@ class _LanguageOption extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           color:
-              isSelected ? primaryColor.withOpacity(0.1) : Colors.grey.shade100,
+              isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
-          border: isSelected ? Border.all(color: primaryColor, width: 2) : null,
+          border: isSelected ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
         ),
         child: Center(
           child: Text(
@@ -648,20 +648,20 @@ class _LanguageOption extends StatelessWidget {
         title,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: isSelected ? primaryColor : Colors.black,
+          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: isSelected ? primaryColor.withOpacity(0.8) : Colors.black54,
+          color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.8) : Colors.black54,
         ),
       ),
       trailing: Radio<String>(
         value: value,
         groupValue: groupValue,
         onChanged: (value) => onChanged(value!),
-        activeColor: primaryColor,
+        activeColor: Theme.of(context).colorScheme.primary,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

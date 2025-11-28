@@ -12,6 +12,7 @@ import 'package:pet_shop/presentation/pages/mobile/qr_scanner/qr_scanner_screen.
 import 'package:pet_shop/presentation/widgets/conditional_draggable_chat_bubble.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
 import 'package:pet_shop/core/services/push_notification_service.dart';
+import 'package:lottie/lottie.dart';
 
 class BottomNavigator extends StatefulWidget {
   final int initialIndex;
@@ -57,7 +58,7 @@ class _HomePageState extends State<BottomNavigator> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       drawer: const AppDrawer(),
       bottomNavigationBar: _FancyBottomBar(
         currentIndex: selectedIndex,
@@ -225,14 +226,14 @@ class _FancyBottomBarState extends State<_FancyBottomBar> with SingleTickerProvi
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                primaryColor,
-                                primaryColor.withOpacity(0.85),
+                                Theme.of(context).colorScheme.primary,
+                                Theme.of(context).colorScheme.primary.withOpacity(0.85),
                               ],
                             ),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: primaryColor.withOpacity(0.3),
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                                 blurRadius: 12,
                                 spreadRadius: 0,
                                 offset: const Offset(0, 4),
@@ -249,12 +250,26 @@ class _FancyBottomBarState extends State<_FancyBottomBar> with SingleTickerProvi
                               borderRadius: BorderRadius.circular(circleSize / 2),
                               onTap: () => widget.onTap(2),
                               child: Center(
-                                child: Icon(
-                                  widget.currentIndex == 2
-                                      ? widget.activeIcons[2]
-                                      : widget.icons[2],
-                                  color: Colors.white,
-                                  size: 26,
+                                child: ClipOval(
+                                  child: SizedBox(
+                                    width: circleSize ,
+                                    height: circleSize ,
+                                    child: Lottie.asset(
+                                      'assets/scan_qr_code.json',
+                                      fit: BoxFit.cover,
+                                      repeat: true,
+                                      animate: true,
+                                      errorBuilder: (context, error, stack) {
+                                        return Icon(
+                                          widget.currentIndex == 2
+                                              ? widget.activeIcons[2]
+                                              : widget.icons[2],
+                                          color: Colors.white,
+                                          size: 26,
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -282,7 +297,7 @@ class _FancyBottomBarState extends State<_FancyBottomBar> with SingleTickerProvi
                             ? FontWeight.w700
                             : FontWeight.w600,
                         color: widget.currentIndex == 2
-                            ? primaryColor
+                            ? Theme.of(context).colorScheme.primary
                             : Colors.grey[600],
                       ),
                       child: Text(widget.labels[2]),
@@ -361,8 +376,8 @@ class _BarItemState extends State<_BarItem> with SingleTickerProviderStateMixin 
       color: Colors.transparent,
       child: InkWell(
         onTap: widget.onTap,
-        splashColor: primaryColor.withOpacity(0.1),
-        highlightColor: primaryColor.withOpacity(0.05),
+        splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        highlightColor: Theme.of(context).colorScheme.primary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(8),
         child: AnimatedBuilder(
           animation: _controller,
@@ -385,7 +400,7 @@ class _BarItemState extends State<_BarItem> with SingleTickerProviderStateMixin 
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.12),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -395,7 +410,7 @@ class _BarItemState extends State<_BarItem> with SingleTickerProviderStateMixin 
                           child: Icon(
                             widget.selected ? widget.activeIcon : widget.icon,
                             color: widget.selected
-                                ? primaryColor
+                                ? Theme.of(context).colorScheme.primary
                                 : Colors.grey[600],
                             size: 24,
                           ),
@@ -413,7 +428,7 @@ class _BarItemState extends State<_BarItem> with SingleTickerProviderStateMixin 
                           ? FontWeight.w700
                           : FontWeight.w500,
                       color: widget.selected
-                          ? primaryColor
+                          ? Theme.of(context).colorScheme.primary
                           : Colors.grey[600],
                     ),
                     child: Text(

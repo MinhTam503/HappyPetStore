@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/bloc/social/social_bloc.dart';
 import 'package:pet_shop/presentation/bloc/social/social_event.dart';
 import 'package:pet_shop/presentation/bloc/social/social_state.dart';
@@ -226,7 +225,7 @@ class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveCl
             icon: const Icon(Icons.refresh),
             label: Text(l10n.tryAgain),
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -238,8 +237,6 @@ class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveCl
 
   Widget _buildEmptyState(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Center(
       child: Padding(
@@ -250,7 +247,7 @@ class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveCl
             Icon(
               Icons.people_outline,
               size: 80,
-              color: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.3),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
             ),
             const SizedBox(height: 16),
             Text(
@@ -261,7 +258,7 @@ class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveCl
             Text(
               l10n?.startFollowing ?? 'Follow pets to see their posts here',
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.textTheme.bodySmall?.color),
+              style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
             ),
           ],
         ),

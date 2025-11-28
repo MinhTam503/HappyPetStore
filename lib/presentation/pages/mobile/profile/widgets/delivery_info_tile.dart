@@ -60,7 +60,7 @@ class DeliveryInfoTile extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.person, color: primaryColor, size: 20),
+                Icon(Icons.person, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   deliveryInfo['name'] ?? '',
@@ -71,7 +71,7 @@ class DeliveryInfoTile extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.phone, color: primaryColor, size: 20),
+                Icon(Icons.phone, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(deliveryInfo['phone'] ?? ''),
               ],
@@ -80,7 +80,7 @@ class DeliveryInfoTile extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_on, color: primaryColor, size: 20),
+                Icon(Icons.location_on, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

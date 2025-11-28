@@ -180,9 +180,9 @@ class _ChatPageContentState extends State<ChatPageContent> {
     }
 
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text("Pet Shop"),
         centerTitle: true,
       ),
