@@ -79,10 +79,11 @@ class _GetStartedPageState extends State<GetStartedPage> {
                   onPressed: _completeOnboarding,
                   child: Text(
                     l10n.skip,
-                    style: const TextStyle(
+                    style:  TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: primaryColor,
+                      color: Theme.of(context)
+                                    .colorScheme.primary,
                     ),
                   ),
                 ),
@@ -117,8 +118,10 @@ class _GetStartedPageState extends State<GetStartedPage> {
                   width: _currentPage == index ? 24 : 8,
                   decoration: BoxDecoration(
                     color: _currentPage == index
-                        ? primaryColor
-                        : primaryColor.withOpacity(0.3),
+                        ? Theme.of(context)
+                                    .colorScheme.primary
+                        : Theme.of(context)
+                                    .colorScheme.primary.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

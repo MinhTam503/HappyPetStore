@@ -138,8 +138,9 @@ class _CategoryAdminState extends State<CategoryAdmin> {
                   ),
                   IconButton(
                     tooltip: AppLocalizations.of(context)!.addBreed,
-                    icon: const Icon(Icons.add_circle_outline,
-                        color: primaryColor),
+                    icon:  Icon(Icons.add_circle_outline,
+                        color: Theme.of(context)
+                                    .colorScheme.primary),
                     onPressed: () {
                       _showDialogAddBreed(categoryId, () async {
                         final updatedDoc = await _firestore
@@ -495,8 +496,9 @@ class _CategoryAdminState extends State<CategoryAdmin> {
               stream: _firestore.collection('Category').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator(color: primaryColor));
+                  return  Center(
+                      child: CircularProgressIndicator(color: Theme.of(context)
+                                    .colorScheme.primary));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return EmptyState(

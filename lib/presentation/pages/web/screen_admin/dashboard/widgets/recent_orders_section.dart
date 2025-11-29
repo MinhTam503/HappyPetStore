@@ -179,8 +179,10 @@ class _OrderRow extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  primaryColor.withOpacity(0.1),
-                  primaryColor.withOpacity(0.05),
+                  Theme.of(context)
+                                    .colorScheme.primary.withOpacity(0.1),
+                  Theme.of(context)
+                                    .colorScheme.primary.withOpacity(0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(12),

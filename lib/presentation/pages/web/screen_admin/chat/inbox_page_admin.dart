@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
-import 'package:pet_shop/core/constants/app_constants.dart'; // có primaryColor, secondaryColor
-
 import '../../components/empty_state.dart';
 import 'ChatDetailPage.dart';
 import 'components/conversation_card.dart';
@@ -78,7 +76,8 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: primaryColor, width: 2),
+                  borderSide:  BorderSide(color: Theme.of(context)
+                                    .colorScheme.primary, width: 2),
                 ),
               ),
             ),
@@ -94,8 +93,9 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
                   );
                 }
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator(color: primaryColor));
+                  return  Center(
+                      child: CircularProgressIndicator(color: Theme.of(context)
+                                    .colorScheme.primary));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return EmptyState(

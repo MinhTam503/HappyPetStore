@@ -180,7 +180,8 @@ class _BlockedAccountsPageState extends State<BlockedAccountsPage> {
               Navigator.pop(context);
               _unblockUser(user);
             },
-            style: TextButton.styleFrom(foregroundColor: primaryColor),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context)
+                                    .colorScheme.primary),
             child: Text(l10n.unblock),
           ),
         ],
@@ -392,8 +393,10 @@ class _BlockedUserCard extends StatelessWidget {
             OutlinedButton(
               onPressed: onUnblock,
               style: OutlinedButton.styleFrom(
-                foregroundColor: primaryColor,
-                side: BorderSide(color: primaryColor, width: 1.5),
+                foregroundColor: Theme.of(context)
+                                    .colorScheme.primary,
+                side: BorderSide(color: Theme.of(context)
+                                    .colorScheme.primary, width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),

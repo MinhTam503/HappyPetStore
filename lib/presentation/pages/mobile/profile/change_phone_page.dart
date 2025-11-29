@@ -244,7 +244,8 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
                     child: ElevatedButton(
                       onPressed: _isSending ? null : _sendCode,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
+                        backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
@@ -299,7 +300,8 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
                           fieldHeight: 46,
                           fieldWidth: 40,
                           inactiveColor: Colors.grey.shade300,
-                          selectedColor: primaryColor,
+                          selectedColor: Theme.of(context)
+                                    .colorScheme.primary,
                           activeColor: Colors.grey.shade500,
                           inactiveFillColor: Colors.white,
                           selectedFillColor: Colors.white,
@@ -320,7 +322,8 @@ class _ChangePhonePageState extends State<ChangePhonePage> {
                   child: ElevatedButton(
                     onPressed: (_verificationId ?? '').isEmpty || _isVerifying ? null : _verifyCode,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
+                      backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _isVerifying

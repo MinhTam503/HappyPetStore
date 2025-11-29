@@ -292,7 +292,8 @@ class _NewSearchPageState extends State<SearchPage> {
                   Container(
                     width: 44,
                     decoration: BoxDecoration(
-                      color: primaryColor,
+                      color: Theme.of(context)
+                                    .colorScheme.primary,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(

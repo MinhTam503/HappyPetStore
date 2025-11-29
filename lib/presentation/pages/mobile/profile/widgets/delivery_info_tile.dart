@@ -19,7 +19,8 @@ class DeliveryInfoTile extends StatelessWidget {
 
     return Card(
       elevation: isDefault ? 3 : 1.5,
-      color: isDefault ? primaryColor.withOpacity(0.1) : null,
+      color: isDefault ? Theme.of(context)
+                                    .colorScheme.primary.withOpacity(0.1) : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -32,7 +33,8 @@ class DeliveryInfoTile extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: primaryColor,
+                      color: Theme.of(context)
+                                    .colorScheme.primary,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(

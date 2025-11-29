@@ -417,13 +417,15 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: Theme.of(context)
+                                    .colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             icon,
             size: 20,
-            color: primaryColor,
+            color: Theme.of(context)
+                                    .colorScheme.primary,
           ),
         ),
         const SizedBox(width: 12),
@@ -510,7 +512,8 @@ class _SettingsToggle extends StatelessWidget {
       trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
-        activeColor: primaryColor,
+        activeColor: Theme.of(context)
+                                    .colorScheme.primary,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

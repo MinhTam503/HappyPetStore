@@ -181,7 +181,8 @@ class _NofiScreenState extends State<NofiScreen> {
               return IconButton(
                 icon: Icon(
                   Icons.mark_email_read,
-                  color: hasUnread ? primaryColor : Colors.grey,
+                  color: hasUnread ? Theme.of(context)
+                                    .colorScheme.primary : Colors.grey,
                 ),
                 onPressed: hasUnread
                     ? () {
@@ -375,7 +376,8 @@ class _NofiScreenState extends State<NofiScreen> {
                   child: Text(
                     'Bạn có $unreadCount thông báo chưa đọc',
                     style: TextStyle(
-                      color: primaryColor,
+                      color: Theme.of(context)
+                                    .colorScheme.primary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -437,7 +439,8 @@ class _NofiScreenState extends State<NofiScreen> {
                                   width: 8,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: primaryColor,
+                                    color: Theme.of(context)
+                                    .colorScheme.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),

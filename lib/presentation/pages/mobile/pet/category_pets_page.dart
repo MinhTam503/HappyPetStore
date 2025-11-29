@@ -38,12 +38,12 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
   Future<void> _loadPets() async {
     try {
       setState(() => isLoading = true);
-      
+
       final snapshot = await FirebaseFirestore.instance
           .collection('Pets')
           .where('category', isEqualTo: widget.categoryName)
           .get();
-      
+
       if (mounted) {
         final petsData = snapshot.docs.map((doc) {
           final data = doc.data();
@@ -55,7 +55,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
           final status = pet['status']?.toString().toLowerCase() ?? '';
           return isAvailable && status != 'sold';
         }).toList();
-        
+
         // Extract unique breeds
         final breeds = <String>{'all'};
         for (final pet in petsData) {
@@ -64,7 +64,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
             breeds.add(breed);
           }
         }
-        
+
         setState(() {
           pets = petsData;
           filteredPets = List.from(pets);
@@ -87,9 +87,8 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
       if (breed == 'all') {
         filteredPets = List.from(pets);
       } else {
-        filteredPets = pets.where((pet) => 
-          pet['breed']?.toString() == breed
-        ).toList();
+        filteredPets =
+            pets.where((pet) => pet['breed']?.toString() == breed).toList();
       }
     });
     _applySorting();
@@ -99,11 +98,11 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
     setState(() {
       filteredPets.sort((a, b) {
         int result = 0;
-        
+
         // Apply multiple sorting criteria in order
         for (final criteria in selectedSortCriteria) {
           dynamic valueA, valueB;
-          
+
           switch (criteria) {
             case 'name':
               valueA = a['name'] ?? '';
@@ -125,13 +124,13 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
               valueA = a['name'] ?? '';
               valueB = b['name'] ?? '';
           }
-          
+
           result = valueA.compareTo(valueB);
           if (result != 0) {
             break; // If values are different, stop here
           }
         }
-        
+
         return isAscending ? result : -result;
       });
     });
@@ -139,7 +138,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
 
   void _showSortOptions() {
     final l10n = AppLocalizations.of(context)!;
-    
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -170,7 +169,10 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                     'Chọn nhiều tiêu chí (theo thứ tự ưu tiên):',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -178,10 +180,14 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                     child: ListView(
                       shrinkWrap: true,
                       children: [
-                        _buildMultiSortOption('name', 'Tên', Icons.sort_by_alpha, setModalState),
-                        _buildMultiSortOption('price', l10n.priceAsc, Icons.attach_money, setModalState),
-                        _buildMultiSortOption('age', 'Tuổi', Icons.cake, setModalState),
-                        _buildMultiSortOption('sex', 'Giới tính', Icons.pets, setModalState),
+                        _buildMultiSortOption(
+                            'name', 'Tên', Icons.sort_by_alpha, setModalState),
+                        _buildMultiSortOption('price', l10n.priceAsc,
+                            Icons.attach_money, setModalState),
+                        _buildMultiSortOption(
+                            'age', 'Tuổi', Icons.cake, setModalState),
+                        _buildMultiSortOption(
+                            'sex', 'Giới tính', Icons.pets, setModalState),
                       ],
                     ),
                   ),
@@ -198,9 +204,18 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                           icon: const Icon(Icons.arrow_upward),
                           label: Text(l10n.priceAsc),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: isAscending ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            foregroundColor: isAscending
+                                ? Theme.of(context)
+                                    .colorScheme.primary
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
                             side: BorderSide(
-                              color: isAscending ? primaryColor : Theme.of(context).dividerColor,
+                              color: isAscending
+                                  ? Theme.of(context)
+                                    .colorScheme.primary
+                                  : Theme.of(context).dividerColor,
                             ),
                           ),
                         ),
@@ -216,9 +231,18 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                           icon: const Icon(Icons.arrow_downward),
                           label: Text(l10n.priceDesc),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: !isAscending ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            foregroundColor: !isAscending
+                                ? Theme.of(context)
+                                    .colorScheme.primary
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
                             side: BorderSide(
-                              color: !isAscending ? primaryColor : Theme.of(context).dividerColor,
+                              color: !isAscending
+                                  ? Theme.of(context)
+                                    .colorScheme.primary
+                                  : Theme.of(context).dividerColor,
                             ),
                           ),
                         ),
@@ -234,8 +258,10 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Áp dụng'),
                     ),
@@ -249,18 +275,26 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
     );
   }
 
-  Widget _buildMultiSortOption(String value, String label, IconData icon, StateSetter setModalState) {
+  Widget _buildMultiSortOption(
+      String value, String label, IconData icon, StateSetter setModalState) {
     final isSelected = selectedSortCriteria.contains(value);
     final selectedIndex = selectedSortCriteria.toList().indexOf(value);
-    
+
     return CheckboxListTile(
-      secondary: Icon(icon, color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+      secondary: Icon(icon,
+          color: isSelected
+              ? Theme.of(context)
+                                    .colorScheme.primary
+              : Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
       title: Row(
         children: [
           Text(
             label,
             style: TextStyle(
-              color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface,
+              color: isSelected
+                  ? Theme.of(context)
+                                    .colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -269,7 +303,8 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: primaryColor,
+                color: Theme.of(context)
+                                    .colorScheme.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -285,7 +320,8 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
         ],
       ),
       value: isSelected,
-      activeColor: primaryColor,
+      activeColor: Theme.of(context)
+                                    .colorScheme.primary,
       onChanged: (bool? checked) {
         setModalState(() {
           if (checked == true) {
@@ -293,13 +329,13 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
           } else {
             selectedSortCriteria.remove(value);
           }
-          
+
           // Ensure at least one criterion is selected
           if (selectedSortCriteria.isEmpty) {
             selectedSortCriteria.add('name');
           }
         });
-        
+
         setState(() {}); // Update main widget state
       },
     );
@@ -309,13 +345,15 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     // Get localized category name
-    final localizedCategoryName = GenderLocalizer.getLocalizedCategory(l10n, widget.categoryName);
+    final localizedCategoryName =
+        GenderLocalizer.getLocalizedCategory(l10n, widget.categoryName);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        centerTitle: true,
         title: Text(localizedCategoryName),
         elevation: 0,
         actions: [
@@ -334,9 +372,9 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Text(
+                const Text(
                   'Giống:',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
@@ -346,16 +384,17 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: availableBreeds.map((breed) => 
-                        _buildBreedChip(breed, breed == 'all' ? 'Tất cả' : breed)
-                      ).toList(),
+                      children: availableBreeds
+                          .map((breed) => _buildBreedChip(
+                              breed, breed == 'all' ? 'Tất cả' : breed))
+                          .toList(),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           // Pets grid
           Expanded(
             child: isLoading
@@ -368,14 +407,20 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                             Icon(
                               Icons.pets_outlined,
                               size: 64,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.3),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               l10n.noResults,
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
                               ),
                             ),
                           ],
@@ -384,7 +429,8 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                     : Padding(
                         padding: const EdgeInsets.all(16),
                         child: GridView.builder(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             childAspectRatio: 0.78,
                             crossAxisSpacing: 12,
@@ -415,21 +461,23 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
 
   Widget _buildBreedChip(String value, String label) {
     final isSelected = selectedBreed == value;
-    
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         selected: isSelected,
         label: Text(label),
         onSelected: (selected) => _filterByBreed(value),
-        selectedColor: primaryColor.withOpacity(0.2),
-        checkmarkColor: primaryColor,
+        selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+        checkmarkColor: Theme.of(context).colorScheme.primary,
         labelStyle: TextStyle(
-          color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
         side: BorderSide(
-          color: isSelected ? primaryColor : Theme.of(context).dividerColor,
+          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
         ),
       ),
     );

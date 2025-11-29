@@ -205,7 +205,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _MenuItem(
                           icon: Icons.pets,
                           iconBg: const Color(0xfffde2e2),
-                          iconColor: primaryColor,
+                          iconColor: Theme.of(context)
+                                    .colorScheme.primary,
                           title: l10n?.viewedPets ?? 'Viewed Pets',
                           onTap: () {
                             Navigator.push(

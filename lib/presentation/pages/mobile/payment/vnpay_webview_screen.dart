@@ -110,7 +110,8 @@ class _VnpayWebViewScreenState extends State<VnpayWebViewScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.black),
@@ -177,7 +178,8 @@ class _VnpayWebViewScreenState extends State<VnpayWebViewScreen> {
                           icon: const Icon(Icons.refresh),
                           label: const Text('Thử lại'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
+                            backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
@@ -201,15 +203,16 @@ class _VnpayWebViewScreenState extends State<VnpayWebViewScreen> {
           if (_isLoading && _error == null)
             Container(
               color: Colors.white.withOpacity(0.8),
-              child: const Center(
+              child:  Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context)
+                                    .colorScheme.primary),
                     ),
-                    SizedBox(height: 16),
-                    Text(
+                    const SizedBox(height: 16),
+                    const Text(
                       'Đang tải trang thanh toán...',
                       style: TextStyle(
                         fontSize: 16,

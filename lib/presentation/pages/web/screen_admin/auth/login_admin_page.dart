@@ -211,7 +211,8 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                               height: 48,
                               child: FilledButton(
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: primaryColor,
+                                  backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                                   foregroundColor: Colors.white,
                                 ),
                                 autofocus: true,

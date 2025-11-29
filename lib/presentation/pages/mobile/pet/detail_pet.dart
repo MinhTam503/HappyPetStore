@@ -586,7 +586,8 @@ class _DetailPetState extends State<DetailPet> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: primaryColor),
+                    side:  BorderSide(color: Theme.of(context)
+                                    .colorScheme.primary),
                   ),
                   elevation: 4,
                 ),

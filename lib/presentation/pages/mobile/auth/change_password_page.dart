@@ -257,7 +257,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   backgroundColor:
-                                      primaryColor, // dùng màu hệ thống app
+                                      Theme.of(context)
+                                    .colorScheme.primary, 
                                   foregroundColor: Colors.black,
                                   disabledBackgroundColor: Colors.grey.shade300,
                                 ),
@@ -320,7 +321,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: primaryColor, width: 1.6),
+        borderSide: BorderSide(color: Theme.of(context)
+                                    .colorScheme.primary, width: 1.6),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       filled: true,

@@ -60,14 +60,16 @@ class ConversationCard extends StatelessWidget {
                 // Avatar
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: primaryColor.withOpacity(.12),
+                  backgroundColor: Theme.of(context)
+                                    .colorScheme.primary.withOpacity(.12),
                   foregroundImage: hasImage ? NetworkImage(imageUrl) : null,
                   onForegroundImageError: hasImage ? (_, __) {} : null,
                   child: !hasImage
                       ? Text(
                           initials, // fallback sang parts khi không có ảnh
-                          style: const TextStyle(
-                            color: primaryColor,
+                          style:  TextStyle(
+                            color: Theme.of(context)
+                                    .colorScheme.primary,
                             fontWeight: FontWeight.w700,
                           ),
                         )
@@ -125,7 +127,8 @@ class ConversationCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: primaryColor,
+                      color: Theme.of(context)
+                                    .colorScheme.primary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(

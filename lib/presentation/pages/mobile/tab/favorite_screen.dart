@@ -103,8 +103,9 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        iconTheme: const IconThemeData(
-          color: primaryColor,
+        iconTheme:  IconThemeData(
+          color: Theme.of(context)
+                                    .colorScheme.primary,
           size: 28,
         ),
         key: _scaffoldKey,
@@ -365,10 +366,11 @@ class _FavoriteCard extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         CurrencyHelper.formatVND(price),
-                        style: const TextStyle(
+                        style:  TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: primaryColor,
+                          color: Theme.of(context)
+                                    .colorScheme.primary,
                           letterSpacing: 0.2,
                         ),
                       ),

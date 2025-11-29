@@ -67,8 +67,9 @@ class _VnpayPaymentResultScreenState extends State<VnpayPaymentResultScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                   CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context)
+                                    .colorScheme.primary),
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -197,7 +198,8 @@ class _VnpayPaymentResultScreenState extends State<VnpayPaymentResultScreen> {
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
+                  backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -252,7 +254,8 @@ class _VnpayPaymentResultScreenState extends State<VnpayPaymentResultScreen> {
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
+                backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 16,

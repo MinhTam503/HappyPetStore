@@ -208,26 +208,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     await orderRef.set(orderData);
 
-    // Update pet status to sold and mark as unavailable
-    if (isPaid) {
-      for (var item in cartItems) {
-        final petId = item.grocery["productId"] ?? item.grocery["id"];
-        if (petId != null) {
-          try {
-            final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId.toString());
-            final docSnap = await docRef.get();
-            if (docSnap.exists) {
-              await docRef.update({
-                "status": "sold",
-                "isAvailable": false,
-              });
-              debugPrint("✅ Pet $petId marked as sold");
-            } else {
-              debugPrint("⚠️ Pet with id $petId not found in Firestore.");
-            }
-          } catch (e) {
-            debugPrint("❌ Error updating pet $petId status: $e");
+    // Update pet status to reserved and mark as unavailable when order is placed
+    for (var item in cartItems) {
+      final petId = item.grocery["productId"] ?? item.grocery["id"];
+      if (petId != null) {
+        try {
+          final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId.toString());
+          final docSnap = await docRef.get();
+          if (docSnap.exists) {
+            await docRef.update({
+              "status": "reserved",
+              "isAvailable": false,
+              "reservedAt": FieldValue.serverTimestamp(),
+              "orderId": orderRef.id,
+            });
+            debugPrint("✅ Pet $petId marked as reserved for order ${orderRef.id}");
+          } else {
+            debugPrint("⚠️ Pet with id $petId not found in Firestore.");
           }
+        } catch (e) {
+          debugPrint("❌ Error updating pet $petId status: $e");
         }
       }
     }
@@ -539,10 +539,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: primaryColor.withValues(alpha: 0.1),
+                            color: Theme.of(context)
+                                    .colorScheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.location_on, color: primaryColor, size: 20),
+                          child:  Icon(Icons.location_on, color: Theme.of(context)
+                                    .colorScheme.primary, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -551,7 +553,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             children: [
                               Text(
                                 'Địa chỉ giao hàng',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: primaryColor),
+                                style:  TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Theme.of(context)
+                                    .colorScheme.primary),
                               ),
                               const SizedBox(height: 4),
                               if (selectedDeliveryInfo != null) ...[
@@ -653,7 +656,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const Text('Tổng cộng', style: TextStyle(fontWeight: FontWeight.bold)),
                       Text(
                         CurrencyHelper.formatVND(total),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+                        style:  TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context)
+                                    .colorScheme.primary),
                       ),
                     ],
                   ),
@@ -708,7 +712,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
+                        backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                         foregroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

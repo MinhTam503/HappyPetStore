@@ -741,8 +741,9 @@ class _CartScreenState extends State<CartScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        iconTheme: const IconThemeData(
-          color: primaryColor,
+        iconTheme:  IconThemeData(
+          color: Theme.of(context)
+                                    .colorScheme.primary,
           size: 28,
         ),
         key: _scaffoldKey,
@@ -1071,10 +1072,11 @@ class _CartScreenState extends State<CartScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   CurrencyHelper.formatVND(selectedTotal),
-                                  style: const TextStyle(
+                                  style:  TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: primaryColor,
+                                    color: Theme.of(context)
+                                    .colorScheme.primary,
                                   ),
                                 ),
                               ],
@@ -1114,7 +1116,8 @@ class _CartScreenState extends State<CartScreen> {
                                               .add(LoadCart(userIdentifier!));
                                         },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                                 foregroundColor: Colors.black,
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 14),

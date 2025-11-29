@@ -18,7 +18,8 @@ class MessageRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bubbleColor = isMe 
-        ? primaryColor 
+        ? Theme.of(context)
+                                    .colorScheme.primary 
         : Theme.of(context).cardColor;
     final textColor = isMe 
         ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.white)

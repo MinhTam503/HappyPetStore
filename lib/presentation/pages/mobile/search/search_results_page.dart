@@ -198,7 +198,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                       children: [
                         Icon(
                           widget.searchImage != null ? Icons.image_search : Icons.pets, 
-                          color: widget.searchImage != null ? Colors.purple : primaryColor, 
+                          color: widget.searchImage != null ? Colors.purple : Theme.of(context)
+                                    .colorScheme.primary, 
                           size: 20
                         ),
                         const SizedBox(width: 8),
@@ -382,7 +383,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                               icon: const Icon(Icons.search),
                               label: const Text('Tìm kiếm mới'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 24, vertical: 12),

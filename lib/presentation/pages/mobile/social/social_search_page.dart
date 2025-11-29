@@ -74,7 +74,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
     return Scaffold(
       backgroundColor: isDark ? theme.scaffoldBackgroundColor : secondaryColor,
       appBar: AppBar(
-        backgroundColor: isDark ? theme.scaffoldBackgroundColor : secondaryColor,
+        backgroundColor:
+            isDark ? theme.scaffoldBackgroundColor : secondaryColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -101,7 +102,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
               hintText: l10n?.searchPets ?? 'Search pets, people...',
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, size: 20),
@@ -226,17 +228,23 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
                           : null,
                     ),
                     child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       leading: Container(
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
+                          color: (isDark
+                                  ? darkPrimaryColor
+                                  : Theme.of(context).colorScheme.primary)
+                              .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.history,
-                          color: isDark ? darkPrimaryColor : primaryColor,
+                          color: isDark
+                              ? darkPrimaryColor
+                              : Theme.of(context).colorScheme.primary,
                           size: 20,
                         ),
                       ),
@@ -257,7 +265,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
                             size: 16,
                           ),
                           IconButton(
-                            icon: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                            icon: Icon(Icons.close,
+                                size: 18, color: Colors.grey[500]),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onPressed: () {
@@ -331,12 +340,19 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
                         avatar: Icon(
                           Icons.tag,
                           size: 16,
-                          color: isDark ? darkPrimaryColor : primaryColor,
+                          color: isDark
+                              ? darkPrimaryColor
+                              : Theme.of(context).colorScheme.primary,
                         ),
                         label: Text(tag),
-                        backgroundColor: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
+                        backgroundColor: (isDark
+                                ? darkPrimaryColor
+                                : Theme.of(context).colorScheme.primary)
+                            .withOpacity(0.1),
                         labelStyle: TextStyle(
-                          color: isDark ? darkPrimaryColor : primaryColor,
+                          color: isDark
+                              ? darkPrimaryColor
+                              : Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -427,7 +443,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
     );
   }
 
-  Widget _buildSearchTip(IconData icon, String title, String example, bool isDark) {
+  Widget _buildSearchTip(
+      IconData icon, String title, String example, bool isDark) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -533,7 +550,7 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
       itemBuilder: (context, index) {
         final profile = results[index];
         final isLastItem = index == results.length - 1;
-        
+
         return Container(
           margin: EdgeInsets.only(bottom: isLastItem ? 0 : 12),
           decoration: BoxDecoration(
@@ -562,9 +579,11 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       leading: CircleAvatar(
         radius: 28,
-        backgroundColor: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
-        backgroundImage:
-            profile.avatarUrl.isNotEmpty ? NetworkImage(profile.avatarUrl) : null,
+        backgroundColor:
+            (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
+        backgroundImage: profile.avatarUrl.isNotEmpty
+            ? NetworkImage(profile.avatarUrl)
+            : null,
         child: profile.avatarUrl.isEmpty
             ? Icon(
                 Icons.pets,
@@ -574,8 +593,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
             : null,
       ),
       title: Text(
-        (profile.displayName?.isNotEmpty ?? false) 
-            ? profile.displayName! 
+        (profile.displayName?.isNotEmpty ?? false)
+            ? profile.displayName!
             : profile.petName,
         style: TextStyle(
           fontWeight: FontWeight.bold,
@@ -586,7 +605,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if ((profile.displayName?.isNotEmpty ?? false) && profile.petName.isNotEmpty)
+          if ((profile.displayName?.isNotEmpty ?? false) &&
+              profile.petName.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(
@@ -616,7 +636,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
+                  color: (isDark ? darkPrimaryColor : primaryColor)
+                      .withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -643,7 +664,8 @@ class _SocialSearchPageState extends State<SocialSearchPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: (isDark ? darkPrimaryColor : primaryColor).withOpacity(0.1),
+                  color: (isDark ? darkPrimaryColor : primaryColor)
+                      .withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(

@@ -191,8 +191,9 @@ class _AccountAdminState extends State<AccountAdmin> {
         labelText: label,
         prefixIcon: prefix,
         border: const OutlineInputBorder(),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: primaryColor, width: 2),
+        focusedBorder:  OutlineInputBorder(
+          borderSide: BorderSide(color: Theme.of(context)
+                                    .colorScheme.primary, width: 2),
         ),
       );
 

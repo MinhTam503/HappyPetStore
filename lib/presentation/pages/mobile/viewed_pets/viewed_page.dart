@@ -197,8 +197,9 @@ class _ViewedPageState extends State<ViewedPage> {
                       ),
                     Text(
                       CurrencyHelper.formatVND(pet.price ?? 0),
-                      style: const TextStyle(
-                        color: primaryColor,
+                      style:  TextStyle(
+                        color: Theme.of(context)
+                                    .colorScheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -220,7 +221,8 @@ class _ViewedPageState extends State<ViewedPage> {
                   _buildFavoriteButton(pet),
                   IconButton(
                     icon:
-                        const Icon(Icons.message_outlined, color: primaryColor),
+                         Icon(Icons.message_outlined, color: Theme.of(context)
+                                    .colorScheme.primary),
                     onPressed: () {
                       Navigator.push(
                         context,

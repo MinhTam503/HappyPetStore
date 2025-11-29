@@ -170,7 +170,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ListTile(
                 leading: Icon(
                   Icons.photo_library_rounded,
-                  color: primaryColor,
+                  color: Theme.of(context)
+                                    .colorScheme.primary,
                   size: 28,
                 ),
                 title: Text(
@@ -188,7 +189,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ListTile(
                 leading: Icon(
                   Icons.camera_alt_rounded,
-                  color: primaryColor,
+                  color: Theme.of(context)
+                                    .colorScheme.primary,
                   size: 28,
                 ),
                 title: Text(
@@ -394,7 +396,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 fontWeight: FontWeight.bold,
                 color: _isUploading
                     ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
-                    : (isDark ? darkPrimaryColor : primaryColor),
+                    : (isDark ? darkPrimaryColor : Theme.of(context)
+                                    .colorScheme.primary),
               ),
             ),
           ),
@@ -420,12 +423,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   // Avatar
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: primaryColor.withOpacity(0.1),
+                    backgroundColor: Theme.of(context)
+                                    .colorScheme.primary.withOpacity(0.1),
                     backgroundImage: _userAvatar != null && _userAvatar!.isNotEmpty
                         ? NetworkImage(_userAvatar!)
                         : null,
                     child: _userAvatar == null || _userAvatar!.isEmpty
-                        ? Icon(Icons.person, color: primaryColor, size: 28)
+                        ? Icon(Icons.person, color: Theme.of(context)
+                                    .colorScheme.primary, size: 28)
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -568,9 +573,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                   style: const TextStyle(fontSize: 15),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: isDark ? darkPrimaryColor : primaryColor,
+                  foregroundColor: isDark ? darkPrimaryColor : Theme.of(context)
+                                    .colorScheme.primary,
                   side: BorderSide(
-                    color: isDark ? darkPrimaryColor : primaryColor,
+                    color: isDark ? darkPrimaryColor : Theme.of(context)
+                                    .colorScheme.primary,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   minimumSize: const Size(double.infinity, 48),

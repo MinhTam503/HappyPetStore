@@ -100,13 +100,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           children: [
             const SizedBox(width: 8),
             CircleAvatar(
-              backgroundColor: primaryColor.withOpacity(.12),
+              backgroundColor: Theme.of(context)
+                                    .colorScheme.primary.withOpacity(.12),
               child: Text(
                 widget.customerEmail.isNotEmpty
                     ? widget.customerEmail[0].toUpperCase()
                     : '?',
-                style: const TextStyle(
-                  color: primaryColor,
+                style:  TextStyle(
+                  color: Theme.of(context)
+                                    .colorScheme.primary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -139,8 +141,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     return Center(child: Text(AppLocalizations.of(context)!.errorLoadingChatData));
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                        child: CircularProgressIndicator(color: primaryColor));
+                    return  Center(
+                        child: CircularProgressIndicator(color: Theme.of(context)
+                                    .colorScheme.primary));
                   }
                   final docs = snapshot.data!.docs;
 
@@ -229,7 +232,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ),
                   const SizedBox(width: 8),
                   CircleAvatar(
-                    backgroundColor: primaryColor,
+                    backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                     radius: 24,
                     child: IconButton(
                       onPressed: sendMessage,

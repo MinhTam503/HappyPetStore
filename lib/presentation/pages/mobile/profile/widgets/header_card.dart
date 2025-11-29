@@ -48,7 +48,8 @@ class HeaderCard extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: primaryColor, width: 3),
+                  border: Border.all(color: Theme.of(context)
+                                    .colorScheme.primary, width: 3),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(.10),
@@ -76,7 +77,8 @@ class HeaderCard extends StatelessWidget {
                 bottom: -2,
                 right: -2,
                 child: Material(
-                  color: primaryColor,
+                  color: Theme.of(context)
+                                    .colorScheme.primary,
                   shape: const CircleBorder(),
                   elevation: 2,
                   child: InkWell(

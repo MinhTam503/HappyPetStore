@@ -700,8 +700,9 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            color: primaryColor),
+                         Icon(Icons.location_on_outlined,
+                            color: Theme.of(context)
+                                    .colorScheme.primary),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
