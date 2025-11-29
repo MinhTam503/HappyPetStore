@@ -173,7 +173,7 @@ class _EditSocialProfilePageState extends State<EditSocialProfilePage> {
                 child: Text(
                   _isUpdating ? l10n.savingProfile : l10n.saveProfile,
                   style: TextStyle(
-                    color: _isUpdating ? Colors.grey : theme.primaryColor,
+                    color: _isUpdating ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) : theme.primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -214,7 +214,7 @@ class _EditSocialProfilePageState extends State<EditSocialProfilePage> {
                       backgroundColor: theme.primaryColor,
                       radius: 20,
                       child: IconButton(
-                        icon: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                        icon: Icon(Icons.camera_alt, size: 20, color: Theme.of(context).colorScheme.onPrimary),
                         onPressed: _isUploading ? null : _pickImage,
                       ),
                     ),

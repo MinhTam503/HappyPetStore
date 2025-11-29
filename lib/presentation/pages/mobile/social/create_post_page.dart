@@ -162,7 +162,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -393,7 +393,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: _isUploading
-                    ? Colors.grey
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
                     : (isDark ? darkPrimaryColor : primaryColor),
               ),
             ),
@@ -410,7 +410,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: Colors.grey[300]!,
+                    color: Theme.of(context).dividerColor,
                     width: 0.5,
                   ),
                 ),
@@ -445,7 +445,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           l10n?.createPost ?? 'Create Post',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                       ],
@@ -465,7 +465,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 decoration: InputDecoration(
                   hintText: l10n?.writeCaption ?? 'Write caption...',
                   hintStyle: TextStyle(
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                     fontSize: 15,
                   ),
                   border: InputBorder.none,

@@ -254,26 +254,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(18),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Colors.black12,
+                          color: Theme.of(context).shadowColor.withOpacity(0.12),
                           blurRadius: 4,
                           spreadRadius: 1,
-                          offset: Offset(0, 2),
+                          offset: const Offset(0, 2),
                         )
                       ],
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.search, color: Colors.grey, size: 20),
+                        Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             l10n?.searchPetsPlaceholder ?? 'Search for pets',
-                            style: const TextStyle(
-                              color: Colors.black45,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
                               fontSize: 14,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -345,9 +345,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 TextSpan(
                   text: l10n?.welcomeToHappyPets ?? 'Welcome to Happy Pets Shop!',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
-                    color: Colors.black38,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.38),
                   ),
                 ),
               ],
@@ -359,9 +359,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           const SizedBox(height: 10),
           Text(
             l10n?.findPerfectCompanion ?? 'Find the perfect companion for your family',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
               height: 1.2,
               fontWeight: FontWeight.bold,
             ),
@@ -387,30 +387,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Container(
           padding: const EdgeInsets.only(left: 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(30),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Colors.black12,
+                color: Theme.of(context).shadowColor.withOpacity(0.12),
                 blurRadius: 12,
                 spreadRadius: 3,
-                offset: Offset(0, 5),
+                offset: const Offset(0, 5),
               )
             ],
           ),
           child: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.search,
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
               const SizedBox(width: 10),
               SizedBox(
                 width: 300,
                 child: Text(
                   l10n?.searchPetsPlaceholder ?? 'Search for pets',
-                  style: const TextStyle(
-                    color: Colors.black45,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
                     fontSize: 14,
                   ),
                 ),

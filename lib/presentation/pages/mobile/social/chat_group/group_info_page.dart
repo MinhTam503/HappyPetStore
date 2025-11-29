@@ -63,15 +63,15 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     final hasMore = memberCount > 8;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 1,
-        iconTheme: const IconThemeData(color: Color(0xFF00A86B)),
-        title: const Text(
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
+        title: Text(
           'Thông tin nhóm',
           style: TextStyle(
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -103,10 +103,10 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                   // Group Name
                   Text(
                     widget.groupInfo.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -152,10 +152,10 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                     children: [
                       Text(
                         l10n.members,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
                         ),
                       ),
                       if (hasMore)
@@ -203,7 +203,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                   label: Text(l10n.leaveGroup),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -230,7 +230,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!, width: 0.5),
+          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
         ),
       ),
       child: ListTile(
@@ -245,17 +245,17 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         ),
         title: Text(
           name,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 15,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
           ),
         ),
         subtitle: isMe
             ? Text(
                 'Bạn',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   fontSize: 13,
                 ),
               )
@@ -277,9 +277,9 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
           expand: false,
           builder: (context, scrollController) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
               ),
@@ -294,7 +294,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.grey[300],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),

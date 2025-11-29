@@ -686,7 +686,7 @@ class _LanguageOption extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           color:
-              isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.grey.shade100,
+              isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: isSelected ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
         ),
@@ -707,7 +707,7 @@ class _LanguageOption extends StatelessWidget {
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.8) : Colors.black54,
+          color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.8) : Theme.of(context).colorScheme.onSurface.withOpacity(0.54),
         ),
       ),
       trailing: Radio<String>(
@@ -795,7 +795,7 @@ class _ThemeOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected 
               ? Theme.of(context).colorScheme.primary.withOpacity(0.1) 
-              : Colors.grey.shade100,
+              : Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: isSelected 
               ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) 
@@ -805,7 +805,7 @@ class _ThemeOption extends StatelessWidget {
           icon,
           color: isSelected 
               ? Theme.of(context).colorScheme.primary 
-              : Colors.grey.shade600,
+              : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           size: 24,
         ),
       ),
@@ -821,7 +821,7 @@ class _ThemeOption extends StatelessWidget {
         style: theme.textTheme.bodySmall?.copyWith(
           color: isSelected 
               ? Theme.of(context).colorScheme.primary.withOpacity(0.8) 
-              : Colors.black54,
+              : Theme.of(context).colorScheme.onSurface.withOpacity(0.54),
         ),
       ),
       trailing: Radio<bool>(

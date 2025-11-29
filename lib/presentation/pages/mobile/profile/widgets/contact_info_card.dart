@@ -26,9 +26,9 @@ class ContactInfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Liên kết tài khoản',
-              style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black),
+              style: TextStyle(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 12),
             _row(
@@ -66,8 +66,8 @@ class ContactInfoCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-        color: Colors.white,
+        border: Border.all(color: Theme.of(context).dividerColor),
+        color: Theme.of(context).cardColor,
       ),
       child: ListTile(
         leading: Icon(icon, color: Theme.of(context).colorScheme.primary),

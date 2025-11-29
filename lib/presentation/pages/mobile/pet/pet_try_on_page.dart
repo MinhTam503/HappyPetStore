@@ -616,19 +616,19 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                                 _stickerRotation = 0.0;
                               });
                             },
-                            backgroundColor: Colors.black54,
-                            child: const Icon(Icons.restart_alt, color: Colors.white),
+                            backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.54),
                             tooltip: 'Reset vị trí',
+                            child: Icon(Icons.restart_alt, color: Theme.of(context).colorScheme.onSurface),
                           ),
                         ),
                       if (_error != null)
                         Positioned.fill(
                           child: Container(
-                            color: Colors.black54,
+                            color: Theme.of(context).colorScheme.surface.withOpacity(0.54),
                             alignment: Alignment.center,
                             child: Text(
                               _error!,
-                              style: const TextStyle(color: Colors.white),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -649,7 +649,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
       onTap: () => setState(() => _controlsExpanded = !_controlsExpanded),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        color: Colors.grey[200],
+        color: Theme.of(context).colorScheme.surfaceVariant,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -673,20 +673,20 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: Row(
         children: [
-          Icon(Icons.view_in_ar, size: 18, color: Colors.grey[700]),
+          Icon(Icons.view_in_ar, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
           const SizedBox(width: 6),
           Text(
             l10n.renderMode,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           const Spacer(),
@@ -736,7 +736,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                   _useLiveCamera ? () => _switchMode(false) : _pickRoomPhoto,
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    _useLiveCamera ? Colors.grey[800] : Colors.green[700],
+                    _useLiveCamera ? Theme.of(context).colorScheme.onSurface.withOpacity(0.8) : Colors.green[700],
               ),
               child: Text(_roomPhoto == null ? l10n.capturePhoto : l10n.retakePhoto),
             ),
@@ -747,7 +747,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
               onPressed: !_useLiveCamera ? () => _switchMode(true) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    _useLiveCamera ? Colors.green[700] : Colors.grey[800],
+                    _useLiveCamera ? Colors.green[700] : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
               child: Text(l10n.liveCamera),
             ),
@@ -762,23 +762,23 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.category, size: 18, color: Colors.grey[700]),
+              Icon(Icons.category, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
               const SizedBox(width: 6),
               Text(
                 l10n.petCategory,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
               ),
             ],
@@ -803,12 +803,12 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                       decoration: BoxDecoration(
                         color: isSelected
                             ? Theme.of(context).primaryColor
-                            : Colors.white,
+                            : Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected
                               ? Theme.of(context).primaryColor
-                              : Colors.grey[300]!,
+                              : Theme.of(context).dividerColor,
                           width: isSelected ? 2 : 1,
                         ),
                         boxShadow: isSelected
@@ -832,7 +832,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                               Icon(
                                 _categoryIcons[category],
                                 size: 24,
-                                color: isSelected ? Colors.white : Colors.grey[700],
+                                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               ),
                               if (loading)
                                 SizedBox(
@@ -841,7 +841,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      isSelected ? Colors.white : Theme.of(context).primaryColor,
+                                      isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).primaryColor,
                                     ),
                                   ),
                                 ),
@@ -856,7 +856,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                                   ? FontWeight.bold
                                   : FontWeight.w500,
                               color:
-                                  isSelected ? Colors.white : Colors.grey[700],
+                                  isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -881,23 +881,23 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.straighten, size: 18, color: Colors.grey[700]),
+              Icon(Icons.straighten, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
               const SizedBox(width: 6),
               Text(
                 l10n.petSize,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
               ),
               const Spacer(),
@@ -915,7 +915,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
           SliderTheme(
             data: SliderThemeData(
               activeTrackColor: Theme.of(context).primaryColor,
-              inactiveTrackColor: Colors.grey[300],
+              inactiveTrackColor: Theme.of(context).dividerColor,
               thumbColor: Theme.of(context).primaryColor,
               overlayColor: Theme.of(context).primaryColor.withOpacity(0.2),
               trackHeight: 4,
@@ -933,11 +933,11 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
             children: [
               Text(
                 l10n.weightKg(min.toStringAsFixed(min < 1 ? 2 : 0)),
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
               Text(
                 l10n.weightKg(max.toStringAsFixed(0)),
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
             ],
           ),
@@ -952,11 +952,11 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
         return Image.file(File(_roomPhoto!.path), fit: BoxFit.cover);
       }
       return Container(
-        color: Colors.black,
+        color: Theme.of(context).colorScheme.surface,
         alignment: Alignment.center,
         child: Text(
           l10n.noRoomPhoto,
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
           textAlign: TextAlign.center,
         ),
       );
@@ -975,7 +975,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
         return Center(
           child: Text(
             l10n.cameraInitError(e.toString()),
-            style: const TextStyle(color: Colors.white70),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
           ),
         );
       }
@@ -983,7 +983,7 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
     return Center(
       child: Text(
         l10n.initializingCamera,
-        style: const TextStyle(color: Colors.white70),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
       ),
     );
   }
@@ -993,23 +993,23 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.flip, size: 18, color: Colors.grey[700]),
+              Icon(Icons.flip, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
               const SizedBox(width: 6),
               Text(
                 l10n.flip,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
               ),
             ],
@@ -1023,19 +1023,19 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                   icon: Icon(
                     Icons.flip,
                     size: 20,
-                    color: _flipHorizontal ? Colors.white : Colors.grey[700],
+                    color: _flipHorizontal ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                   label: Text(
                     l10n.flipHorizontal,
                     style: TextStyle(
                       fontSize: 12,
-                      color: _flipHorizontal ? Colors.white : Colors.grey[700],
+                      color: _flipHorizontal ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _flipHorizontal
                         ? Theme.of(context).primaryColor
-                        : Colors.white,
+                        : Theme.of(context).cardColor,
                     elevation: _flipHorizontal ? 2 : 0,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
@@ -1050,20 +1050,20 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
                     child: Icon(
                       Icons.flip,
                       size: 20,
-                      color: _flipVertical ? Colors.white : Colors.grey[700],
+                      color: _flipVertical ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                   label: Text(
                     l10n.flipVertical,
                     style: TextStyle(
                       fontSize: 12,
-                      color: _flipVertical ? Colors.white : Colors.grey[700],
+                      color: _flipVertical ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _flipVertical
                         ? Theme.of(context).primaryColor
-                        : Colors.white,
+                        : Theme.of(context).cardColor,
                     elevation: _flipVertical ? 2 : 0,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
@@ -1084,27 +1084,27 @@ class _PetTryOnPageState extends State<PetTryOnPage> with WidgetsBindingObserver
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.black54,
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.54),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (_use3DMode)
-            const Icon(Icons.threed_rotation, color: Colors.white70, size: 16),
+            Icon(Icons.threed_rotation, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 16),
           if (_use3DMode)
             const SizedBox(width: 8),
           Expanded(
             child: Text(
               hintText,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () => setState(() => _hintVisible = false),
-            child: const Icon(Icons.close, color: Colors.white70, size: 18),
+            child: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 18),
           ),
         ],
       ),
@@ -1263,7 +1263,7 @@ class _StickerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (image == null) {
-      final paint = Paint()..color = Colors.white24;
+      final paint = Paint()..color = const Color(0x3DFFFFFF);
       canvas.drawCircle(size.center(Offset.zero) + offset, 40, paint);
       return;
     }

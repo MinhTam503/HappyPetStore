@@ -422,7 +422,7 @@ class _LoginPageNewState extends State<LoginPageNew>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: Colors.pink.shade300,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         content: Center(child: Text(message)),
       ),
     );
@@ -431,7 +431,7 @@ class _LoginPageNewState extends State<LoginPageNew>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: secondaryColor,
+      backgroundColor:Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Stack(
@@ -501,19 +501,21 @@ class _LoginPageNewState extends State<LoginPageNew>
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             "Đăng nhập",
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 5),
                           Text(
                             AppLocalizations.of(context)!.pleaseLoginToContinue,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w300,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                           const SizedBox(height: 50),
@@ -562,14 +564,17 @@ class _LoginPageNewState extends State<LoginPageNew>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text("Chưa có tài khoản? "),
+                              Text(
+                                "Chưa có tài khoản? ",
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                              ),
                               GestureDetector(
                                 onTap: widget.onTap,
                                 child: Text(
                                   "Đăng ký ngay",
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.pink.shade300,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                               ),
@@ -579,9 +584,10 @@ class _LoginPageNewState extends State<LoginPageNew>
                           Center(
                             child: Text(
                               AppLocalizations.of(context)!.orLoginWith,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),
@@ -594,10 +600,10 @@ class _LoginPageNewState extends State<LoginPageNew>
                                 child: Container(
                                   height: 50,
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Theme.of(context).cardColor,
                                     borderRadius: BorderRadius.circular(12),
                                     border:
-                                        Border.all(color: Colors.grey.shade300),
+                                        Border.all(color: Theme.of(context).dividerColor),
                                   ),
                                   child: InkWell(
                                     onTap: _signInWithGoogle,
@@ -612,11 +618,12 @@ class _LoginPageNewState extends State<LoginPageNew>
                                               "assets/images/google.png"),
                                         ),
                                         const SizedBox(width: 10),
-                                        const Text(
+                                        Text(
                                           "Google",
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
+                                            color: Theme.of(context).colorScheme.onSurface,
                                           ),
                                         ),
                                       ],

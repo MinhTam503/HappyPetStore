@@ -37,7 +37,7 @@ class _ChatListPageState extends State<ChatListPage> {
       appBar: AppBar(
         title: Text(l10n.messages),
         backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: BlocBuilder<ChatBloc, ChatState>(
         builder: (context, state) {
@@ -72,14 +72,14 @@ class _ChatListPageState extends State<ChatListPage> {
                     Icon(
                       Icons.chat_bubble_outline,
                       size: 80,
-                      color: Colors.grey[300],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.noConversationsYet,
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -109,12 +109,12 @@ class _ChatListPageState extends State<ChatListPage> {
                   return ListTile(
                     leading: CircleAvatar(
                       radius: 28,
-                      backgroundColor: Colors.grey[300],
+                      backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                       backgroundImage: otherUserAvatar.isNotEmpty
                           ? NetworkImage(otherUserAvatar)
                           : null,
                       child: otherUserAvatar.isEmpty
-                          ? Icon(Icons.person, color: Colors.grey[600])
+                          ? Icon(Icons.person, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))
                           : null,
                     ),
                     title: Row(
@@ -142,8 +142,8 @@ class _ChatListPageState extends State<ChatListPage> {
                             ),
                             child: Text(
                               unreadCount > 99 ? '99+' : unreadCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: theme.colorScheme.onPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -157,7 +157,7 @@ class _ChatListPageState extends State<ChatListPage> {
                         fontWeight: unreadCount > 0
                             ? FontWeight.w600
                             : FontWeight.normal,
-                        color: unreadCount > 0 ? Colors.black87 : Colors.grey[600],
+                        color: unreadCount > 0 ? theme.colorScheme.onSurface.withOpacity(0.87) : theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -166,7 +166,7 @@ class _ChatListPageState extends State<ChatListPage> {
                       _formatTimestamp(conversation.lastMessageTime),
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                     onTap: () {

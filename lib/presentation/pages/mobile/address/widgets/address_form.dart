@@ -196,7 +196,7 @@ class AddressForm extends StatelessWidget {
                           style: TextStyle(
                             color: selectedLocation != null
                                 ? Colors.green[700]
-                                : Colors.grey[600],
+                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             fontSize: 14,
                           ),
                         ),

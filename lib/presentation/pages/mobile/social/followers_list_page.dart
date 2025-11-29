@@ -95,14 +95,14 @@ class _FollowersListPageState extends State<FollowersListPage> {
                         ? Icons.people_outline
                         : Icons.person_add_outlined,
                     size: 64,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     widget.isFollowersMode
                         ? l10n.noFollowers
                         : l10n.noFollowing,
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
                 ],
               ),

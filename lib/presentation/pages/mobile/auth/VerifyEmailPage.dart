@@ -58,8 +58,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         title: Text(AppLocalizations.of(context)!.verifyEmail, 
-                   style: TextStyle(color: Colors.black)),
-        iconTheme: const IconThemeData(color: Colors.black),
+                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
       ),
       body: Center(
         child: Padding(
@@ -81,12 +81,12 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   const SizedBox(height: 12),
                   Text(
                     AppLocalizations.of(context)!.pleaseCheckEmail,
-                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                    style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     "(${widget.email}) để xác minh tài khoản.",
-                    style: TextStyle(fontSize: 15, color: Colors.black54),
+                    style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54)),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(

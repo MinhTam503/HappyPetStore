@@ -198,14 +198,14 @@ class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveCl
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+          Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
           const SizedBox(height: 16),
           Text(
             l10n!.oopsSomethingWrong,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -214,7 +214,7 @@ class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveCl
             child: Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
           ),
           const SizedBox(height: 24),
@@ -226,7 +226,7 @@ class _FollowingFeedState extends State<FollowingFeed> with AutomaticKeepAliveCl
             label: Text(l10n.tryAgain),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),

@@ -133,7 +133,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
       case 'Cancelled':
         return Colors.red;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
     }
   }
 
@@ -163,7 +163,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
       case 'delivered':
         return Colors.green;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
     }
   }
 
@@ -210,7 +210,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
          l10n?.yourOrder??"Đơn hàng của bạn",
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: theme.colorScheme.onSurface,
             letterSpacing: .2,
           ),
         ),
@@ -357,7 +357,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                       _formatTime(order['timestamp']),
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
-                                        color: Colors.black54,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.54),
                                       ),
                                     ),
                                   ],
@@ -399,8 +399,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                     _ChipBadge(
                                       label: "Thanh toán: $statusPay",
                                       icon: Icons.verified_outlined,
-                                      bg: Colors.grey.shade100,
-                                      fg: Colors.black87,
+                                      bg: Theme.of(context).colorScheme.surfaceVariant,
+                                      fg: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
                                     ),
                                     _ChipBadge(
                                       label: status,
@@ -437,13 +437,13 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   Row(
                                     children: [
                                       Icon(Icons.local_shipping,
-                                          size: 16, color: Colors.grey[600]),
+                                          size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                                       const SizedBox(width: 4),
                                       Text(
                                         "Mã vận đơn: $trackingNumber",
                                         style:
                                             theme.textTheme.bodySmall?.copyWith(
-                                          color: Colors.grey[600],
+                                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -510,7 +510,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -622,7 +622,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.black12,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -660,14 +660,14 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       _ChipBadge(
                         label: "Email: $email",
                         icon: Icons.alternate_email,
-                        bg: Colors.grey.shade100,
-                        fg: Colors.black87,
+                        bg: Theme.of(context).colorScheme.surfaceVariant,
+                        fg: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
                       ),
                       _ChipBadge(
                         label: "Thanh toán: $statusPay",
                         icon: Icons.verified_outlined,
-                        bg: Colors.grey.shade100,
-                        fg: Colors.black87,
+                        bg: Theme.of(context).colorScheme.surfaceVariant,
+                        fg: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
                       ),
                       // Show breakdown if subtotal exists and different from total (new orders), otherwise just total
                       if (subtotal != totalRaw && shippingFee > 0) ...[
@@ -706,7 +706,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         Expanded(
                           child: Text(
                             address,
-                            style: const TextStyle(color: Colors.black87),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87)),
                           ),
                         ),
                       ],
@@ -751,9 +751,9 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
+                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
+                        border: Border.all(color: Theme.of(context).dividerColor),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,9 +782,9 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
+                          border: Border.all(color: Theme.of(context).dividerColor),
                         ),
                         child: ShippingTrackingWidget(
                           trackingNumber: trackingNumber,
@@ -829,9 +829,9 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   : Container(
                                       width: 56,
                                       height: 56,
-                                      color: Colors.grey.shade200,
-                                      child: const Icon(Icons.pets,
-                                          color: Colors.black38),
+                                      color: Theme.of(context).colorScheme.surfaceVariant,
+                                      child: Icon(Icons.pets,
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.38)),
                                     ),
                             ),
                             title: GestureDetector(
@@ -905,11 +905,11 @@ class _FilterBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.05),
+            color: Theme.of(context).shadowColor.withOpacity(.05),
             blurRadius: 10,
             offset: const Offset(0, 6),
           ),
@@ -1033,13 +1033,13 @@ class _EmptyOrders extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.inbox_outlined, size: 72, color: Colors.black26),
+            Icon(Icons.inbox_outlined, size: 72, color: theme.colorScheme.onSurface.withOpacity(0.26)),
             const SizedBox(height: 12),
             Text(
               "Không tìm thấy đơn hàng",
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: Colors.black54,
+                color: theme.colorScheme.onSurface.withOpacity(0.54),
               ),
             ),
             const SizedBox(height: 6),
@@ -1047,7 +1047,7 @@ class _EmptyOrders extends StatelessWidget {
               "Đơn hàng của bạn sẽ hiển thị tại đây khi bạn mua sắm.",
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.black45,
+                color: theme.colorScheme.onSurface.withOpacity(0.45),
               ),
             ),
           ],

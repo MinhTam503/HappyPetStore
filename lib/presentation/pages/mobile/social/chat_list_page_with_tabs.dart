@@ -71,15 +71,15 @@ class _ChatListPageWithTabsState extends State<ChatListPageWithTabs>
           preferredSize: const Size.fromHeight(48),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Colors.grey[200]!, width: 1)),
+              color: Theme.of(context).cardColor,
+              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1)),
             ),
             child: TabBar(
               controller: _tabController,
               indicatorColor: const Color(0xFF00A86B),
               indicatorWeight: 3,
               labelColor: const Color(0xFF00A86B),
-              unselectedLabelColor: Colors.grey[600],
+              unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 15),
               tabs: [

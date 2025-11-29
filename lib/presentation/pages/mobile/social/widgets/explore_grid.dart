@@ -265,14 +265,14 @@ class _ExploreGridState extends State<ExploreGrid> with AutomaticKeepAliveClient
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+          Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
           const SizedBox(height: 16),
           Text(
             l10n?.oopsSomethingWrong ?? 'Oops! Something went wrong',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -281,7 +281,7 @@ class _ExploreGridState extends State<ExploreGrid> with AutomaticKeepAliveClient
             child: Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
           ),
           const SizedBox(height: 24),
@@ -293,7 +293,7 @@ class _ExploreGridState extends State<ExploreGrid> with AutomaticKeepAliveClient
             label: Text(l10n?.tryAgain ?? 'Try Again'),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),

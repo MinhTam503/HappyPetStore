@@ -170,7 +170,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                     'Chọn nhiều tiêu chí (theo thứ tự ưu tiên):',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -198,9 +198,9 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                           icon: const Icon(Icons.arrow_upward),
                           label: Text(l10n.priceAsc),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: isAscending ? primaryColor : Colors.grey,
+                            foregroundColor: isAscending ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             side: BorderSide(
-                              color: isAscending ? primaryColor : Colors.grey,
+                              color: isAscending ? primaryColor : Theme.of(context).dividerColor,
                             ),
                           ),
                         ),
@@ -216,9 +216,9 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                           icon: const Icon(Icons.arrow_downward),
                           label: Text(l10n.priceDesc),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: !isAscending ? primaryColor : Colors.grey,
+                            foregroundColor: !isAscending ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             side: BorderSide(
-                              color: !isAscending ? primaryColor : Colors.grey,
+                              color: !isAscending ? primaryColor : Theme.of(context).dividerColor,
                             ),
                           ),
                         ),
@@ -235,7 +235,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
                       child: const Text('Áp dụng'),
                     ),
@@ -254,13 +254,13 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
     final selectedIndex = selectedSortCriteria.toList().indexOf(value);
     
     return CheckboxListTile(
-      secondary: Icon(icon, color: isSelected ? primaryColor : Colors.grey),
+      secondary: Icon(icon, color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
       title: Row(
         children: [
           Text(
             label,
             style: TextStyle(
-              color: isSelected ? primaryColor : Colors.black,
+              color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -274,8 +274,8 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
               ),
               child: Text(
                 '${selectedIndex + 1}',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -315,7 +315,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: Text(localizedCategoryName),
         elevation: 0,
         actions: [
@@ -330,7 +330,7 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
           // Breed filter
           Container(
             height: 60,
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
@@ -368,14 +368,14 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
                             Icon(
                               Icons.pets_outlined,
                               size: 64,
-                              color: Colors.grey.shade400,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               l10n.noResults,
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                               ),
                             ),
                           ],
@@ -425,11 +425,11 @@ class _CategoryPetsPageState extends State<CategoryPetsPage> {
         selectedColor: primaryColor.withOpacity(0.2),
         checkmarkColor: primaryColor,
         labelStyle: TextStyle(
-          color: isSelected ? primaryColor : Colors.grey.shade700,
+          color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
         side: BorderSide(
-          color: isSelected ? primaryColor : Colors.grey.shade300,
+          color: isSelected ? primaryColor : Theme.of(context).dividerColor,
         ),
       ),
     );

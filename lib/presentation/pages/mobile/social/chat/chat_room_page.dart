@@ -192,7 +192,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -243,7 +243,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -277,7 +277,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: Theme.of(context).colorScheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -341,17 +341,17 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: theme.colorScheme.onPrimary,
         title: Row(
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.white,
+              backgroundColor: theme.colorScheme.surface,
               backgroundImage: widget.otherUserAvatar.isNotEmpty
                   ? NetworkImage(widget.otherUserAvatar) as ImageProvider
                   : null,
               child: widget.otherUserAvatar.isEmpty
-                  ? Icon(Icons.person, size: 20, color: Colors.grey[600])
+                  ? Icon(Icons.person, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.6))
                   : null,
             ),
             const SizedBox(width: 12),
@@ -402,14 +402,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                           Icon(
                             Icons.chat_bubble_outline,
                             size: 80,
-                            color: Colors.grey[300],
+                            color: theme.colorScheme.onSurface.withOpacity(0.3),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             l10n.sendFirstMessage,
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.grey[600],
+                              color: theme.colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -446,19 +446,19 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           // Blocked banner (like Facebook Messenger)
           if (_isBlocked)
             Container(
-              color: Colors.grey[200],
+              color: theme.colorScheme.surfaceVariant,
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 20, color: Colors.grey[700]),
+                  Icon(Icons.info_outline, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.7)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       l10n.cannotReplyConversation,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[700],
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ),
@@ -473,7 +473,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 // Reply indicator
                 if (_replyingTo != null)
                   Container(
-                    color: Colors.grey[100],
+                    color: theme.colorScheme.surfaceVariant,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
@@ -508,7 +508,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.grey[700],
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                             ],
@@ -517,7 +517,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                         IconButton(
                           icon: const Icon(Icons.close, size: 20),
                           onPressed: () => _setReplyingTo(null),
-                          color: Colors.grey[600],
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ],
                     ),
@@ -526,10 +526,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 // Input row
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Theme.of(context).shadowColor.withOpacity(0.05),
                         blurRadius: 4,
                         offset: const Offset(0, -2),
                       ),
@@ -562,7 +562,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Theme.of(context).colorScheme.surfaceVariant,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 10,
@@ -581,7 +581,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                         backgroundColor: theme.colorScheme.primary,
                         child: IconButton(
                           icon:
-                              const Icon(Icons.send, color: Colors.white, size: 20),
+                              Icon(Icons.send, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                           onPressed: _sendMessage,
                         ),
                       ),
@@ -812,7 +812,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 DateFormat('HH:mm').format(message.timestamp),
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ),

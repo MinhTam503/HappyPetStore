@@ -113,7 +113,7 @@ class _EditPostPageState extends State<EditPostPage> {
                 child: Text(
                   _isUpdating ? l10n.saving : l10n.save,
                   style: TextStyle(
-                    color: _isUpdating ? Colors.grey : theme.primaryColor,
+                    color: _isUpdating ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) : theme.primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -330,13 +330,13 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context, false),
         ),
         title: Text(
           _getPageTitle(),
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -356,10 +356,10 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
                     color: Colors.pink.shade300,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.phone_android,
                     size: 60,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ),
@@ -379,7 +379,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
                 "${AppLocalizations.of(context)?.otpSentTo ?? 'Mã xác thực đã được gửi đến'}\n${widget.phoneNumber}",
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -430,10 +430,10 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
                   ),
                   child: Text(
           AppLocalizations.of(context)?.verifyButton ?? 'XÁC THỰC',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                 ),
@@ -450,7 +450,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
               ? AppLocalizations.of(context)?.resendButton ?? 'Gửi lại'
               : "${AppLocalizations.of(context)?.resendButtonTimer ?? 'Gửi lại'} ($_resendTokenDuration)",
                       style: TextStyle(
-                        color: _canResend ? Colors.pink.shade300 : Colors.grey,
+                        color: _canResend ? Colors.pink.shade300 : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

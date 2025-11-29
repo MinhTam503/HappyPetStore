@@ -286,7 +286,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isMe ? const Color(0xFF00A86B) : Colors.grey[200],
+                      color: isMe ? const Color(0xFF00A86B) : Theme.of(context).colorScheme.surfaceVariant,
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(18),
                         topRight: const Radius.circular(18),
@@ -304,7 +304,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
                             child: Text(
                               message.text!,
                               style: TextStyle(
-                                color: isMe ? Colors.white : Colors.black87,
+                                color: isMe ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
                                 fontSize: 15,
                               ),
                             ),
@@ -318,7 +318,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
                   padding: const EdgeInsets.only(top: 4, left: 8, right: 8),
                   child: Text(
                     message.timestamp.toLocal().toString().substring(11, 16),
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
                 ),
               ],
@@ -337,13 +337,13 @@ class _ChatPageContentState extends State<ChatPageContent> {
 
     return CircleAvatar(
       backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
-      backgroundColor: Colors.grey[300],
+      backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
       radius: 15,
       child: imageUrl.isEmpty
           ? Icon(
               isShop ? Icons.store : Icons.person,
               size: 16,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             )
           : null,
     );
@@ -362,7 +362,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
             return Container(
               height: 200,
               width: 200,
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.surfaceVariant,
               child: const Center(child: CircularProgressIndicator()),
             );
           },
@@ -370,7 +370,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
             return Container(
               height: 150,
               width: 150,
-              color: Colors.grey[200],
+              color: Theme.of(context).colorScheme.surfaceVariant,
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -389,10 +389,10 @@ class _ChatPageContentState extends State<ChatPageContent> {
   Widget _buildInputArea() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).shadowColor.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -414,7 +414,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
                   const SizedBox(width: 8),
                   Text(
                     'Đang tải ảnh lên...',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
                   ),
                 ],
               ),
@@ -433,7 +433,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
                   decoration: InputDecoration(
                     hintText: "Nhập nội dung ...",
                     filled: true,
-                    fillColor: Colors.grey[100],
+                    fillColor: Theme.of(context).colorScheme.surfaceVariant,
                     contentPadding: const EdgeInsets.symmetric(
                       vertical: 10,
                       horizontal: 16,
@@ -449,7 +449,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
               CircleAvatar(
                 backgroundColor: const Color(0xFF00A86B),
                 child: IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                  icon: Icon(Icons.send, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                   onPressed: _sendMessage,
                 ),
               ),

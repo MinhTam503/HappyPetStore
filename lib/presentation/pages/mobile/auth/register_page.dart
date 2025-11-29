@@ -469,7 +469,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: Colors.pink.shade300,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         content: Center(child: Text(message)),
       ),
     );
@@ -490,7 +490,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: Colors.pink.shade300,
+                  color: Theme.of(context).colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -502,7 +502,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                 width: 150,
                 height: 150,
                 decoration: BoxDecoration(
-                  color: Colors.pink.shade300,
+                  color: Theme.of(context).colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -514,7 +514,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: Colors.pink.shade300,
+                  color: Theme.of(context).colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -526,7 +526,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.pink.shade300,
+                  color: Theme.of(context).colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -552,7 +552,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.pink.shade300.withOpacity(0.3),
+                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                                     spreadRadius: 5,
                                     blurRadius: 15,
                                     offset: const Offset(0, 5),
@@ -571,11 +571,12 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
+                      Text(
                         "Đăng ký tài khoản",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 30),
@@ -615,14 +616,17 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(AppLocalizations.of(context)!.alreadyHaveAccount),
+                          Text(
+                            AppLocalizations.of(context)!.alreadyHaveAccount,
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                          ),
                           GestureDetector(
                             onTap: widget.onTap,
                             child: Text(
                               AppLocalizations.of(context)!.loginNow,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.pink.shade300,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           )
@@ -632,9 +636,10 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                       Center(
                         child: Text(
                           AppLocalizations.of(context)!.orRegisterWith,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -647,9 +652,9 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                             child: Container(
                               height: 50,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Theme.of(context).cardColor,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: Theme.of(context).dividerColor),
                               ),
                               child: InkWell(
                                 onTap: _signUpWithGoogle,
@@ -663,11 +668,12 @@ class _RegisterPageNewState extends State<RegisterPageNew>
                                       child: Image.asset("assets/images/google.png"),
                                     ),
                                     const SizedBox(width: 10),
-                                    const Text(
+                                    Text(
                                       "Google",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                   ],

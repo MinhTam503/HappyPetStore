@@ -200,7 +200,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
     
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -245,7 +245,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
     
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -276,7 +276,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: Theme.of(context).colorScheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(emoji, style: const TextStyle(fontSize: 32)),
@@ -336,7 +336,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 1,
         iconTheme: const IconThemeData(color: Color(0xFF00A86B)),
         leading: IconButton(
@@ -366,8 +366,8 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                 children: [
                   Text(
                     widget.groupName,
-                    style: const TextStyle(
-                      color: Colors.black87,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.87),
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -376,7 +376,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                     Text(
                       '${_groupInfo!.participants.length} thành viên',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                         fontSize: 12,
                       ),
                     ),
@@ -445,11 +445,11 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey[300]),
+                          Icon(Icons.chat_bubble_outline, size: 80, color: theme.colorScheme.onSurface.withOpacity(0.3)),
                           const SizedBox(height: 16),
                           Text(
                             l10n.sendFirstMessage,
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                            style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                           ),
                         ],
                       ),
@@ -488,10 +488,10 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
           // Input area
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Theme.of(context).shadowColor.withOpacity(0.05),
                   blurRadius: 4,
                   offset: const Offset(0, -2),
                 ),
@@ -534,7 +534,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.grey[700],
+                                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                             ],
@@ -543,7 +543,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                         IconButton(
                           icon: const Icon(Icons.close, size: 20),
                           onPressed: () => _setReplyingTo(null),
-                          color: Colors.grey[600],
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ],
                     ),
@@ -575,7 +575,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: theme.colorScheme.surfaceVariant,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           ),
                           maxLines: null,
@@ -587,7 +587,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                       CircleAvatar(
                         backgroundColor: theme.colorScheme.primary,
                         child: IconButton(
-                          icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                          icon: Icon(Icons.send, color: theme.colorScheme.onPrimary, size: 20),
                           onPressed: _sendMessage,
                         ),
                       ),
@@ -623,7 +623,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
             message.text ?? '',
             style: TextStyle(
               fontSize: 13,
-              color: Colors.grey[700],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontStyle: FontStyle.italic,
             ),
             textAlign: TextAlign.center,
@@ -663,12 +663,12 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                 }
                 return CircleAvatar(
                   radius: 16,
-                  backgroundColor: Colors.grey[300],
+                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                   backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
                       ? NetworkImage(avatarUrl)
                       : null,
                   child: avatarUrl == null || avatarUrl.isEmpty
-                      ? Icon(Icons.person, size: 16, color: Colors.grey[600])
+                      ? Icon(Icons.person, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))
                       : null,
                 );
               },
@@ -699,7 +699,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                           senderName,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -743,7 +743,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isMe ? const Color(0xFF00A86B) : Colors.grey[200],
+                      color: isMe ? const Color(0xFF00A86B) : Theme.of(context).colorScheme.surfaceVariant,
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(18),
                         topRight: const Radius.circular(18),
@@ -760,7 +760,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: isMe ? Colors.white.withOpacity(0.2) : Colors.grey[300],
+                            color: isMe ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.2) : Theme.of(context).dividerColor,
                             borderRadius: BorderRadius.circular(8),
                             border: Border(
                               left: BorderSide(
@@ -779,7 +779,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isMe ? Colors.white : const Color(0xFF00A86B),
+                                  color: isMe ? Theme.of(context).colorScheme.onPrimary : const Color(0xFF00A86B),
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -789,7 +789,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: isMe ? Colors.white70 : Colors.grey[700],
+                                  color: isMe ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7) : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                             ],
@@ -832,7 +832,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                           child: Text(
                             message.text!,
                             style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black87,
+                              color: isMe ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
                               fontSize: 15,
                             ),
                           ),
@@ -867,7 +867,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                   padding: const EdgeInsets.only(top: 4, left: 8, right: 8),
                   child: Text(
                     DateFormat('HH:mm').format(message.timestamp),
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
                 ),
               ],
@@ -925,7 +925,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.cancel, style: const TextStyle(color: Colors.grey)),
+            child: Text(l10n.cancel, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -975,7 +975,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                   SnackBar(
                     content: Row(
                       children: [
-                        const Icon(Icons.check_circle, color: Colors.white),
+                        Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary),
                         const SizedBox(width: 8),
                         Text(l10n.leftGroup),
                       ],
@@ -990,7 +990,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
                   SnackBar(
                     content: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.white),
+                        Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onPrimary),
                         const SizedBox(width: 8),
                         Text(l10n.error),
                       ],
@@ -1002,7 +1002,7 @@ class _GroupChatRoomPageState extends State<GroupChatRoomPage> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: Text(l10n.leaveGroup),
           ),

@@ -318,7 +318,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                   TabBar(
                     controller: _tabController,
                     labelColor: theme.primaryColor,
-                    unselectedLabelColor: Colors.grey,
+                    unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     indicatorColor: theme.primaryColor,
                     tabs: [
                       Tab(text: l10n.userPosts),
@@ -474,8 +474,8 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isFollowing ? Colors.grey[300] : theme.primaryColor,
-                      foregroundColor: isFollowing ? Colors.black : Colors.white,
+                      backgroundColor: isFollowing ? Theme.of(context).colorScheme.surfaceVariant : theme.primaryColor,
+                      foregroundColor: isFollowing ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onPrimary,
                     ),
                     child: Text(isFollowing ? l10n.unfollow : l10n.follow),
                   ),
@@ -532,7 +532,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
       ],
@@ -928,7 +928,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: Colors.grey.shade300),
+                            side: BorderSide(color: Theme.of(context).dividerColor),
                           ),
                         ),
                         child: Text(
@@ -950,7 +950,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange.shade400,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

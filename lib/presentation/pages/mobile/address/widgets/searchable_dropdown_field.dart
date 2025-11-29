@@ -58,7 +58,7 @@ class _SearchableDropdownFieldState extends FormFieldState<String> {
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -81,7 +81,7 @@ class _SearchableDropdownFieldState extends FormFieldState<String> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: Theme.of(context).dividerColor,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -165,7 +165,7 @@ class _SearchableDropdownFieldView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12));
-    final labelStyle = TextStyle(color: enabled ? Colors.grey[700] : Colors.grey);
+    final labelStyle = TextStyle(color: enabled ? Theme.of(context).colorScheme.onSurface.withOpacity(0.7) : Theme.of(context).colorScheme.onSurface.withOpacity(0.5));
 
     return GestureDetector(
       onTap: enabled ? onTap : null,
@@ -190,7 +190,7 @@ class _SearchableDropdownFieldView extends StatelessWidget {
                 ),
               Icon(
                 Icons.arrow_drop_down,
-                color: enabled ? Theme.of(context).colorScheme.primary : Colors.grey,
+                color: enabled ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
             ],
           ),
@@ -200,8 +200,8 @@ class _SearchableDropdownFieldView extends StatelessWidget {
           value ?? (hintText ?? 'Chọn'),
           style: TextStyle(
             color: enabled
-                ? (value == null ? Colors.grey[600] : Colors.black)
-                : Colors.grey,
+                ? (value == null ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6) : Theme.of(context).colorScheme.onSurface)
+                : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             fontSize: 16,
           ),
         ),

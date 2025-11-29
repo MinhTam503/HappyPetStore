@@ -182,7 +182,7 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                             label: const Text('Nhắn tin'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12)),
@@ -219,10 +219,10 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                       height: 280,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(color: Theme.of(context).dividerColor),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Theme.of(context).shadowColor.withOpacity(0.05),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -307,7 +307,7 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                                   : "Happy Pet là cửa hàng chuyên cung cấp các sản phẩm và dịch vụ dành cho thú cưng.",
                               textAlign: TextAlign.start,
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: Colors.black87,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
                                 height: 1.35,
                               ),
                             ),
@@ -380,7 +380,7 @@ class _Header extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
+                border: Border.all(color: Theme.of(context).cardColor, width: 4),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.15),
@@ -392,7 +392,7 @@ class _Header extends StatelessWidget {
               child: CircleAvatar(
                 radius: 50,
                 backgroundImage: NetworkImage(avatarUrl),
-                backgroundColor: Colors.white,
+                backgroundColor: Theme.of(context).cardColor,
               ),
             ),
           ),

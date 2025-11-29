@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/presentation/widgets/components/my_button.dart';
 import 'package:pet_shop/presentation/widgets/components/my_textfield.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/otp_verification_page.dart';
@@ -228,7 +227,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 ),
                 child: Text(
                   AppLocalizations.of(context)!.passwordResetNote,
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                  style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
               ),
             ],
@@ -299,7 +298,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
         ),
         title: Text(
           AppLocalizations.of(context)!.forgotPasswordTitle,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
           ),
@@ -394,7 +393,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                     const SizedBox(height: 40),
                     Text(
                       AppLocalizations.of(context)!.forgotPasswordHeading,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
@@ -402,7 +401,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                     const SizedBox(height: 10),
                     Text(
                       AppLocalizations.of(context)!.forgotPasswordSubtitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w300,
                         color: Colors.grey,
