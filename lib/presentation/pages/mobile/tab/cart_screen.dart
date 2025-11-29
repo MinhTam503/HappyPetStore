@@ -941,20 +941,26 @@ class _CartScreenState extends State<CartScreen> {
                           Checkbox(
                             value: selectedCount == carts.length &&
                                 carts.isNotEmpty,
-                            onChanged: (val) {
+                            onChanged: (val) async {
                               setState(() {
                                 _selectAll = val ?? false;
                                 _selectedProductIds.clear();
-                                if (_selectAll) {
-                                  for (final c in carts) {
-                                    final id =
-                                        c.grocery['productId']?.toString() ??
-                                            '';
-                                    if (id.isNotEmpty)
+                              });
+                              
+                              if (_selectAll) {
+                                // Check each pet status before adding to selection
+                                for (final c in carts) {
+                                  final id = c.grocery['productId']?.toString() ?? '';
+                                  if (id.isNotEmpty) {
+                                    final isSold = await CartItem.isPetSold(id);
+                                    if (!isSold) {
                                       _selectedProductIds.add(id);
+                                    }
                                   }
                                 }
-                              });
+                                setState(() {}); // Update UI after async check
+                              }
+                              
                               if (userIdentifier != null) {
                                 context.read<CartBloc>().add(
                                     UpdateCartSelection(userIdentifier!,
@@ -991,15 +997,25 @@ class _CartScreenState extends State<CartScreen> {
                           final id =
                               cart.grocery['productId']?.toString() ?? '';
                           final checked = _selectedProductIds.contains(id);
-                          return Padding(
+                          
+                          // Check if pet is sold using FutureBuilder
+                          return FutureBuilder<bool>(
+                            future: CartItem.isPetSold(id),
+                            initialData: false,
+                            builder: (context, snapshot) {
+                              final isSold = snapshot.data ?? false;
+                              
+                              return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Material(
                               elevation: 1,
                               borderRadius: BorderRadius.circular(12),
-                              color: Colors.white,
+                              // Darker background for sold pets
+                              color: isSold ? Colors.grey.shade300 : Colors.white,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
-                                onTap: () async {
+                                // Disable tap for sold pets
+                                onTap: isSold ? null : () async {
                                   DialogHelper.showLoadingDialog(context, message: 'Đang mở chi tiết...');
                                   final Map<String, dynamic>? pet =
                                       await getPetById(id);
@@ -1014,7 +1030,10 @@ class _CartScreenState extends State<CartScreen> {
                                     );
                                   }
                                 },
-                                child: SizedBox(
+                                child: Opacity(
+                                  // Reduce opacity for sold pets
+                                  opacity: isSold ? 0.6 : 1.0,
+                                  child: SizedBox(
                                   height: 120,
                                   child: Stack(
                                     children: [
@@ -1032,7 +1051,8 @@ class _CartScreenState extends State<CartScreen> {
                                         child: Center(
                                           child: Checkbox(
                                             value: checked,
-                                            onChanged: (val) {
+                                            // Disable checkbox if pet is sold
+                                            onChanged: isSold ? null : (val) {
                                               setState(() {
                                                 if ((val ?? false) &&
                                                     id.isNotEmpty) {
@@ -1057,8 +1077,11 @@ class _CartScreenState extends State<CartScreen> {
                                     ],
                                   ),
                                 ),
+                                ),
                               ),
                             ),
+                          );
+                            },
                           );
                         },
                       ),
@@ -1119,13 +1142,44 @@ class _CartScreenState extends State<CartScreen> {
                                           if (selected.isEmpty) {
                                             return;
                                           }
+                                          
+                                          // Check if any selected pet is sold
+                                          DialogHelper.showLoadingDialog(context, message: 'Đang kiểm tra...');
+                                          final List<CartModel> availablePets = [];
+                                          final List<String> soldPetNames = [];
+                                          
+                                          for (var cart in selected) {
+                                            final petId = cart.grocery['productId']?.toString() ?? '';
+                                            final isSold = await CartItem.isPetSold(petId);
+                                            if (isSold) {
+                                              soldPetNames.add(cart.grocery['name']?.toString() ?? 'Thú cưng');
+                                              // Remove sold pet from selection
+                                              _selectedProductIds.remove(petId);
+                                            } else {
+                                              availablePets.add(cart);
+                                            }
+                                          }
+                                          
+                                          await DialogHelper.safeHideLoadingDialog();
+                                          
+                                          if (soldPetNames.isNotEmpty) {
+                                            if (!mounted) return;
+                                            NotificationHelper.showError(
+                                              context,
+                                              'Thú cưng đã bán',
+                                              'Các thú cưng sau đã được bán: ${soldPetNames.join(', ')}. Vui lòng xóa khỏi giỏ hàng.',
+                                            );
+                                            setState(() {}); // Update UI to reflect deselection
+                                            return;
+                                          }
+                                          
                                           // Navigate to dedicated checkout screen and refresh cart when returning
                                           await Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (_) => CheckoutScreen(
                                                 userIdentifier: userIdentifier!,
-                                                carts: selected,
+                                                carts: availablePets,
                                               ),
                                             ),
                                           );

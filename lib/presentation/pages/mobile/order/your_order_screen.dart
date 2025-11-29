@@ -50,7 +50,63 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
   }
 
   void cancelOrder(String orderId) async {
-    await ordersCollection.doc(orderId).update({'statusOrder': 'Cancelled'});
+    try {
+      // Update order status to Cancelled
+      await ordersCollection.doc(orderId).update({
+        'statusOrder': 'Cancelled',
+        'cancelledAt': FieldValue.serverTimestamp(),
+      });
+
+      // Get order data to find pets
+      final orderDoc = await ordersCollection.doc(orderId).get();
+      if (orderDoc.exists) {
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final orderItems = (orderData['items'] as List?) ?? [];
+
+        // Release all pets back to available
+        for (var item in orderItems) {
+          final petId = item['productId']?.toString() ?? item['id']?.toString();
+          if (petId != null && petId.isNotEmpty) {
+            try {
+              final petDoc = await FirebaseFirestore.instance
+                  .collection('Pets')
+                  .doc(petId)
+                  .get();
+
+              if (petDoc.exists) {
+                await FirebaseFirestore.instance
+                    .collection('Pets')
+                    .doc(petId)
+                    .update({
+                  'status': 'available',
+                  'isAvailable': true,
+                  'reservedAt': FieldValue.delete(),
+                  'orderId': FieldValue.delete(),
+                  'cancelledAt': FieldValue.serverTimestamp(),
+                });
+                print(
+                    '✅ Pet $petId released back to available (order cancelled by user)');
+              }
+            } catch (e) {
+              print('❌ Error updating pet $petId status: $e');
+            }
+          }
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã hủy đơn hàng thành công')),
+        );
+      }
+    } catch (e) {
+      print('❌ Error cancelling order: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi hủy đơn hàng: $e')),
+        );
+      }
+    }
   }
 
   // Removed free-text address dialog; we now use AddressListPage to select addresses.
@@ -98,7 +154,9 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi cập nhật địa chỉ: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Lỗi cập nhật địa chỉ: $e'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -207,7 +265,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         centerTitle: true,
         elevation: 0,
         title: Text(
-         l10n?.yourOrder??"Đơn hàng của bạn",
+          l10n?.yourOrder ?? "Đơn hàng của bạn",
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
             color: theme.colorScheme.onSurface,
@@ -276,7 +334,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
               for (final doc in orders) {
                 final docId = doc.id;
                 final orderIdField =
-                    (doc.data() as Map<String, dynamic>?)?['orderId']?.toString();
+                    (doc.data() as Map<String, dynamic>?)?['orderId']
+                        ?.toString();
                 if (docId == widget.initialOrderId ||
                     orderIdField == widget.initialOrderId) {
                   matchDoc = doc;
@@ -357,7 +416,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                       _formatTime(order['timestamp']),
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurface.withOpacity(0.54),
+                                        color: theme.colorScheme.onSurface
+                                            .withOpacity(0.54),
                                       ),
                                     ),
                                   ],
@@ -399,8 +459,13 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                     _ChipBadge(
                                       label: "Thanh toán: $statusPay",
                                       icon: Icons.verified_outlined,
-                                      bg: Theme.of(context).colorScheme.surfaceVariant,
-                                      fg: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
+                                      bg: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceVariant,
+                                      fg: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.87),
                                     ),
                                     _ChipBadge(
                                       label: status,
@@ -437,13 +502,16 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   Row(
                                     children: [
                                       Icon(Icons.local_shipping,
-                                          size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                                          size: 16,
+                                          color: theme.colorScheme.onSurface
+                                              .withOpacity(0.6)),
                                       const SizedBox(width: 4),
                                       Text(
                                         "Mã vận đơn: $trackingNumber",
                                         style:
                                             theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                          color: theme.colorScheme.onSurface
+                                              .withOpacity(0.6),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -538,7 +606,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
         String address = '';
         String customerPhone = '';
         String customerName = '';
-        
+
         try {
           if (order.data() is Map<String, dynamic>) {
             final orderData = order.data() as Map<String, dynamic>;
@@ -546,7 +614,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
             // 1. Ưu tiên lấy từ customerInfo (format mới)
             if (orderData.containsKey('customerInfo') &&
                 orderData['customerInfo'] is Map<String, dynamic>) {
-              final customerInfo = orderData['customerInfo'] as Map<String, dynamic>;
+              final customerInfo =
+                  orderData['customerInfo'] as Map<String, dynamic>;
               customerName = customerInfo['name']?.toString() ?? '';
               customerPhone = customerInfo['phone']?.toString() ?? '';
             }
@@ -561,7 +630,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                 orderData['shippingAddress'] != null &&
                 orderData['shippingAddress'].toString().isNotEmpty) {
               final shippingAddr = orderData['shippingAddress'].toString();
-              
+
               // Format: Name • Phone\nAddress
               if (customerName.isNotEmpty && customerPhone.isNotEmpty) {
                 address = '$customerName • $customerPhone\n$shippingAddr';
@@ -574,11 +643,12 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
             // 4. Fallback: Lấy từ deliveryInfo
             else if (orderData.containsKey('deliveryInfo') &&
                 orderData['deliveryInfo'] is Map<String, dynamic>) {
-              final deliveryInfo = orderData['deliveryInfo'] as Map<String, dynamic>;
+              final deliveryInfo =
+                  orderData['deliveryInfo'] as Map<String, dynamic>;
               final name = deliveryInfo['name']?.toString() ?? customerName;
               final phone = deliveryInfo['phone']?.toString() ?? customerPhone;
               final addr = deliveryInfo['address']?.toString() ?? '';
-              
+
               if (name.isNotEmpty && phone.isNotEmpty) {
                 address = '$name • $phone\n$addr';
               } else if (phone.isNotEmpty) {
@@ -622,7 +692,10 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.12),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.12),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -661,13 +734,19 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         label: "Email: $email",
                         icon: Icons.alternate_email,
                         bg: Theme.of(context).colorScheme.surfaceVariant,
-                        fg: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
+                        fg: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.87),
                       ),
                       _ChipBadge(
                         label: "Thanh toán: $statusPay",
                         icon: Icons.verified_outlined,
                         bg: Theme.of(context).colorScheme.surfaceVariant,
-                        fg: Theme.of(context).colorScheme.onSurface.withOpacity(0.87),
+                        fg: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.87),
                       ),
                       // Show breakdown if subtotal exists and different from total (new orders), otherwise just total
                       if (subtotal != totalRaw && shippingFee > 0) ...[
@@ -700,14 +779,17 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                         Icon(Icons.location_on_outlined,
-                            color: Theme.of(context)
-                                    .colorScheme.primary),
+                        Icon(Icons.location_on_outlined,
+                            color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             address,
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.87)),
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.87)),
                           ),
                         ),
                       ],
@@ -720,7 +802,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         spacing: 8,
                         children: [
                           OutlinedButton.icon(
-                            onPressed: () => _pickAddressAndUpdateOrder(order.id),
+                            onPressed: () =>
+                                _pickAddressAndUpdateOrder(order.id),
                             icon: const Icon(Icons.edit_location_alt),
                             label: const Text('Đổi địa chỉ giao hàng'),
                           ),
@@ -752,9 +835,13 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceVariant
+                            .withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border:
+                            Border.all(color: Theme.of(context).dividerColor),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,7 +872,8 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Theme.of(context).dividerColor),
+                          border:
+                              Border.all(color: Theme.of(context).dividerColor),
                         ),
                         child: ShippingTrackingWidget(
                           trackingNumber: trackingNumber,
@@ -830,9 +918,14 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                   : Container(
                                       width: 56,
                                       height: 56,
-                                      color: Theme.of(context).colorScheme.surfaceVariant,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceVariant,
                                       child: Icon(Icons.pets,
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.38)),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant
+                                              .withOpacity(0.38)),
                                     ),
                             ),
                             title: GestureDetector(
@@ -924,7 +1017,8 @@ class _FilterBar extends StatelessWidget {
               value: statusFilter,
               onChanged: (v) => v != null ? onStatusChanged(v) : null,
               items: filterItems.entries
-                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                  .map((e) =>
+                      DropdownMenuItem(value: e.key, child: Text(e.value)))
                   .toList(),
               decoration: InputDecoration(
                 labelText: 'Trạng thái',
@@ -1034,7 +1128,8 @@ class _EmptyOrders extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inbox_outlined, size: 72, color: theme.colorScheme.onSurface.withOpacity(0.26)),
+            Icon(Icons.inbox_outlined,
+                size: 72, color: theme.colorScheme.onSurface.withOpacity(0.26)),
             const SizedBox(height: 12),
             Text(
               "Không tìm thấy đơn hàng",

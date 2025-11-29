@@ -740,6 +740,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 await DialogHelper.safeHideLoadingDialog();
                                 if (!context.mounted) return;
                                 NotificationHelper.showError(context, 'Đặt hàng thất bại', e.toString());
+                                // Navigate back to cart screen when order fails
+                                Navigator.of(context).pop();
                               }
                             }
                           },

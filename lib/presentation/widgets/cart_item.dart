@@ -1,20 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_bloc.dart';
 import 'package:pet_shop/presentation/bloc/cartBloc/cart_event.dart';
-import 'package:pet_shop/core/utils/gender_localizer.dart';
 import '../../data/models/cart_model.dart';
 
 class CartItem extends StatelessWidget {
   final CartModel cart;
   final bool showRemoveButton;
-  const CartItem({super.key, required this.cart, this.showRemoveButton = true});
+  const CartItem({
+    super.key,
+    required this.cart,
+    this.showRemoveButton = true,
+  });
+
+  // Static method to check if pet is sold/unavailable
+  static Future<bool> isPetSold(String productId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('Pets')
+          .doc(productId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data();
+        final status = data?['status']?.toString() ?? 'available';
+        final isAvailable = data?['isAvailable'] ?? true;
+        return status != 'available' || !isAvailable;
+      }
+    } catch (_) {}
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {

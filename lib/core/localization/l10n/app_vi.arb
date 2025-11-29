@@ -501,7 +501,7 @@
   "@selectAll": {"description": "Select all button"},
   "clearSelection": "Bỏ chọn tất cả",
   "@clearSelection": {"description": "Clear selection button"},
-  "selected": "đã chọn",
+  "selected": "Đã chọn",
   "@selected": {"description": "Selected count suffix"},
   "noPetsAvailable": "Không có thú cưng nào",
   "@noPetsAvailable": {"description": "No pets available message"},

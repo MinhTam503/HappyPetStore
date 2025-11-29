@@ -339,7 +339,7 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
           appBar: AppBar(
             centerTitle: true,
             title: const Text('Trợ lý ảo'),
-            backgroundColor: const Color(0xff08A045),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             foregroundColor: Colors.white,
             elevation: 2,
             actions: [
