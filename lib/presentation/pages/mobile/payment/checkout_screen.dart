@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:pet_shop/auth/payment/keys.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
 import 'package:pet_shop/core/config/vnpay_config.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
@@ -119,6 +118,55 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
+    // 🔒 STEP 1: Use Transaction to atomically check and reserve pets (PREVENT RACE CONDITION)
+    List<String> petIds = cartItems.map((item) => item.grocery["productId"].toString()).toList();
+    
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // Read all pets in transaction
+        List<DocumentSnapshot> petSnapshots = [];
+        for (String petId in petIds) {
+          final petRef = FirebaseFirestore.instance.collection('Pets').doc(petId);
+          final petSnap = await transaction.get(petRef);
+          petSnapshots.add(petSnap);
+        }
+
+        // Check if ALL pets are available
+        for (var petSnap in petSnapshots) {
+          if (!petSnap.exists) {
+            throw Exception('Thú cưng ${petSnap.id} không tồn tại!');
+          }
+          
+          final petData = petSnap.data() as Map<String, dynamic>;
+          final isAvailable = petData['isAvailable'] ?? false;
+          final status = petData['status'] ?? 'available'; // Missing status = available (old pets)
+          
+          // Only accept pets with status='available' AND isAvailable=true
+          if (status != 'available' || !isAvailable) {
+            throw Exception('Thú cưng ${petData['name'] ?? petSnap.id} đã được đặt trước hoặc bán rồi!');
+          }
+        }
+
+        // Reserve ALL pets atomically
+        for (var petSnap in petSnapshots) {
+          final petRef = FirebaseFirestore.instance.collection('Pets').doc(petSnap.id);
+          transaction.update(petRef, {
+            'status': 'reserved',
+            'isAvailable': false,
+            'reservedAt': FieldValue.serverTimestamp(),
+            'orderId': orderRef.id,
+          });
+        }
+        
+        debugPrint('✅ Transaction success: Reserved ${petSnapshots.length} pets atomically');
+      });
+    } catch (e) {
+      debugPrint('❌ Transaction failed: $e');
+      // Rethrow to let caller handle the error
+      rethrow;
+    }
+
+    // 🔒 STEP 2: Now that pets are reserved, build order data
     List<Map<String, dynamic>> items = [];
     List<String> breeds = [];
 
@@ -206,31 +254,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       "items": items,
     };
 
+    // 🔒 STEP 3: Create order (pets already reserved in transaction above)
     await orderRef.set(orderData);
-
-    // Update pet status to reserved and mark as unavailable when order is placed
-    for (var item in cartItems) {
-      final petId = item.grocery["productId"] ?? item.grocery["id"];
-      if (petId != null) {
-        try {
-          final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId.toString());
-          final docSnap = await docRef.get();
-          if (docSnap.exists) {
-            await docRef.update({
-              "status": "reserved",
-              "isAvailable": false,
-              "reservedAt": FieldValue.serverTimestamp(),
-              "orderId": orderRef.id,
-            });
-            debugPrint("✅ Pet $petId marked as reserved for order ${orderRef.id}");
-          } else {
-            debugPrint("⚠️ Pet with id $petId not found in Firestore.");
-          }
-        } catch (e) {
-          debugPrint("❌ Error updating pet $petId status: $e");
-        }
-      }
-    }
+    debugPrint('✅ Order ${orderRef.id} created successfully');
 
     final orderUserId = orderData['userId']?.toString();
     final orderUserName = orderData['displayName']?.toString();
@@ -570,9 +596,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ] else ...[
-                                Text(
+                                const Text(
                                   'Chưa có địa chỉ giao hàng',
-                                  style: const TextStyle(fontSize: 14, color: Colors.orange, fontWeight: FontWeight.w500),
+                                  style: TextStyle(fontSize: 14, color: Colors.orange, fontWeight: FontWeight.w500),
                                 ),
                                 Text(
                                   'Chạm để thêm địa chỉ',
@@ -642,9 +668,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Phí vận chuyển'),
                       Text('Miễn phí', style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600)),
                     ],
@@ -675,7 +701,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           } else {
                                 // COD
             DialogHelper.showLoadingDialog(context, message: 'Đang tạo đơn hàng...');
-            final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: false);
+            try {
+              final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: false);
                                     // Remove purchased items from cart
                                     try {
                                       final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
@@ -709,8 +736,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                     builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds),
                                   ),
                                 );
+                              } catch (e) {
+                                await DialogHelper.safeHideLoadingDialog();
+                                if (!context.mounted) return;
+                                NotificationHelper.showError(context, 'Đặt hàng thất bại', e.toString());
                               }
-                            },
+                            }
+                          },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context)
                                     .colorScheme.primary,

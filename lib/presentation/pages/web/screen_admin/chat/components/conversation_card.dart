@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:pet_shop/core/constants/app_constants.dart';
 
 class ConversationCard extends StatelessWidget {
   final String email;

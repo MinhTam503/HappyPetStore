@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 
 /// VNPay Payment WebView Screen
 /// Hiển thị trang thanh toán VNPay trong WebView

@@ -12,7 +12,6 @@ import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/change_password_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
-import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/viewed_pets/viewed_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';

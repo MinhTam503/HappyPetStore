@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 // Stripe payments moved to CheckoutScreen
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -333,7 +332,55 @@ class _CartScreenState extends State<CartScreen> {
 
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
-    // Lấy đầy đủ thông tin thú cưng từ Firestore
+    // 🔒 STEP 1: Use Transaction to atomically check and reserve pets (PREVENT RACE CONDITION)
+    List<String> petIds = cartItems.map((item) => item.grocery["productId"].toString()).toList();
+    
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // Read all pets in transaction
+        List<DocumentSnapshot> petSnapshots = [];
+        for (String petId in petIds) {
+          final petRef = FirebaseFirestore.instance.collection('Pets').doc(petId);
+          final petSnap = await transaction.get(petRef);
+          petSnapshots.add(petSnap);
+        }
+
+        // Check if ALL pets are available
+        for (var petSnap in petSnapshots) {
+          if (!petSnap.exists) {
+            throw Exception('Thú cưng ${petSnap.id} không tồn tại!');
+          }
+          
+          final petData = petSnap.data() as Map<String, dynamic>;
+          final isAvailable = petData['isAvailable'] ?? false;
+          final status = petData['status'] ?? 'available'; // Missing status = available (old pets)
+          
+          // Only accept pets with status='available' AND isAvailable=true
+          if (status != 'available' || !isAvailable) {
+            throw Exception('Thú cưng ${petData['name'] ?? petSnap.id} đã được đặt trước hoặc bán rồi!');
+          }
+        }
+
+        // Reserve ALL pets atomically
+        for (var petSnap in petSnapshots) {
+          final petRef = FirebaseFirestore.instance.collection('Pets').doc(petSnap.id);
+          transaction.update(petRef, {
+            'status': 'reserved',
+            'isAvailable': false,
+            'reservedAt': FieldValue.serverTimestamp(),
+            'orderId': orderRef.id,
+          });
+        }
+        
+        print('✅ Transaction success: Reserved ${petSnapshots.length} pets atomically');
+      });
+    } catch (e) {
+      print('❌ Transaction failed: $e');
+      // Rethrow to let caller handle the error
+      rethrow;
+    }
+
+    // 🔒 STEP 2: Now that pets are reserved, build order data
     List<Map<String, dynamic>> items = [];
     List<String> breeds = []; // Collect breeds here
 
@@ -452,36 +499,9 @@ class _CartScreenState extends State<CartScreen> {
     print("  - deliveryInfo: ${orderData['deliveryInfo']}");
     print("🌱 Collected breeds for Apriori: $breeds");
 
+    // 🔒 STEP 3: Create order (pets already reserved in transaction above)
     await orderRef.set(orderData);
-
-    // Update pet status to sold and mark as unavailable
-    for (var item in cartItems) {
-      final petId = item.grocery["productId"] ?? item.grocery["id"];
-      if (petId != null) {
-        try {
-          final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId.toString());
-          final docSnap = await docRef.get();
-          if (docSnap.exists) {
-            await docRef.update({
-              "status": "sold",
-              "isAvailable": false,
-            });
-            print("✅ Pet $petId marked as sold");
-          } else {
-            print("⚠️ Pet with id $petId not found in Firestore.");
-          }
-        } catch (e) {
-          print("❌ Error updating pet $petId status: $e");
-        }
-      }
-    }
-
-    // NOTE: Shipment will be created by admin when order status changes to "Processing"
-    // This ensures proper workflow: Order → Admin Review → Create Shipment
-    print('✅ Order created successfully: ${orderRef.id}');
-    print('📋 Order status: Pending (waiting for admin to process)');
-    print(
-        '🚫 Shipment NOT created yet - will be created when admin changes status to Processing');
+    print('✅ Order ${orderRef.id} created successfully');
 
     // Gửi thông báo đơn hàng đã được đặt
     final orderUserId = orderData['userId']?.toString();
@@ -883,7 +903,7 @@ class _CartScreenState extends State<CartScreen> {
               } else if (state is CartLoaded) {
                 final List<Map<String, dynamic>> cartItems = state.items;
                 if (cartItems.isEmpty) {
-                  return const Center(child: Text("No items in your cart."));
+                  return const Center(child: Text("Không có thú cưng trong giỏ hàng!"));
                 }
                 List<CartModel> carts = cartItems.map((item) {
                   return CartModel(

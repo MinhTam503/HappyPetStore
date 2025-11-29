@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 
 import 'components/date_chip.dart';
 import 'components/message_row.dart';

@@ -83,6 +83,7 @@ class PetBloc extends Bloc<PetEvent, PetState> {
         'weight': pet.weight.isNotEmpty ? pet.weight : '0',
         'color': pet.color ?? '',
         'isAvailable': pet.isAvailable,
+        'status': 'available', // Initialize status for new pets
       });
 
       // Train AI
@@ -121,6 +122,11 @@ class PetBloc extends Bloc<PetEvent, PetState> {
       // Parse price
       final priceValue = _parsePrice(pet.price);
 
+      // Get current pet data to preserve status if needed
+      final currentDoc = await _petsCollection.doc(pet.id).get();
+      final currentData = currentDoc.data() as Map<String, dynamic>?;
+      final currentStatus = currentData?['status'] ?? 'available';
+
       // Update Firestore
       await _petsCollection.doc(pet.id).update({
         'name': pet.name.isNotEmpty ? pet.name : 'Unknown',
@@ -134,6 +140,8 @@ class PetBloc extends Bloc<PetEvent, PetState> {
         'color': pet.color ?? '',
         'isAvailable': pet.isAvailable,
         'price': priceValue,
+        // Only reset to available if admin sets isAvailable=true, otherwise preserve status
+        'status': pet.isAvailable ? 'available' : currentStatus,
       });
 
       emit(const PetActionSuccess('Cập nhật thành công!'));

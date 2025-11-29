@@ -6,7 +6,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_bloc.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_event.dart';
 import 'package:pet_shop/presentation/bloc/favBloc/fav_state.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 
 import '../pet/detail_pet.dart';

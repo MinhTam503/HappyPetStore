@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/presentation/bloc/vnpay/vnpay_bloc.dart';
 import 'package:pet_shop/presentation/bloc/vnpay/vnpay_event.dart';
 import 'package:pet_shop/presentation/bloc/vnpay/vnpay_state.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 
 /// Screen để xử lý callback từ VNPay sau khi thanh toán
 class VnpayPaymentResultScreen extends StatefulWidget {

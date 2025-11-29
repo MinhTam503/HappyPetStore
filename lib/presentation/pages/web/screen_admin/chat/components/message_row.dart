@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:pet_shop/core/constants/app_constants.dart';
 
 class MessageRow extends StatelessWidget {
   final bool isMe;
