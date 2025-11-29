@@ -486,6 +486,50 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                   await updateOrder(
                                       orderId, collection, payload);
 
+                                  // Update pet status based on order status
+                                  final orderItems = (order['items'] as List?) ?? [];
+                                  for (var item in orderItems) {
+                                    final petId = item['productId']?.toString() ?? item['id']?.toString();
+                                    if (petId != null && petId.isNotEmpty) {
+                                      try {
+                                        final petDoc = await FirebaseFirestore.instance
+                                            .collection('Pets')
+                                            .doc(petId)
+                                            .get();
+                                        
+                                        if (petDoc.exists) {
+                                          if (newStatus == 'Completed') {
+                                            // Mark as sold when order is completed
+                                            await FirebaseFirestore.instance
+                                                .collection('Pets')
+                                                .doc(petId)
+                                                .update({
+                                              'status': 'sold',
+                                              'isAvailable': false,
+                                              'soldAt': FieldValue.serverTimestamp(),
+                                            });
+                                            print('✅ Pet $petId marked as sold (order completed)');
+                                          } else if (newStatus == 'Cancelled') {
+                                            // Release pet back to available when order is cancelled
+                                            await FirebaseFirestore.instance
+                                                .collection('Pets')
+                                                .doc(petId)
+                                                .update({
+                                              'status': 'available',
+                                              'isAvailable': true,
+                                              'reservedAt': FieldValue.delete(),
+                                              'orderId': FieldValue.delete(),
+                                              'cancelledAt': FieldValue.serverTimestamp(),
+                                            });
+                                            print('✅ Pet $petId released back to available (order cancelled)');
+                                          }
+                                        }
+                                      } catch (e) {
+                                        print('❌ Error updating pet $petId status: $e');
+                                      }
+                                    }
+                                  }
+
                                   // Check if widget is still mounted after async operation
                                   if (!mounted) return;
 

@@ -598,10 +598,68 @@ class ShippingService {
               orderUpdate['statusPayment'] = 'Payment Completed';
               // Stamp completion time for dashboard ordering
               orderUpdate['completedAt'] = FieldValue.serverTimestamp();
+              
+              // Update pet status to sold when order is delivered successfully
+              final orderItems = (data['items'] as List?) ?? [];
+              for (var item in orderItems) {
+                final petId = item['productId']?.toString() ?? item['id']?.toString();
+                if (petId != null && petId.isNotEmpty) {
+                  try {
+                    final petDoc = await FirebaseFirestore.instance
+                        .collection('Pets')
+                        .doc(petId)
+                        .get();
+                    
+                    if (petDoc.exists) {
+                      await FirebaseFirestore.instance
+                          .collection('Pets')
+                          .doc(petId)
+                          .update({
+                        'status': 'sold',
+                        'isAvailable': false,
+                        'soldAt': FieldValue.serverTimestamp(),
+                      });
+                      print('✅ Pet $petId marked as sold (shipment delivered)');
+                    }
+                  } catch (e) {
+                    print('❌ Error updating pet $petId status: $e');
+                  }
+                }
+              }
             } else if (newStatus == 'failed' || newStatus == 'returned') {
               orderUpdate['statusOrder'] = 'Cancelled';
               // Stamp cancellation time for audit
               orderUpdate['cancelledAt'] = FieldValue.serverTimestamp();
+              
+              // Release pets back to available when shipment fails
+              final orderItems = (data['items'] as List?) ?? [];
+              for (var item in orderItems) {
+                final petId = item['productId']?.toString() ?? item['id']?.toString();
+                if (petId != null && petId.isNotEmpty) {
+                  try {
+                    final petDoc = await FirebaseFirestore.instance
+                        .collection('Pets')
+                        .doc(petId)
+                        .get();
+                    
+                    if (petDoc.exists) {
+                      await FirebaseFirestore.instance
+                          .collection('Pets')
+                          .doc(petId)
+                          .update({
+                        'status': 'available',
+                        'isAvailable': true,
+                        'reservedAt': FieldValue.delete(),
+                        'orderId': FieldValue.delete(),
+                        'cancelledAt': FieldValue.serverTimestamp(),
+                      });
+                      print('✅ Pet $petId released back to available (shipment failed)');
+                    }
+                  } catch (e) {
+                    print('❌ Error updating pet $petId status: $e');
+                  }
+                }
+              }
             }
             
             await doc.reference.update(orderUpdate);
@@ -662,10 +720,68 @@ class ShippingService {
                 orderUpdate['statusPayment'] = 'Payment Completed';
                 // Stamp completion time for dashboard ordering
                 orderUpdate['completedAt'] = FieldValue.serverTimestamp();
+                
+                // Update pet status to sold when order is delivered successfully
+                final orderItems = (data['items'] as List?) ?? [];
+                for (var item in orderItems) {
+                  final petId = item['productId']?.toString() ?? item['id']?.toString();
+                  if (petId != null && petId.isNotEmpty) {
+                    try {
+                      final petDoc = await FirebaseFirestore.instance
+                          .collection('Pets')
+                          .doc(petId)
+                          .get();
+                      
+                      if (petDoc.exists) {
+                        await FirebaseFirestore.instance
+                            .collection('Pets')
+                            .doc(petId)
+                            .update({
+                          'status': 'sold',
+                          'isAvailable': false,
+                          'soldAt': FieldValue.serverTimestamp(),
+                        });
+                        print('✅ Pet $petId marked as sold (web shipment delivered)');
+                      }
+                    } catch (e) {
+                      print('❌ Error updating pet $petId status: $e');
+                    }
+                  }
+                }
               } else if (newStatus == 'failed' || newStatus == 'returned') {
                 orderUpdate['statusOrder'] = 'Cancelled';
                 // Stamp cancellation time for audit
                 orderUpdate['cancelledAt'] = FieldValue.serverTimestamp();
+                
+                // Release pets back to available when shipment fails
+                final orderItems = (data['items'] as List?) ?? [];
+                for (var item in orderItems) {
+                  final petId = item['productId']?.toString() ?? item['id']?.toString();
+                  if (petId != null && petId.isNotEmpty) {
+                    try {
+                      final petDoc = await FirebaseFirestore.instance
+                          .collection('Pets')
+                          .doc(petId)
+                          .get();
+                      
+                      if (petDoc.exists) {
+                        await FirebaseFirestore.instance
+                            .collection('Pets')
+                            .doc(petId)
+                            .update({
+                          'status': 'available',
+                          'isAvailable': true,
+                          'reservedAt': FieldValue.delete(),
+                          'orderId': FieldValue.delete(),
+                          'cancelledAt': FieldValue.serverTimestamp(),
+                        });
+                        print('✅ Pet $petId released back to available (web shipment failed)');
+                      }
+                    } catch (e) {
+                      print('❌ Error updating pet $petId status: $e');
+                    }
+                  }
+                }
               }
               
               await doc.reference.update(orderUpdate);
