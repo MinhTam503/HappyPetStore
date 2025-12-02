@@ -40,6 +40,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Map<String, dynamic>? selectedDeliveryInfo;
   String paymentMethod = 'vnpay';
   final double shippingFee = 0.0; // Always free
+  
+  // Guard to prevent duplicate VNPay WebView opening
+  bool _isProcessingVnpay = false;
+  String? _lastPaymentUrlOpened;
 
   @override
   void initState() {
@@ -456,12 +460,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   title: const Text('Thanh toán'),
       ),
       body: BlocListener<VnpayBloc, VnpayState>(
+        listenWhen: (previous, current) {
+          // Only listen if state actually changed
+          if (identical(previous, current)) {
+            debugPrint('⚠️ listenWhen: Identical state objects, skipping');
+            return false;
+          }
+          
+          // Prevent duplicate processing of same payment URL
+          if (current is VnpayPaymentUrlCreated) {
+            final url = current.payment.paymentUrl;
+            debugPrint('🔍 listenWhen: VnpayPaymentUrlCreated - URL: ${url?.substring(0, 50)}...');
+            debugPrint('🔍 listenWhen: _lastPaymentUrlOpened: ${_lastPaymentUrlOpened?.substring(0, 50) ?? "null"}');
+            debugPrint('🔍 listenWhen: _isProcessingVnpay: $_isProcessingVnpay');
+            
+            if (url == _lastPaymentUrlOpened) {
+              debugPrint('⚠️ listenWhen: Ignoring duplicate VnpayPaymentUrlCreated for same URL');
+              return false;
+            }
+            if (_isProcessingVnpay) {
+              debugPrint('⚠️ listenWhen: Ignoring VnpayPaymentUrlCreated - already processing');
+              return false;
+            }
+          }
+          return true;
+        },
         listener: (context, state) async {
           if (state is VnpayPaymentUrlCreated) {
             final paymentUrl = state.payment.paymentUrl;
-            if (paymentUrl != null) {
-              await DialogHelper.safeHideLoadingDialog();
-              final result = await Navigator.push<Map<String, String>>(
+            
+            // Guard: prevent duplicate processing
+            if (paymentUrl == null || paymentUrl == _lastPaymentUrlOpened || _isProcessingVnpay) {
+              debugPrint('⚠️ Skipping duplicate VNPay payment URL');
+              return;
+            }
+            
+            // Mark as processing
+            _isProcessingVnpay = true;
+            _lastPaymentUrlOpened = paymentUrl;
+            
+            debugPrint('✅ Opening VNPay WebView for URL: ${paymentUrl.substring(0, 80)}...');
+            
+            await DialogHelper.safeHideLoadingDialog();
+            final result = await Navigator.push<Map<String, String>>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => VnpayWebViewScreen(
@@ -471,6 +512,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               );
 
+              // Reset processing flag after returning from WebView
+              _isProcessingVnpay = false;
+              
               if (result != null && context.mounted) {
                 context.read<VnpayBloc>().add(VerifyVnpayCallback(result));
                 // Consider saving order after verifying success via a Result Screen, as in CartScreen
@@ -521,10 +565,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                 );
+              } else {
+                // User cancelled or no result - reset flag
+                _isProcessingVnpay = false;
+                _lastPaymentUrlOpened = null;
               }
-            }
+            
           } else if (state is VnpayError) {
             await DialogHelper.safeHideLoadingDialog();
+            _isProcessingVnpay = false;
+            _lastPaymentUrlOpened = null;
             NotificationHelper.showError(context, 'Lỗi thanh toán VNPay', state.message);
           }
         },

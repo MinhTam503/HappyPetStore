@@ -1,6 +1,6 @@
 class VnpayConfig {
-  static const String tmnCode = 'DFAZ4N5B';
-  static const String hashSecret = '0FZS7UXD47XLQYHGNQRD4ZDUGC9BERI1';
+  static const String tmnCode = 'UN6RX8AX';
+  static const String hashSecret = 'LAXB1JHRK66SJ4TWWTW2Q06AQZC5E5U8';
   
   // URLs
   static const String sandboxUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';

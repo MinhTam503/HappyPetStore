@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:pet_shop/core/utils/confirm_dialog_helper.dart';
 
 /// VNPay Payment WebView Screen
 /// Hiển thị trang thanh toán VNPay trong WebView
@@ -227,31 +228,22 @@ class _VnpayWebViewScreenState extends State<VnpayWebViewScreen> {
     );
   }
 
-  void _showCloseConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hủy thanh toán?'),
-        content: const Text(
-          'Bạn có chắc chắn muốn hủy giao dịch thanh toán này không?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Tiếp tục thanh toán'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Close WebView
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('Hủy thanh toán'),
-          ),
-        ],
-      ),
+  void _showCloseConfirmation() async {
+    final confirmed = await ConfirmDialogHelper.show(
+      context,
+      title: 'Hủy thanh toán?',
+      message: 'Bạn có chắc chắn muốn hủy giao dịch thanh toán này không?',
+      confirmText: 'Hủy thanh toán',
+      cancelText: 'Tiếp tục',
+      icon: Icons.warning_rounded,
+      iconBgColor: Colors.orange.shade50,
+      iconColor: Colors.orange.shade400,
+      confirmColor: Colors.red.shade400,
+      barrierDismissible: false,
     );
+    
+    if (confirmed == true) {
+      Navigator.of(context).pop(); // Close WebView
+    }
   }
 }

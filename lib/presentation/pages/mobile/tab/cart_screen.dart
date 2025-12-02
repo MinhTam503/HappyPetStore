@@ -782,6 +782,13 @@ class _CartScreenState extends State<CartScreen> {
       body: SafeArea(
         child: BlocListener<VnpayBloc, VnpayState>(
           listener: (context, vnpayState) async {
+            // Guard: nếu màn hình không phải route hiện tại (ví dụ đã chuyển sang CheckoutScreen)
+            // thì bỏ qua xử lý để tránh mở WebView trùng lặp từ screen nằm dưới stack.
+            final route = ModalRoute.of(context);
+            if (route != null && !route.isCurrent) {
+              debugPrint('⚠️ [CartScreen] Bỏ qua VNPay state vì route không còn current.');
+              return;
+            }
             if (vnpayState is VnpayPaymentUrlCreated) {
               // Payment URL created, open in WebView
               final paymentUrl = vnpayState.payment.paymentUrl;

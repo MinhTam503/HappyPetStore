@@ -22,6 +22,7 @@ import '../profile/edit_profile.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pet_shop/presentation/bloc/profile/edit_profile_bloc.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
+import 'package:pet_shop/core/utils/confirm_dialog_helper.dart';
 // Removed unused import for favorite_screen.dart
 
 class ProfileScreen extends StatefulWidget {
@@ -308,132 +309,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-void _showLogoutDialog(BuildContext context) {
+void _showLogoutDialog(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
-
-  showDialog(
-    context: context,
+  final confirmed = await ConfirmDialogHelper.show(
+    context,
+    title: l10n?.logout ?? 'Đăng xuất',
+    message: l10n?.logoutConfirm ?? 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
+    confirmText: l10n?.logout ?? 'Đăng xuất',
+    cancelText: l10n?.cancel ?? 'Hủy',
+    icon: Icons.logout_rounded,
+    iconBgColor: Colors.red.shade50,
+    iconColor: Colors.red.shade400,
+    confirmColor: Colors.red.shade400,
     barrierDismissible: false,
-    builder: (BuildContext context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.rectangle,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                offset: const Offset(0, 10),
-                blurRadius: 10,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.logout_rounded,
-                  color: Colors.red.shade400,
-                  size: 40,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Title
-              Text(
-                l10n?.logout ?? 'Đăng xuất',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Message
-              Text(
-                l10n?.logoutConfirm ??
-                    'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                      child: Text(
-                        l10n?.cancel ?? 'Hủy',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _logout(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade400,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        l10n?.logout ?? 'Đăng xuất',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    },
   );
+  if (confirmed == true) {
+    _logout(context);
+  }
 }
 
 Future<void> _logout(BuildContext context) async {
