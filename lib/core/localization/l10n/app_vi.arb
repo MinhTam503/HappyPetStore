@@ -284,6 +284,26 @@
   "loading": "Đang tải...",
   "favorites": "Yêu thích",
   "yourOrder": "Đơn hàng của bạn",
+  "spendingTitle": "Biến động thu chi",
+  "spendingWeek": "Theo tuần",
+  "spendingMonth": "Theo tháng",
+  "spendingYear": "Theo năm",
+  "spendingTotal": "Tổng chi {period}",
+  "@spendingTotal": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "spendingPeriodWeek": "tuần này",
+  "spendingPeriodMonth": "tháng này",
+  "spendingPeriodYear": "năm này",
+  "spendingChart": "Biểu đồ chi tiêu",
+  "spendingEmpty": "Chưa có dữ liệu chi tiêu",
+  "spendingHint": "Nhấn vào cột để xem chi tiết",
+  "orderLabel": "Đơn hàng",
+  "quantityLabel": "SL",
   "manageAddresses": "Quản lý địa chỉ",
   "changePasswordMenu": "Đổi mật khẩu",
   "viewedPetsMenu": "Đã xem gần đây",

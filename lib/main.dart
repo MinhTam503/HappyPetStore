@@ -166,6 +166,14 @@ Future<void> main() async {
     try {
       final settingsService = SettingsService();
       final useAdminTheme = await settingsService.getUseAdminTheme();
+      
+      // Load theme from Firestore if using admin theme
+      if (useAdminTheme) {
+        // ThemeManager automatically loads from Firestore on initialization
+        // Just ensure it's initialized
+        ThemeManager();
+      }
+      
       // Ensure stream gets initial value by setting it
       await settingsService.setUseAdminTheme(useAdminTheme);
     } catch (e) {

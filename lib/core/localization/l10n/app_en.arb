@@ -1187,6 +1187,26 @@
   "@yourOrder": {
     "description": "Your order menu item"
   },
+  "spendingTitle": "Spending Insights",
+  "spendingWeek": "Weekly",
+  "spendingMonth": "Monthly",
+  "spendingYear": "Yearly",
+  "spendingTotal": "Total spent {period}",
+  "@spendingTotal": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "spendingPeriodWeek": "this week",
+  "spendingPeriodMonth": "this month",
+  "spendingPeriodYear": "this year",
+  "spendingChart": "Spending Chart",
+  "spendingEmpty": "No spending data yet",
+  "spendingHint": "Tap on a column to see details",
+  "orderLabel": "Order",
+  "quantityLabel": "Qty",
   "manageAddresses": "Manage Addresses",
   "@manageAddresses": {
     "description": "Manage addresses menu item"

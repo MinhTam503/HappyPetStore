@@ -197,7 +197,7 @@ class _SearchableDropdownFieldView extends StatelessWidget {
         ),
         isEmpty: value == null || value!.isEmpty,
         child: Text(
-          value ?? (hintText ?? 'Chọn'),
+          value ?? (hintText ?? ''),
           style: TextStyle(
             color: enabled
                 ? (value == null ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6) : Theme.of(context).colorScheme.onSurface)

@@ -113,7 +113,7 @@ class AddressForm extends StatelessWidget {
                   const SizedBox(height: 16),
                   SearchableDropdownField(
                     labelText: 'Tỉnh/Thành phố *',
-                    hintText: 'Nhập tên tỉnh/thành phố',
+                    // hintText: 'Nhập tên tỉnh/thành phố',
                     prefixIcon: Icons.location_city,
                     initialValue: selectedProvince,
                     items: provinces,
@@ -125,9 +125,9 @@ class AddressForm extends StatelessWidget {
                   const SizedBox(height: 16),
                   SearchableDropdownField(
                     labelText: 'Phường/Xã *',
-                    hintText: selectedProvince == null
-                        ? 'Chọn tỉnh trước'
-                        : 'Nhập tên phường/xã',
+                    // hintText: selectedProvince == null
+                    //     ? 'Chọn tỉnh trước'
+                    //     : 'Nhập tên phường/xã',
                     prefixIcon: Icons.location_on,
                     enabled: selectedProvince != null,
                     initialValue: selectedWard,
@@ -153,8 +153,6 @@ class AddressForm extends StatelessWidget {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.home),
                       alignLabelWithHint: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                     minLines: 2,
                     maxLines: 6,

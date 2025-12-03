@@ -499,10 +499,10 @@ Future<void> _ensureBrandImagesLoaded() async {
   try {
     // Already loaded
     if (PushNotificationService._brandBigPicture != null) return;
-    const assetPath = 'assets/images/splash_screen_mobile.png';
+    const assetPath = "assets/images/Splash/splash_screen_default.png";
     final bytes = await rootBundle.load(assetPath);
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/splash_screen_mobile.png');
+    final file = File('${dir.path}/splash_screen_default.png');
     await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
 
     // Use file path based bitmaps for broad compatibility

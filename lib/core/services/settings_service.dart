@@ -115,9 +115,9 @@ class SettingsService {
   Future<bool> getUseAdminTheme() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_useAdminThemeKey) ?? true; // Default to follow admin theme
+      return prefs.getBool(_useAdminThemeKey) ?? false; // Default to default theme (not admin)
     } catch (e) {
-      return true; // Default fallback
+      return false; // Default fallback
     }
   }
 

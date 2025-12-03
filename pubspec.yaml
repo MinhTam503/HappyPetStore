@@ -125,6 +125,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+    - assets/images/Splash/
     - assets/orders_100.json
     - assets/loading.json
     - assets/scan_qr_code.json
@@ -156,14 +157,17 @@ flutter:
 flutter_native_splash:
   android: true
   ios: true
-  image: assets/images/splash_screen_mobile.png 
-  color: "#08A045"
+  image: assets/images/Splash/Winter.png
+  color: "#5AADDA"
+  fullscreen: true
+  android_gravity: fill
+  ios_content_mode: scaleAspectFill
   android_12:
-    color: "#08A045"
-    color_dark: "#08A045"
-    image: assets/images/splash_screen_mobile.png
+    color: "#5AADDA"
+    color_dark: "#5AADDA"
+    image: assets/images/Splash/Winter.png
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/splash_screen_mobile.png"
+  image_path: "assets/images/Splash/Winter_avatar.png"

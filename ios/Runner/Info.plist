@@ -1,129 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Pet Shop</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>Happy Pet</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
-	<key>UIStatusBarHidden</key>
-	<false/>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	
-	<!-- URL schemes required for Firebase Auth (Phone/Google) reCAPTCHA redirect on iOS -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<!-- REVERSED_CLIENT_ID derived from iosClientId in lib/firebase_options.dart -->
-				<string>com.googleusercontent.apps.1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o</string>
-			</array>
-		</dict>
-		<!-- Facebook URL Scheme: fb + FacebookAppID -->
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>fb382084861054704</string>
-			</array>
-		</dict>
-	</array>
-
-	<!-- Google Sign-In iOS client ID (non-reversed). Required by GoogleSignIn SDK v7+/v8+ -->
-	<key>GIDClientID</key>
-	<string>1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o.apps.googleusercontent.com</string>
-
-	<!-- Ensure Firebase can automatically intercept application:openURL for auth flows -->
-	<key>FirebaseAppDelegateProxyEnabled</key>
-	<true/>
-
-	<!-- Facebook SDK configuration for iOS login -->
-	<key>FacebookAppID</key>
-	<string>382084861054704</string>
-	<key>FacebookDisplayName</key>
-	<string>Happy Pet</string>
-	<key>FacebookClientToken</key>
-	<string>95f394c6f4fa44c93ec9edc329361a0d</string>
-
-	<!-- Whitelist Facebook URL schemes used by the SDK (iOS 9+) -->
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>fbapi</string>
-		<string>fb-messenger-share-api</string>
-		<string>fbauth2</string>
-		<string>fbshareextension</string>
-	</array>
-	
-	<!-- Location permission usage descriptions for iOS -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Ứng dụng cần truy cập vị trí của bạn để chọn địa chỉ giao hàng trên bản đồ và gợi ý vị trí gần bạn.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Ứng dụng có thể sử dụng vị trí của bạn khi đang dùng để hiển thị bản đồ và địa chỉ chính xác.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Ứng dụng cần quyền truy cập vị trí để cung cấp trải nghiệm giao hàng tốt hơn.</string>
-	
-	<!-- Camera permission usage description for QR code scanning and AR -->
-	<key>NSCameraUsageDescription</key>
-	<string>Ứng dụng cần quyền truy cập camera để quét mã QR, xem AR và đặt thú cưng 3D lên sàn nhà.</string>
-
-	<!-- Photo library usage for saving Pet Try-On screenshots -->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Ứng dụng cần quyền truy cập thư viện ảnh để lưu ảnh Pet Try-On.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Ứng dụng cần quyền lưu ảnh vào thư viện để bạn chia sẻ hình thú cưng trong phòng.</string>
-	
-	<!-- Microphone and Speech Recognition permissions for voice chatbot -->
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Ứng dụng cần quyền truy cập micro để bạn có thể nói chuyện với trợ lý ảo bằng giọng nói.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Ứng dụng cần quyền nhận diện giọng nói để chuyển đổi lời nói thành văn bản khi bạn trò chuyện với trợ lý.</string>
-	
-	<!-- ARKit requirement for iOS AR features -->
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>arkit</string>
-	</array>
-</dict>
+	<dict>
+		<key>CADisableMinimumFrameDurationOnPhone</key>
+		<true/>
+		<key>CFBundleDevelopmentRegion</key>
+		<string>$(DEVELOPMENT_LANGUAGE)</string>
+		<key>CFBundleDisplayName</key>
+		<string>Happy Pets</string>
+		<key>CFBundleExecutable</key>
+		<string>$(EXECUTABLE_NAME)</string>
+		<key>CFBundleIdentifier</key>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<key>CFBundleInfoDictionaryVersion</key>
+		<string>6.0</string>
+		<key>CFBundleName</key>
+		<string>Happy Pet</string>
+		<key>CFBundlePackageType</key>
+		<string>APPL</string>
+		<key>CFBundleShortVersionString</key>
+		<string>$(FLUTTER_BUILD_NAME)</string>
+		<key>CFBundleSignature</key>
+		<string>????</string>
+		<key>CFBundleVersion</key>
+		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<key>LSRequiresIPhoneOS</key>
+		<true/>
+		<key>UIApplicationSupportsIndirectInputEvents</key>
+		<true/>
+		<key>UILaunchStoryboardName</key>
+		<string>LaunchScreen</string>
+		<key>UIMainStoryboardFile</key>
+		<string>Main</string>
+		<key>UIStatusBarHidden</key>
+		<true/>
+		<key>UISupportedInterfaceOrientations</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<key>UISupportedInterfaceOrientations~ipad</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationPortraitUpsideDown</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<!-- URL schemes required for Firebase Auth (Phone/Google) reCAPTCHA redirect on iOS -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<!-- REVERSED_CLIENT_ID derived from iosClientId in lib/firebase_options.dart -->
+					<string>com.googleusercontent.apps.1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o</string>
+				</array>
+			</dict>
+			<!-- Facebook URL Scheme: fb + FacebookAppID -->
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>fb382084861054704</string>
+				</array>
+			</dict>
+		</array>
+		<!-- Google Sign-In iOS client ID (non-reversed). Required by GoogleSignIn SDK v7+/v8+ -->
+		<key>GIDClientID</key>
+		<string>1025178678813-ttvel2tfd2oa73jimgd6icbvon7v401o.apps.googleusercontent.com</string>
+		<!-- Ensure Firebase can automatically intercept application:openURL for auth flows -->
+		<key>FirebaseAppDelegateProxyEnabled</key>
+		<true/>
+		<!-- Facebook SDK configuration for iOS login -->
+		<key>FacebookAppID</key>
+		<string>382084861054704</string>
+		<key>FacebookDisplayName</key>
+		<string>Happy Pet</string>
+		<key>FacebookClientToken</key>
+		<string>95f394c6f4fa44c93ec9edc329361a0d</string>
+		<!-- Whitelist Facebook URL schemes used by the SDK (iOS 9+) -->
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>fbapi</string>
+			<string>fb-messenger-share-api</string>
+			<string>fbauth2</string>
+			<string>fbshareextension</string>
+		</array>
+		<!-- Location permission usage descriptions for iOS -->
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Ứng dụng cần truy cập vị trí của bạn để chọn địa chỉ giao hàng trên bản đồ và gợi ý vị trí gần bạn.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Ứng dụng có thể sử dụng vị trí của bạn khi đang dùng để hiển thị bản đồ và địa chỉ chính xác.</string>
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>Ứng dụng cần quyền truy cập vị trí để cung cấp trải nghiệm giao hàng tốt hơn.</string>
+		<!-- Camera permission usage description for QR code scanning and AR -->
+		<key>NSCameraUsageDescription</key>
+		<string>Ứng dụng cần quyền truy cập camera để quét mã QR, xem AR và đặt thú cưng 3D lên sàn nhà.</string>
+		<!-- Photo library usage for saving Pet Try-On screenshots -->
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Ứng dụng cần quyền truy cập thư viện ảnh để lưu ảnh Pet Try-On.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Ứng dụng cần quyền lưu ảnh vào thư viện để bạn chia sẻ hình thú cưng trong phòng.</string>
+		<!-- Microphone and Speech Recognition permissions for voice chatbot -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Ứng dụng cần quyền truy cập micro để bạn có thể nói chuyện với trợ lý ảo bằng giọng nói.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Ứng dụng cần quyền nhận diện giọng nói để chuyển đổi lời nói thành văn bản khi bạn trò chuyện với trợ lý.</string>
+		<!-- ARKit requirement for iOS AR features -->
+		<key>UIRequiredDeviceCapabilities</key>
+		<array>
+			<string>arkit</string>
+		</array>
+		<key>UIViewControllerBasedStatusBarAppearance</key>
+		<false/>
+	</dict>
 </plist>

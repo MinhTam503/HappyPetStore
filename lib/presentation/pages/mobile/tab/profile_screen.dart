@@ -17,6 +17,8 @@ import 'package:pet_shop/presentation/pages/mobile/viewed_pets/viewed_page.dart'
 import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/spending/spending_screen.dart';
+import 'package:pet_shop/presentation/bloc/spending/spending_bloc.dart';
 
 import '../profile/edit_profile.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -215,6 +217,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 builder: (_) => const ViewedPage(),
                               ),
                             );
+                          },
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                      _MenuCard(children: [
+                        _MenuItem(
+                          icon: Icons.trending_up,
+                          iconBg: const Color(0xffe3f2fd),
+                          iconColor: Colors.blue,
+                          title: l10n?.spendingTitle ?? 'Biến động thu chi',
+                          onTap: () {
+                            if (userIdentifier != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider(
+                                    create: (_) => SpendingBloc(),
+                                    child: SpendingScreen(userId: userIdentifier!),
+                                  ),
+                                ),
+                              );
+                            }
                           },
                         ),
                       ]),

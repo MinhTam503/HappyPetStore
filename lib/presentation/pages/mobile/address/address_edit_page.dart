@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/constants/vn_admin_units.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'widgets/address_form.dart';
