@@ -582,12 +582,13 @@ class _DetailPetState extends State<DetailPet> {
               child: ElevatedButton(
                 onPressed: _addToCart,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
+                  backgroundColor: Theme.of(context)
+                                    .colorScheme.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side:  BorderSide(color: Theme.of(context)
-                                    .colorScheme.primary),
+                                    .colorScheme.secondary),
                   ),
                   elevation: 4,
                 ),

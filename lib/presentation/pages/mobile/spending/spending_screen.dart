@@ -502,7 +502,7 @@ class _SpendingScreenState extends State<SpendingScreen>
                         child: const Icon(Icons.pets),
                       ),
                 title: Text(pet.name),
-                subtitle: Text('${l10n?.quantityLabel ?? 'SL'}: ${pet.quantity}'),
+                // subtitle: Text('${l10n?.quantityLabel ?? 'SL'}: ${pet.quantity}'),
                 trailing: Text(
                   CurrencyHelper.formatVND(pet.price),
                   style: const TextStyle(fontWeight: FontWeight.w600),

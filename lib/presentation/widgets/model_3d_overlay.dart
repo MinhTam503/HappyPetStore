@@ -47,127 +47,173 @@ class _Model3DOverlayState extends State<Model3DOverlay> {
       return const SizedBox.shrink();
     }
 
-    // Convert offset from center-based positioning
     final screenSize = MediaQuery.of(context).size;
-    final centerX = screenSize.width / 2;
-    final centerY = screenSize.height / 2;
-    
-    // Base size 300px for better visibility
-    final baseSize = 300.0;
-    final modelSize = baseSize * widget.scale;
-    
-    // Calculate position (offset is from center)
-    final left = centerX + widget.offset.dx - (modelSize / 2);
-    final top = centerY + widget.offset.dy - (modelSize / 2);
+    // Realistic size calculation based on actual pet dimensions
+    final clampedScale = widget.scale.clamp(0.1, 5.0);
+
+    // Real-world pet size reference (approximate height in meters at average weight)
+    // Dog: 0.5m at 10kg, Cat: 0.25m at 4kg, Fish: 0.15m at 0.5kg, Bird: 0.2m at 0.3kg
+    final referenceHeightM = 0.5; // Default for Dog
+
+    // Map screen space: assume 1 meter = 200 pixels on screen for AR-like perspective
+    final pixelsPerMeter = 200.0;
+    final baseHeightPx =
+        referenceHeightM * pixelsPerMeter; // ~100px for reference pet
+
+    // Final size: baseHeight * scale (0.8-2.5 range from weight slider)
+    // 1kg dog: 100 * 0.8 * 2.5 = 200px (~0.2m small)
+    // 10kg dog: 100 * 1.112 * 2.5 = 278px (~0.28m reasonable)
+    // 50kg dog: 100 * 2.5 * 2.5 = 625px (~0.62m large)
+    final boxSize = baseHeightPx *
+        clampedScale *
+        2.5; // Reduced from 5.0 to 2.5 for realistic size
+
+    // Dynamic camera distance: adjusted for smaller models
+    // Small pets (0.8 scale) = 6.0m away, Large pets (2.5 scale) = 2.0m away
+    final cameraDistance = (5.0 / clampedScale).clamp(2.0, 6.0);
+    final cameraOrbit = '0deg 75deg ${cameraDistance.toStringAsFixed(2)}m';
+    const fovDeg = 45.0;
 
     debugPrint('📐 Model3DOverlay rendering:');
     debugPrint('   Screen: ${screenSize.width} x ${screenSize.height}');
-    debugPrint('   Position: left=$left, top=$top');
-    debugPrint('   Size: $modelSize x $modelSize');
-    debugPrint('   Rotation: ${widget.rotationY}°');
+    debugPrint('   Offset: ${widget.offset}');
+    debugPrint('   Scale: ${widget.scale}');
+    debugPrint('   BoxSize: ${boxSize.toStringAsFixed(1)} px');
+    debugPrint('   Camera Distance: ${cameraDistance.toStringAsFixed(2)}m');
+    debugPrint('   Camera Orbit: $cameraOrbit');
+    debugPrint('   FOV: ${fovDeg.toStringAsFixed(1)}°');
+    debugPrint('   Rotation Y: ${widget.rotationY}°');
 
-    // Apply flip transformations
+    // Apply transformations: position, flip, and zoom
     final scaleX = widget.flipHorizontal ? -1.0 : 1.0;
     final scaleY = widget.flipVertical ? -1.0 : 1.0;
 
-    return Stack(
-      children: [
-        Positioned(
-          left: left,
-          top: top,
-          width: modelSize,
-          height: modelSize,
-          child: Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..scale(scaleX, scaleY, 1.0),
-            child: RepaintBoundary(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                ),
-                child: ModelViewer(
-                  src: widget.modelUrl,
-                  alt: "3D Pet Model",
-                  ar: true, // Enable AR mode for iOS devices
-                  arModes: const ['scene-viewer', 'webxr', 'quick-look'], // Support multiple AR modes
-                  iosSrc: widget.modelUrl, // Use same model for iOS AR Quick Look
-                  autoRotate: false,
-                  // Enable camera controls for 360° rotation and zoom
-                  cameraControls: true,
-                  disableZoom: false,
-                  touchAction: TouchAction.panY,
-                  
-                  // Camera configuration - optimal view
-                  cameraOrbit: '0deg 75deg 2.5m',
-                  fieldOfView: '30deg',
-                  minFieldOfView: '25deg',
-                  maxFieldOfView: '45deg',
-                  
-                  // Rotation control via orientation
-                  orientation: '0deg ${widget.rotationY}deg 0deg',
-                  
-                  // Lighting
-                  shadowIntensity: 0.0,
-                  shadowSoftness: 0.0,
-                  exposure: 1.5, // Brighter
-                  
-                  // Performance
-                  loading: Loading.eager,
-                  
-                  // Transparent background
-                  backgroundColor: Colors.transparent,
-                  
-                  // Interaction prompt for users on real devices
-                  interactionPrompt: InteractionPrompt.auto,
-                  interactionPromptThreshold: 1000, // Show prompt after 1 second
-                  interactionPromptStyle: InteractionPromptStyle.basic,
-                  
-                  // No environment
-                  environmentImage: null,
-                  skyboxImage: null,
-                  
-                  // No poster
-                  poster: null,
-                  
-                  // Force transparency via CSS with WebGL fixes and touch optimization
-                  relatedCss: '''
-                    body, html {
-                      margin: 0;
-                      padding: 0;
-                      width: 100%;
-                      height: 100%;
-                      background: transparent !important;
-                      background-color: transparent !important;
-                      overflow: hidden;
-                      touch-action: pan-y pinch-zoom; /* Enable touch gestures on real devices */
-                      -webkit-user-select: none;
-                      user-select: none;
-                    }
-                    model-viewer {
-                      width: 100%;
-                      height: 100%;
-                      background: transparent !important;
-                      background-color: transparent !important;
-                      --poster-color: transparent !important;
-                      --progress-bar-color: transparent;
-                      touch-action: pan-y pinch-zoom; /* Critical for iOS touch */
-                    }
-                    model-viewer::part(default-progress-bar) {
-                      display: none;
-                    }
-                    canvas {
-                      image-rendering: -webkit-optimize-contrast;
-                      image-rendering: crisp-edges;
-                      touch-action: pan-y pinch-zoom; /* Enable canvas touch gestures */
-                    }
-                  ''',
-                ),
-              ),
+    return Center(
+        child: Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()
+        // First translate to move the viewer around screen
+        ..translate(widget.offset.dx, widget.offset.dy)
+        // Then apply flip
+        ..scale(scaleX, scaleY, 1.0),
+      child: RepaintBoundary(
+        child: OverflowBox(
+          minWidth: 0,
+          minHeight: 0,
+          maxWidth: double.infinity,
+          maxHeight: double.infinity,
+          child: Container(
+            width: boxSize,
+            height: boxSize,
+            child: ModelViewer(
+              src: widget.modelUrl,
+              alt: "3D Pet Model",
+              ar: true,
+              arModes: const ['scene-viewer', 'webxr', 'quick-look'],
+              iosSrc: widget.modelUrl,
+              autoRotate: false,
+
+              // Enable camera controls for 360° rotation and zoom
+              cameraControls: true,
+              disableZoom: false,
+              touchAction: TouchAction.panY,
+
+              // CRITICAL: Disable auto-framing to prevent auto-zoom on load
+              disableTap: true,
+
+              // Camera position - only distance changes with scale
+              cameraOrbit: cameraOrbit,
+              fieldOfView: '${fovDeg.toStringAsFixed(1)}deg',
+              minFieldOfView: '15deg',
+              maxFieldOfView: '90deg',
+
+              // Lock camera target to prevent auto-framing
+              cameraTarget: '0m 0m 0m',
+
+              // CRITICAL: Minimize auto-animation that causes size changes
+              // Must be > 0, use very small value for instant camera updates
+              interpolationDecay: 100,
+
+              // Rotation control via orientation
+              orientation: '0deg ${widget.rotationY}deg 0deg',
+
+              // Lighting
+              shadowIntensity: 0.0,
+              shadowSoftness: 0.0,
+              exposure: 1.5,
+
+              // Performance
+              loading: Loading.eager,
+
+              // Transparent background
+              backgroundColor: Colors.transparent,
+
+              // Interaction prompt
+              interactionPrompt: InteractionPrompt.auto,
+              interactionPromptThreshold: 1000,
+              interactionPromptStyle: InteractionPromptStyle.basic,
+
+              // No environment
+              environmentImage: null,
+              skyboxImage: null,
+
+              // No poster
+              poster: null,
+
+              // Force transparency via CSS with WebGL fixes and touch optimization
+              relatedCss: '''
+              body, html {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                background: transparent !important;
+                background-color: transparent !important;
+                overflow: hidden;
+                touch-action: pan-y pinch-zoom;
+                -webkit-user-select: none;
+                user-select: none;
+              }
+              model-viewer {
+                width: 100%;
+                height: 100%;
+                background: transparent !important;
+                background-color: transparent !important;
+                --poster-color: transparent !important;
+                --progress-bar-color: transparent;
+                touch-action: pan-y pinch-zoom;
+              }
+              model-viewer::part(default-progress-bar) {
+                display: none;
+              }
+              canvas {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+                touch-action: pan-y pinch-zoom;
+              }
+            ''',
+
+              // JavaScript to prevent auto-framing and lock camera
+              relatedJs: '''
+              const modelViewer = document.querySelector('model-viewer');
+              
+              // Prevent auto-framing on load by locking camera immediately
+              modelViewer.addEventListener('load', () => {
+                // Re-apply camera orbit after model loads to prevent auto-zoom
+                modelViewer.cameraOrbit = '$cameraOrbit';
+                modelViewer.fieldOfView = '${fovDeg.toStringAsFixed(1)}deg';
+                modelViewer.cameraTarget = '0m 0m 0m';
+              });
+              
+              // Lock camera position immediately to prevent initial auto-zoom
+              modelViewer.cameraOrbit = '$cameraOrbit';
+              modelViewer.fieldOfView = '${fovDeg.toStringAsFixed(1)}deg';
+              modelViewer.cameraTarget = '0m 0m 0m';
+              ''',
             ),
           ),
         ),
-      ],
-    );
+      ),
+    ));
   }
 }
