@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/auth/auth_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
 import 'package:pet_shop/presentation/components/shipping_tracking_widget.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
@@ -11,7 +10,13 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class YourOrderScreen extends StatefulWidget {
   final String? initialOrderId; // If provided, auto-open that order's details
-  const YourOrderScreen({super.key, this.initialOrderId});
+  final bool isEmbedded; // If true, hide AppBar (used in tabs)
+  
+  const YourOrderScreen({
+    super.key,
+    this.initialOrderId,
+    this.isEmbedded = false,
+  });
 
   @override
   State<YourOrderScreen> createState() => _YourOrderScreenState();
@@ -258,53 +263,37 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: secondaryColor,
-      appBar: AppBar(
-        backgroundColor: secondaryColor,
-        centerTitle: true,
-        elevation: 0,
-        title: Text(
-          l10n?.yourOrder ?? "Đơn hàng của bạn",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: theme.colorScheme.onSurface,
-            letterSpacing: .2,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(58),
-          child: Container(
-            alignment: Alignment.center,
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: _FilterBar(
-              statusFilter: statusFilter,
-              orderSort: orderSort,
-              onStatusChanged: (v) => setState(() => statusFilter = v),
-              onSortChanged: (v) => setState(() => orderSort = v),
-            ),
-          ),
-        ),
+    
+    final filterBar = Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      child: _FilterBar(
+        statusFilter: statusFilter,
+        orderSort: orderSort,
+        onStatusChanged: (v) => setState(() => statusFilter = v),
+        onSortChanged: (v) => setState(() => orderSort = v),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: StreamBuilder<QuerySnapshot>(
-          stream: userData == null
-              ? null
-              : ordersCollection
-                  .where('email', isEqualTo: userData?['email'])
-                  .snapshots(),
-          builder: (context, snapshot) {
-            if (userData == null ||
-                snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const _EmptyOrders();
-            }
+    );
+    
+    final bodyContent = RefreshIndicator(
+      onRefresh: _refresh,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: userData == null
+            ? null
+            : ordersCollection
+                .where('email', isEqualTo: userData?['email'])
+                .snapshots(),
+        builder: (context, snapshot) {
+          if (userData == null ||
+              snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const _EmptyOrders();
+          }
 
-            // Lọc theo trạng thái
-            var orders = snapshot.data!.docs.toList();
+          // Lọc theo trạng thái
+          var orders = snapshot.data!.docs.toList();
             if (statusFilter != 'All') {
               orders = orders
                   .where((doc) => (doc['statusOrder'] ?? '') == statusFilter)
@@ -551,7 +540,40 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
             );
           },
         ),
+      );
+    
+    
+    // If embedded, return body with filter bar
+    if (widget.isEmbedded) {
+      return Column(
+        children: [
+          filterBar,
+          Expanded(child: bodyContent),
+        ],
+      );
+    }
+    
+    // Otherwise, return full Scaffold
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        centerTitle: true,
+        elevation: 0,
+        title: Text(
+          l10n?.yourOrder ?? "Đơn hàng của bạn",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurface,
+            letterSpacing: .2,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(58),
+          child: filterBar,
+        ),
       ),
+      body: bodyContent,
     );
   }
 

@@ -18,6 +18,7 @@ import '../account/account_admin.dart';
 import '../category/category_admin.dart';
 import '../auth/login_admin_page.dart';
 import '../order/orders_admin.dart';
+import '../order/reservations_admin.dart';
 
 // Helper class for navigation items
 class NavigationItem {
@@ -46,6 +47,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
   String? _role;
   bool _loading = true;
   bool _socialMenuExpanded = false;
+  bool _ordersMenuExpanded = false;
 
   late final List<Widget> _pages;
 
@@ -62,7 +64,8 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       const PetsAdmin(),
       const CategoryAdmin(),
       const AccountAdmin(),
-      const OrdersAdmin(),
+      const ReservationsAdmin(), // Orders Management - Reservations
+      const OrdersAdmin(), // Orders Management - Orders
       const NotificationManagementPanel(),
       const InboxPageAdmin(),
       const ShopInfo(),
@@ -162,9 +165,21 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         label: l10n.account,
       ),
       NavigationItem(
-        icon: Icons.receipt_long_outlined,
-        selectedIcon: Icons.receipt_long,
-        label: l10n.orders,
+        icon: Icons.shopping_bag_outlined,
+        selectedIcon: Icons.shopping_bag,
+        label: l10n.ordersMenu,
+        subItems: [
+          NavigationItem(
+            icon: Icons.book_online_outlined,
+            selectedIcon: Icons.book_online,
+            label: l10n.manageReservations,
+          ),
+          NavigationItem(
+            icon: Icons.local_shipping_outlined,
+            selectedIcon: Icons.local_shipping,
+            label: l10n.manageOrders,
+          ),
+        ],
       ),
       NavigationItem(
         icon: Icons.notifications_active_outlined,
@@ -221,7 +236,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
       NavigationItem(
         icon: Icons.palette_outlined,
         selectedIcon: Icons.palette,
-        label: 'Giao diện',
+        label: l10n.themeSettings,
       ),
       // NavigationItem(
       //   icon: Icons.local_shipping_outlined,
@@ -249,13 +264,18 @@ class _HomePageAdminState extends State<HomePageAdmin> {
         _selectedIndex < index + item.subItems!.length;
 
     if (hasSubItems) {
+      // Determine which menu this is based on item properties
+      final isSocialMenu = item.label == AppLocalizations.of(context)!.socialNetwork;
+      final isOrdersMenu = item.label == AppLocalizations.of(context)!.ordersMenu;
+      final isExpanded = isSocialMenu ? _socialMenuExpanded : (isOrdersMenu ? _ordersMenuExpanded : false);
+      
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             child: Material(
-              color: (isSubItemSelected || _socialMenuExpanded)
+              color: (isSubItemSelected || isExpanded)
                   ? theme.colorScheme.primary.withOpacity(0.05)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
@@ -264,7 +284,11 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                 onTap: () {
                   if (mounted) {
                     setState(() {
-                      _socialMenuExpanded = !_socialMenuExpanded;
+                      if (isSocialMenu) {
+                        _socialMenuExpanded = !_socialMenuExpanded;
+                      } else if (isOrdersMenu) {
+                        _ordersMenuExpanded = !_ordersMenuExpanded;
+                      }
                     });
                   }
                 },
@@ -296,7 +320,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
                         ),
                       ),
                       Icon(
-                        _socialMenuExpanded 
+                        isExpanded 
                             ? Icons.keyboard_arrow_up 
                             : Icons.keyboard_arrow_down,
                         color: theme.colorScheme.onSurfaceVariant,
@@ -309,7 +333,7 @@ class _HomePageAdminState extends State<HomePageAdmin> {
             ),
           ),
           // Sub-items
-          if (_socialMenuExpanded)
+          if (isExpanded)
             ...item.subItems!.asMap().entries.map((entry) {
               final subIndex = index + entry.key;
               final subItem = entry.value;

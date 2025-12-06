@@ -14,7 +14,7 @@ import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/viewed_pets/viewed_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/orders_and_reservations_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/spending/spending_screen.dart';
@@ -183,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const YourOrderScreen(),
+                                builder: (_) => const OrdersAndReservationsScreen(),
                               ),
                             );
                           },

@@ -8,7 +8,7 @@ import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/infoStore/StoreInfoScreen.dart';
-import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/orders_and_reservations_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/setting/settings_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 import 'package:pet_shop/presentation/pages/mobile/notification/nofi_screen.dart';
@@ -386,7 +386,7 @@ class _AppDrawerState extends State<AppDrawer> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const YourOrderScreen(),
+                        builder: (context) => const OrdersAndReservationsScreen(),
                       ),
                     );
                   },

@@ -9,6 +9,7 @@ import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/order_success.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/checkout_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/payment/store_pickup_checkout_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
@@ -16,6 +17,7 @@ import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
+import 'package:pet_shop/presentation/widgets/fulfillment_method_dialog.dart';
 import '../../../../data/models/cart_model.dart';
 import '../../../bloc/apriori/apriori_bloc.dart';
 import '../../../bloc/apriori/apriori_event.dart';
@@ -1180,16 +1182,40 @@ class _CartScreenState extends State<CartScreen> {
                                             return;
                                           }
                                           
-                                          // Navigate to dedicated checkout screen and refresh cart when returning
-                                          await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => CheckoutScreen(
-                                                userIdentifier: userIdentifier!,
-                                                carts: availablePets,
-                                              ),
-                                            ),
+                                          // Show fulfillment method selection dialog
+                                          if (!mounted) return;
+                                          final method = await showDialog<FulfillmentMethod>(
+                                            context: context,
+                                            builder: (_) => const FulfillmentMethodDialog(),
                                           );
+                                          
+                                          if (method == null || !mounted) return;
+                                          
+                                          // Navigate based on selected method
+                                          if (method == FulfillmentMethod.homeDelivery) {
+                                            // Navigate to home delivery checkout
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => CheckoutScreen(
+                                                  userIdentifier: userIdentifier!,
+                                                  carts: availablePets,
+                                                ),
+                                              ),
+                                            );
+                                          } else if (method == FulfillmentMethod.storePickup) {
+                                            // Navigate to store pickup checkout
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => StorePickupCheckoutScreen(
+                                                  userIdentifier: userIdentifier!,
+                                                  carts: availablePets,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          
                                           if (!mounted) return;
                                           // Reload cart from Firestore to reflect purchased items removal
                                           context

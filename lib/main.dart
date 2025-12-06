@@ -30,6 +30,9 @@ import 'package:pet_shop/presentation/bloc/viewedPets/recent_pets_event.dart';
 import 'package:pet_shop/presentation/bloc/vnpay/vnpay_bloc.dart';
 import 'package:pet_shop/presentation/bloc/social/social_bloc.dart';
 import 'package:pet_shop/presentation/bloc/chat/chat_bloc.dart';
+import 'package:pet_shop/presentation/bloc/reservation/reservation_bloc.dart';
+import 'package:pet_shop/presentation/bloc/deposit_settings/deposit_settings_bloc.dart';
+import 'package:pet_shop/services/reservation_service.dart';
 import 'package:pet_shop/data/repositories/social_repository_impl.dart';
 import 'package:pet_shop/data/repositories/user_chat_repository_impl.dart';
 import 'package:pet_shop/domain/entities/social_pet_profile.dart';
@@ -226,6 +229,13 @@ class MyApp extends StatelessWidget {
             create: (_) => GroupChatBloc(
                   repository: GroupChatRepositoryImpl(),
                 )),
+        BlocProvider(
+            create: (_) => ReservationBloc(
+                  reservationService: ReservationService(),
+                )),
+        BlocProvider(
+            create: (_) => DepositSettingsBloc(),
+                ),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
@@ -234,16 +244,22 @@ class MyApp extends StatelessWidget {
         final themeManager = ThemeManager();
         final settingsService = SettingsService();
         
-        return StreamBuilder<SeasonalTheme>(
-          stream: themeManager.stream,
-          initialData: themeManager.current,
-          builder: (context, themeSnapshot) {
-            return StreamBuilder<bool>(
-              stream: settingsService.useAdminThemeStream,
-              initialData: true,
-              builder: (context, settingsSnapshot) {
-                final useAdminTheme = settingsSnapshot.data ?? true;
-                final adminTheme = themeSnapshot.data ?? SeasonalTheme.defaultTheme;
+        return FutureBuilder<bool>(
+          future: settingsService.getUseAdminTheme(),
+          builder: (context, futureSnapshot) {
+            // Load initial value from SharedPreferences
+            final initialUseAdminTheme = futureSnapshot.data ?? false;
+            
+            return StreamBuilder<SeasonalTheme>(
+              stream: themeManager.stream,
+              initialData: themeManager.current,
+              builder: (context, themeSnapshot) {
+                return StreamBuilder<bool>(
+                  stream: settingsService.useAdminThemeStream,
+                  initialData: initialUseAdminTheme,
+                  builder: (context, settingsSnapshot) {
+                    final useAdminTheme = settingsSnapshot.data ?? initialUseAdminTheme;
+                    final adminTheme = themeSnapshot.data ?? SeasonalTheme.defaultTheme;
                 
                 // On web (admin panel), always use default theme
                 // On mobile, use admin theme if enabled, otherwise default
@@ -616,6 +632,8 @@ class MyApp extends StatelessWidget {
                 },
               },
             );
+                  },
+                );
               },
             );
           },
