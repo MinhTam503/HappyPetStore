@@ -12,9 +12,12 @@ import 'package:pet_shop/data/models/deposit_settings_model.dart';
 import 'package:pet_shop/presentation/bloc/deposit_settings/deposit_settings_bloc.dart';
 import 'package:pet_shop/presentation/bloc/deposit_settings/deposit_settings_event.dart';
 import 'package:pet_shop/presentation/bloc/deposit_settings/deposit_settings_state.dart';
-import 'package:pet_shop/presentation/bloc/reservation/reservation_bloc.dart';
-import 'package:pet_shop/presentation/bloc/reservation/reservation_event.dart';
-import 'package:pet_shop/presentation/bloc/reservation/reservation_state.dart';
+import 'package:pet_shop/presentation/bloc/vnpay/vnpay_bloc.dart';
+import 'package:pet_shop/presentation/bloc/vnpay/vnpay_event.dart';
+import 'package:pet_shop/presentation/bloc/vnpay/vnpay_state.dart';
+import 'package:pet_shop/core/config/vnpay_config.dart';
+import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
+import 'package:pet_shop/presentation/pages/mobile/order/order_success.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/components/store_pickup_header.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/components/pickup_date_card.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/components/payment_option_card.dart';
@@ -22,7 +25,8 @@ import 'package:pet_shop/presentation/pages/mobile/payment/components/payment_me
 import 'package:pet_shop/presentation/pages/mobile/payment/components/reservation_items_list.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/components/reservation_summary_card.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/services/reservation_service.dart';
+
 
 /// Store Pickup Checkout Screen - For reserving pets with deposit
 class StorePickupCheckoutScreen extends StatefulWidget {
@@ -40,14 +44,17 @@ class StorePickupCheckoutScreen extends StatefulWidget {
       _StorePickupCheckoutScreenState();
 }
 
-class _StorePickupCheckoutScreenState
-    extends State<StorePickupCheckoutScreen> {
+class _StorePickupCheckoutScreenState extends State<StorePickupCheckoutScreen> {
   final UserManager userManager = UserManager();
 
   Map<String, dynamic>? userInfo;
   DateTime? selectedPickupDate;
   String paymentMethod = 'vnpay';
   bool isPayingDeposit = true;
+  double? _recentPaymentAmount;
+  
+  // Store pending reservation data until payment succeeds
+  ReservationModel? _pendingReservation;
 
   @override
   void initState() {
@@ -87,13 +94,14 @@ class _StorePickupCheckoutScreenState
       firstDate: firstDate,
       lastDate: lastDate,
       builder: (context, child) {
+        final theme = Theme.of(context);
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: primaryColor,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
+          data: theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              primary: theme.colorScheme.primary,
+              onPrimary: theme.colorScheme.onPrimary,
+              surface: theme.colorScheme.surface,
+              onSurface: theme.colorScheme.onSurface,
             ),
           ),
           child: child!,
@@ -107,11 +115,13 @@ class _StorePickupCheckoutScreenState
   }
 
   Future<void> _createReservation(DepositSettingsModel settings) async {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (selectedPickupDate == null) {
       NotificationHelper.showWarning(
         context,
-        AppLocalizations.of(context)!.selectPickupDate,
-        'Vui lòng chọn ngày đến lấy thú cưng',
+        l10n.selectPickupDate,
+        l10n.pleaseSelectPickupDate,
       );
       return;
     }
@@ -122,10 +132,8 @@ class _StorePickupCheckoutScreenState
       final petId = item.grocery["productId"]?.toString() ?? '';
       if (petId.isEmpty) continue;
 
-      final petDoc = await FirebaseFirestore.instance
-          .collection('Pets')
-          .doc(petId)
-          .get();
+      final petDoc =
+          await FirebaseFirestore.instance.collection('Pets').doc(petId).get();
 
       if (petDoc.exists) {
         final petData = petDoc.data()!;
@@ -147,16 +155,16 @@ class _StorePickupCheckoutScreenState
     if (items.isEmpty) {
       NotificationHelper.showError(
         context,
-        'Lỗi',
-        'Không tìm thấy thú cưng trong giỏ hàng',
+        l10n.error,
+        l10n.petNotFoundInCart,
       );
       return;
     }
 
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      NotificationHelper.showError(context, 'Lỗi',
-          'Vui lòng đăng nhập để đặt trước');
+      NotificationHelper.showError(
+          context, l10n.error, l10n.pleaseLoginToReserve);
       return;
     }
 
@@ -165,30 +173,37 @@ class _StorePickupCheckoutScreenState
     final paymentAmount = _calculatePaymentAmount(settings);
 
     // Show confirmation dialog
+    final theme = Theme.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xác nhận đặt trước'),
+        title: Text(l10n.confirmReservationAction),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Bạn sẽ thanh toán ${isPayingDeposit ? "tiền cọc" : "toàn bộ"}: ${CurrencyHelper.formatVND(paymentAmount)}'),
+            Text(l10n.youWillPay(
+              isPayingDeposit ? l10n.depositPaymentType : l10n.fullPaymentType,
+              CurrencyHelper.formatVND(paymentAmount),
+            )),
             const SizedBox(height: 8),
-            Text('Phương thức: ${paymentMethod == "vnpay" ? "VNPay" : "Stripe"}'),
+            Text(
+                '${l10n.paymentMethodLabel}: ${paymentMethod == "vnpay" ? "VNPay" : "Stripe"}'),
             const SizedBox(height: 8),
-            const Text('Lưu ý: Bạn cần thanh toán để hoàn tất đặt trước.'),
+            Text(l10n.paymentNote),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: const Text('Xác nhận'),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -196,8 +211,8 @@ class _StorePickupCheckoutScreenState
 
     if (confirmed != true) return;
 
-    // Create reservation first with pending payment status
-    final reservation = ReservationModel(
+    // Store reservation data (don't create Firestore doc yet - wait for payment)
+    _pendingReservation = ReservationModel(
       id: '',
       userId: currentUser.uid,
       userIdentifier: widget.userIdentifier,
@@ -215,78 +230,156 @@ class _StorePickupCheckoutScreenState
       remainingAmount: totalAmount,
       paymentMethod: paymentMethod,
     );
+    _recentPaymentAmount = paymentAmount;
 
     if (!mounted) return;
 
-    DialogHelper.showLoadingDialog(context,
-        message: 'Đang tạo đơn đặt trước...');
-    
-    // TODO: After reservation is created, redirect to payment
-    // For now, just create the reservation
-    context.read<ReservationBloc>().add(CreateReservation(reservation));
+    // Redirect to payment immediately (no Firestore reservation yet)
+    if (paymentMethod == 'vnpay') {
+      final orderId = 'RES_${DateTime.now().millisecondsSinceEpoch}';
+      final orderInfo = 'Thanh toan dat truoc HappyPetStore $orderId';
+      
+      DialogHelper.showLoadingDialog(context, message: 'Đang tạo giao dịch VNPay...');
+      context.read<VnpayBloc>().add(CreateVnpayPayment(
+        orderId: orderId,
+        amount: paymentAmount,
+        orderInfo: orderInfo,
+        returnUrl: VnpayConfig.returnUrl,
+      ));
+    } else if (paymentMethod == 'stripe') {
+      NotificationHelper.showWarning(
+        context,
+        'Tính năng đang phát triển',
+        'Thanh toán Stripe cho đặt trước đang được phát triển. Vui lòng chọn VNPay.',
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-            create: (_) =>
-                DepositSettingsBloc()..add(const LoadDepositSettings())),
-        BlocProvider(create: (_) => ReservationBloc()),
-      ],
-      child: BlocListener<ReservationBloc, ReservationState>(
+    return BlocProvider(
+      create: (_) => DepositSettingsBloc()..add(const LoadDepositSettings()),
+      child: MultiBlocListener(
+        listeners: [
+          // ReservationBloc listener removed - reservation created after payment success
+      BlocListener<VnpayBloc, VnpayState>(
         listener: (context, state) async {
-          if (state is ReservationSuccess) {
+          if (state is VnpayPaymentUrlCreated) {
+            final paymentUrl = state.payment.paymentUrl;
+            if (paymentUrl == null) return;
+            
             await DialogHelper.safeHideLoadingDialog();
-
-            // Remove items from cart
-            final cartDoc = FirebaseFirestore.instance
-                .collection('carts')
-                .doc(widget.userIdentifier);
-            final doc = await cartDoc.get();
-            if (doc.exists) {
-              final data = doc.data();
-              final items = (data != null && data['items'] is List)
-                  ? List<Map<String, dynamic>>.from(data['items'] as List)
-                  : <Map<String, dynamic>>[];
-              final purchasedIds = widget.carts
-                  .map((c) => c.grocery['productId']?.toString() ?? '')
-                  .where((id) => id.isNotEmpty)
-                  .toSet();
-              items.removeWhere((it) =>
-                  purchasedIds.contains(it['productId']?.toString() ?? ''));
-              final selected =
-                  (data != null && data['selectedProductIds'] is List)
-                      ? List<String>.from(data['selectedProductIds'] as List)
-                      : <String>[];
-              selected.removeWhere((id) => purchasedIds.contains(id));
-              await cartDoc.set({
-                'items': items,
-                'selectedProductIds': selected
-              }, SetOptions(merge: true));
-            }
-
-            if (!mounted) return;
-            NotificationHelper.showSuccess(
+            final result = await Navigator.push<Map<String, String>>(
               context,
-              l10n.reservationCreatedSuccess,
-              'Vui lòng chờ cửa hàng xác nhận.',
+              MaterialPageRoute(
+                builder: (context) => VnpayWebViewScreen(
+                  paymentUrl: paymentUrl,
+                  returnUrl: VnpayConfig.returnUrl,
+                ),
+              ),
             );
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          } else if (state is ReservationError) {
-            DialogHelper.safeHideLoadingDialog();
-            NotificationHelper.showError(context, 'Lỗi', state.message);
+            
+            if (result != null && mounted) {
+              // Verify VNPay callback immediately
+              context.read<VnpayBloc>().add(VerifyVnpayCallback(result));
+            }
+          } else if (state is VnpayPaymentVerified) {
+            if (state.isSuccess) {
+              // Payment successful - NOW create reservation in Firestore
+              DialogHelper.showLoadingDialog(context, message: 'Đang xử lý đặt trước...');
+              try {
+                // Create reservation with payment info
+                if (_pendingReservation != null && _recentPaymentAmount != null) {
+                  final reservationId = await ReservationService().createReservation(_pendingReservation!);
+                  
+                  // Update payment status immediately
+                  await ReservationService().updateReservationPayment(
+                    reservationId,
+                    _recentPaymentAmount!,
+                  );
+                }
+                // Remove items from cart
+                final cartDoc = FirebaseFirestore.instance
+                    .collection('carts')
+                    .doc(widget.userIdentifier);
+                final doc = await cartDoc.get();
+                if (doc.exists) {
+                  final data = doc.data();
+                  final items = (data != null && data['items'] is List)
+                      ? List<Map<String, dynamic>>.from(data['items'] as List)
+                      : <Map<String, dynamic>>[];
+                  final purchasedIds = widget.carts
+                      .map((c) => c.grocery['productId']?.toString() ?? '')
+                      .where((id) => id.isNotEmpty)
+                      .toSet();
+                  items.removeWhere((it) =>
+                      purchasedIds.contains(it['productId']?.toString() ?? ''));
+                  final selected =
+                      (data != null && data['selectedProductIds'] is List)
+                          ? List<String>.from(data['selectedProductIds'] as List)
+                          : <String>[];
+                  selected.removeWhere((id) => purchasedIds.contains(id));
+                  await cartDoc.set(
+                      {'items': items, 'selectedProductIds': selected},
+                      SetOptions(merge: true));
+                }
+                
+                // Extract breeds for OrderSuccess
+                final purchasedBreeds = widget.carts
+                    .map((item) => item.grocery["breed"] as String?)
+                    .where((breed) => breed != null && breed.isNotEmpty)
+                    .cast<String>()
+                    .toSet()
+                    .toList();
+                
+                await DialogHelper.safeHideLoadingDialog();
+                if (!mounted) return;
+                
+                // Navigate directly to OrderSuccess
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds),
+                  ),
+                  (route) => route.isFirst,
+                );
+              } catch (e) {
+                await DialogHelper.safeHideLoadingDialog();
+                debugPrint('⚠️ Failed to process reservation payment: $e');
+                if (!mounted) return;
+                NotificationHelper.showError(
+                  context,
+                  'Lỗi xử lý',
+                  'Không thể xử lý đặt trước. Vui lòng liên hệ hỗ trợ.',
+                );
+              }
+            } else {
+              // Payment failed
+              NotificationHelper.showError(
+                context,
+                'Thanh toán thất bại',
+                'Giao dịch không thành công.',
+              );
+            }
+          } else if (state is VnpayError) {
+            await DialogHelper.safeHideLoadingDialog();
+            NotificationHelper.showError(
+              context,
+              'Lỗi thanh toán VNPay',
+              state.message,
+            );
           }
         },
+      ),
+      ],
         child: Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).colorScheme.background,
           appBar: AppBar(
             title: Text(l10n.storePickup),
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
           ),
           body: BlocBuilder<DepositSettingsBloc, DepositSettingsState>(
             builder: (context, state) {
@@ -300,7 +393,7 @@ class _StorePickupCheckoutScreenState
                     padding: const EdgeInsets.all(24),
                     child: Text(
                       state.message,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -321,23 +414,33 @@ class _StorePickupCheckoutScreenState
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.info_outline,
-                            size: 64, color: Colors.grey.shade400),
+                            size: 64,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.4)),
                         const SizedBox(height: 16),
                         Text(
-                          'Chức năng đặt trước tạm thời không khả dụng',
+                          l10n.reservationTemporarilyUnavailable,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.8),
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Vui lòng chọn giao hàng tận nơi',
+                          l10n.pleaseSelectHomeDelivery,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
                           ),
                         ),
                       ],
@@ -361,7 +464,8 @@ class _StorePickupCheckoutScreenState
                     PickupDateCard(
                       selectedDate: selectedPickupDate,
                       maxDays: settings.maxReservationDays,
-                      onTap: () => _selectPickupDate(settings.maxReservationDays),
+                      onTap: () =>
+                          _selectPickupDate(settings.maxReservationDays),
                     ),
                     const SizedBox(height: 24),
                     PaymentOptionCard(
@@ -369,6 +473,7 @@ class _StorePickupCheckoutScreenState
                       depositAmount: depositAmount,
                       totalAmount: totalAmount,
                       depositPercentage: settings.depositPercentage.toInt(),
+                      isPercentageDeposit: settings.depositType == DepositType.percentage,
                       onChanged: (val) => setState(() => isPayingDeposit = val),
                     ),
                     const SizedBox(height: 24),
@@ -394,7 +499,8 @@ class _StorePickupCheckoutScreenState
           bottomNavigationBar:
               BlocBuilder<DepositSettingsBloc, DepositSettingsState>(
             builder: (context, state) {
-              if (state is! DepositSettingsLoaded || !state.settings.isEnabled) {
+              if (state is! DepositSettingsLoaded ||
+                  !state.settings.isEnabled) {
                 return const SizedBox.shrink();
               }
 
@@ -403,10 +509,13 @@ class _StorePickupCheckoutScreenState
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.1),
                       blurRadius: 8,
                       offset: const Offset(0, -2),
                     ),
@@ -416,8 +525,8 @@ class _StorePickupCheckoutScreenState
                   child: ElevatedButton(
                     onPressed: () => _createReservation(state.settings),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

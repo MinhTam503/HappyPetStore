@@ -13,7 +13,6 @@ import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
-import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
 import 'package:pet_shop/helpers/order_notification_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/order_success.dart';
@@ -21,7 +20,6 @@ import '../../../../data/models/cart_model.dart';
 import '../../../bloc/vnpay/vnpay_bloc.dart';
 import '../../../bloc/vnpay/vnpay_event.dart';
 import '../../../bloc/vnpay/vnpay_state.dart';
-// removed unused cart bloc imports
 import '../../../widgets/cart_item.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -44,6 +42,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Guard to prevent duplicate VNPay WebView opening
   bool _isProcessingVnpay = false;
   String? _lastPaymentUrlOpened;
+  
+  // Store pending order data until payment succeeds (VNPay/Stripe only)
+  List<CartModel>? _pendingCarts;
 
   @override
   void initState() {
@@ -142,13 +143,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           }
           
           final petData = petSnap.data() as Map<String, dynamic>;
-          final isAvailable = petData['isAvailable'] ?? false;
           final status = petData['status'] ?? 'available'; // Missing status = available (old pets)
+          final isAvailable = petData['isAvailable'] ?? true; // Old pets without this field = available
+          final petName = petData['name'] ?? petSnap.id;
+          
+          debugPrint('🔍 CheckoutScreen: Pet "$petName" (${petSnap.id}) - status: "$status", isAvailable: $isAvailable');
           
           // Only accept pets with status='available' AND isAvailable=true
           if (status != 'available' || !isAvailable) {
-            throw Exception('Thú cưng ${petData['name'] ?? petSnap.id} đã được đặt trước hoặc bán rồi!');
+            debugPrint('❌ CheckoutScreen: Pet validation failed - status="$status" (expected "available"), isAvailable=$isAvailable (expected true)');
+            throw Exception('Thú cưng $petName đã được đặt trước hoặc bán rồi!');
           }
+          debugPrint('✅ CheckoutScreen: Pet "$petName" validated successfully');
         }
 
         // Reserve ALL pets atomically
@@ -375,7 +381,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       DialogHelper.showLoadingDialog(context, message: 'Đang lưu đơn hàng...');
       final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
 
-      // Update pet status to sold (already done in saveOrderToFirestore, but ensure it's called)
+      // Mark pets as SOLD after successful Stripe payment
+      for (var cart in widget.carts) {
+        final petId = cart.grocery["productId"]?.toString();
+        if (petId != null && petId.isNotEmpty) {
+          await FirebaseFirestore.instance.collection('Pets').doc(petId).update({
+            'status': 'sold',
+            'isAvailable': false,
+            'soldAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+      debugPrint('✅ Stripe: Marked ${widget.carts.length} pets as sold');
 
       // Remove purchased items from cart (directly update Firestore)
       try {
@@ -404,12 +421,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // Navigate to OrderSuccess to display suggestions
       await DialogHelper.safeHideLoadingDialog();
       if (!context.mounted) return;
-      NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
           builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds),
         ),
+        (route) => route.isFirst,
       );
     } on StripeException catch (e) {
       await DialogHelper.safeHideLoadingDialog();
@@ -428,6 +445,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _payWithVnPay(double totalPrice) async {
     try {
+      // Store pending order data (don't create order until payment succeeds)
+      _pendingCarts = widget.carts;
+      
       final grandTotal = totalPrice + shippingFee;
       final orderId = 'ORDER_${DateTime.now().millisecondsSinceEpoch}';
       final orderInfo = 'Thanh toan don hang HappyPetStore $orderId';
@@ -516,61 +536,71 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               _isProcessingVnpay = false;
               
               if (result != null && context.mounted) {
+                // Verify VNPay callback immediately
                 context.read<VnpayBloc>().add(VerifyVnpayCallback(result));
-                // Consider saving order after verifying success via a Result Screen, as in CartScreen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => VnpayPaymentResultScreen(
-                      vnpayResponse: result,
-                      onPaymentResult: (isSuccess, orderId) async {
-                        if (isSuccess) {
-                          final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: true);
-                          // Remove purchased items from cart store
-                          try {
-                            final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
-                            final doc = await cartDoc.get();
-                            if (doc.exists) {
-                              final data = doc.data();
-                              final items = (data != null && data['items'] is List)
-                                  ? List<Map<String, dynamic>>.from(data['items'] as List)
-                                  : <Map<String, dynamic>>[];
-                              final purchasedIds = widget.carts
-                                  .map((c) => c.grocery['productId']?.toString() ?? '')
-                                  .where((id) => id.isNotEmpty)
-                                  .toSet();
-                              items.removeWhere((it) => purchasedIds.contains(it['productId']?.toString() ?? ''));
-                              final selected = (data != null && data['selectedProductIds'] is List)
-                                  ? List<String>.from(data['selectedProductIds'] as List)
-                                  : <String>[];
-                              selected.removeWhere((id) => purchasedIds.contains(id));
-                              await cartDoc.set({'items': items, 'selectedProductIds': selected}, SetOptions(merge: true));
-                            }
-                          } catch (e) {
-                            // best-effort cleanup; ignore failures
-                            debugPrint('⚠️ Failed to remove purchased items from cart: $e');
-                          }
-                          if (!context.mounted) return;
-                          NotificationHelper.showSuccess(context, 'Thanh toán thành công!', 'Đơn hàng đã được thanh toán.');
-                          // Go to OrderSuccess page
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds)),
-                            (route) => route.isFirst,
-                          );
-                        } else {
-                          NotificationHelper.showError(context, 'Thanh toán thất bại', 'Giao dịch không thành công.');
-                        }
-                      },
-                    ),
-                  ),
-                );
               } else {
-                // User cancelled or no result - reset flag
+                // User cancelled - reset flag
                 _isProcessingVnpay = false;
                 _lastPaymentUrlOpened = null;
               }
             
+          } else if (state is VnpayPaymentVerified) {
+            _isProcessingVnpay = false;
+            _lastPaymentUrlOpened = null;
+            
+            if (state.isSuccess) {
+              // Payment successful - NOW create order in Firestore
+              DialogHelper.showLoadingDialog(context, message: 'Đang xử lý đơn hàng...');
+              try {
+                // Use pending carts to create order
+                final cartsToProcess = _pendingCarts ?? widget.carts;
+                final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, cartsToProcess, isPaid: true);
+                
+                // Remove purchased items from cart
+                try {
+                  final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
+                  final doc = await cartDoc.get();
+                  if (doc.exists) {
+                    final data = doc.data();
+                    final items = (data != null && data['items'] is List)
+                        ? List<Map<String, dynamic>>.from(data['items'] as List)
+                        : <Map<String, dynamic>>[];
+                    final purchasedIds = cartsToProcess
+                        .map((c) => c.grocery['productId']?.toString() ?? '')
+                        .where((id) => id.isNotEmpty)
+                        .toSet();
+                    items.removeWhere((it) => purchasedIds.contains(it['productId']?.toString() ?? ''));
+                    final selected = (data != null && data['selectedProductIds'] is List)
+                        ? List<String>.from(data['selectedProductIds'] as List)
+                        : <String>[];
+                    selected.removeWhere((id) => purchasedIds.contains(id));
+                    await cartDoc.set({'items': items, 'selectedProductIds': selected}, SetOptions(merge: true));
+                  }
+                } catch (e) {
+                  debugPrint('⚠️ Failed to remove purchased items from cart: $e');
+                }
+                
+                // Clear pending data
+                _pendingCarts = null;
+                
+                await DialogHelper.safeHideLoadingDialog();
+                if (!context.mounted) return;
+                
+                // Navigate directly to OrderSuccess
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds)),
+                  (route) => route.isFirst,
+                );
+              } catch (e) {
+                await DialogHelper.safeHideLoadingDialog();
+                if (!context.mounted) return;
+                NotificationHelper.showError(context, 'Lỗi xử lý đơn hàng', e.toString());
+              }
+            } else {
+              // Payment failed
+              NotificationHelper.showError(context, 'Thanh toán thất bại', 'Giao dịch không thành công.');
+            }
           } else if (state is VnpayError) {
             await DialogHelper.safeHideLoadingDialog();
             _isProcessingVnpay = false;
@@ -753,6 +783,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             DialogHelper.showLoadingDialog(context, message: 'Đang tạo đơn hàng...');
             try {
               final purchasedBreeds = await saveOrderToFirestore(widget.userIdentifier, widget.carts, isPaid: false);
+              
+              // Mark pets as SOLD after COD order
+              for (var cart in widget.carts) {
+                final petId = cart.grocery["productId"]?.toString();
+                if (petId != null && petId.isNotEmpty) {
+                  await FirebaseFirestore.instance.collection('Pets').doc(petId).update({
+                    'status': 'sold',
+                    'isAvailable': false,
+                    'soldAt': FieldValue.serverTimestamp(),
+                  });
+                }
+              }
+              debugPrint('✅ COD: Marked ${widget.carts.length} pets as sold');
                                     // Remove purchased items from cart
                                     try {
                                       final cartDoc = FirebaseFirestore.instance.collection('carts').doc(widget.userIdentifier);
@@ -778,13 +821,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                     }
                                 await DialogHelper.safeHideLoadingDialog();
                                 if (!context.mounted) return;
-                                NotificationHelper.showSuccess(context, 'Đặt hàng thành công!', 'Đơn hàng sẽ được thanh toán khi nhận hàng.');
                                 // Navigate to OrderSuccess
-                                Navigator.pushReplacement(
+                                Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => OrderSuccess(purchasedBreeds: purchasedBreeds),
                                   ),
+                                  (route) => route.isFirst,
                                 );
                               } catch (e) {
                                 await DialogHelper.safeHideLoadingDialog();

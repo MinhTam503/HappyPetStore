@@ -60,7 +60,8 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.book_online, color: primaryColor, size: 32),
+                    const Icon(Icons.book_online,
+                        color: primaryColor, size: 32),
                     const SizedBox(width: 12),
                     Text(
                       l10n.reservationsAdmin,
@@ -144,7 +145,9 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
                     l10n.success,
                     'Thao tác thành công',
                   );
-                  context.read<ReservationBloc>().add(const LoadAllReservations());
+                  context
+                      .read<ReservationBloc>()
+                      .add(const LoadAllReservations());
                 } else if (state is ReservationError) {
                   NotificationHelper.showError(
                     context,
@@ -160,7 +163,8 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
 
                 if (state is ReservationLoaded) {
                   final filteredReservations = state.reservations.where((r) {
-                    final matchesStatus = _selectedStatus == null || r.status == _selectedStatus;
+                    final matchesStatus =
+                        _selectedStatus == null || r.status == _selectedStatus;
                     final matchesSearch = _searchQuery.isEmpty ||
                         r.displayName.toLowerCase().contains(_searchQuery) ||
                         r.email.toLowerCase().contains(_searchQuery) ||
@@ -173,7 +177,8 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
+                          Icon(Icons.inbox_outlined,
+                              size: 64, color: Colors.grey[400]),
                           const SizedBox(height: 16),
                           Text(
                             l10n.noReservations,
@@ -188,7 +193,8 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
-                    child: _buildReservationsTable(filteredReservations, l10n, theme),
+                    child: _buildReservationsTable(
+                        filteredReservations, l10n, theme),
                   );
                 }
 
@@ -222,17 +228,42 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
             ),
             child: Row(
               children: [
-                Expanded(flex: 2, child: Text(l10n.reservationId, style: _headerStyle)),
-                Expanded(flex: 3, child: Text(l10n.customerInfo, style: _headerStyle)),
-                Expanded(flex: 2, child: Text(l10n.pickupDate, style: _headerStyle)),
-                Expanded(flex: 2, child: Text(l10n.totalAmountLabel, style: _headerStyle)),
-                Expanded(flex: 2, child: Text(l10n.statusLabel, style: _headerStyle)),
-                Expanded(flex: 3, child: Text(l10n.actions, style: _headerStyle)),
+                Expanded(
+                    flex: 2,
+                    child: Text(l10n.reservationId,
+                        style: _headerStyle.copyWith(
+                            color: theme.colorScheme.onSurface))),
+                Expanded(
+                    flex: 3,
+                    child: Text(l10n.customerInfo,
+                        style: _headerStyle.copyWith(
+                            color: theme.colorScheme.onSurface))),
+                Expanded(
+                    flex: 2,
+                    child: Text(l10n.pickupDate,
+                        style: _headerStyle.copyWith(
+                            color: theme.colorScheme.onSurface))),
+                Expanded(
+                    flex: 2,
+                    child: Text(l10n.totalAmountLabel,
+                        style: _headerStyle.copyWith(
+                            color: theme.colorScheme.onSurface))),
+                Expanded(
+                    flex: 2,
+                    child: Text(l10n.statusLabel,
+                        style: _headerStyle.copyWith(
+                            color: theme.colorScheme.onSurface))),
+                Expanded(
+                    flex: 3,
+                    child: Text(l10n.actions,
+                        style: _headerStyle.copyWith(
+                            color: theme.colorScheme.onSurface))),
               ],
             ),
           ),
           // Table Body
-          ...reservations.map((reservation) => _buildReservationRow(reservation, l10n, theme)),
+          ...reservations.map(
+              (reservation) => _buildReservationRow(reservation, l10n, theme)),
         ],
       ),
     );
@@ -272,7 +303,10 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
                 ),
                 Text(
                   reservation.phone,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
               ],
             ),
@@ -368,7 +402,8 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
     );
   }
 
-  Widget _buildActionButtons(ReservationModel reservation, AppLocalizations l10n) {
+  Widget _buildActionButtons(
+      ReservationModel reservation, AppLocalizations l10n) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -405,7 +440,8 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
     );
   }
 
-  void _confirmReservation(ReservationModel reservation, AppLocalizations l10n) {
+  void _confirmReservation(
+      ReservationModel reservation, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -419,17 +455,23 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.read<ReservationBloc>().add(ConfirmReservation(reservation.id));
+              context
+                  .read<ReservationBloc>()
+                  .add(ConfirmReservation(reservation.id));
             },
             style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: Text(l10n.confirm),
+            child: Text(
+              l10n.confirm,
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _completeReservation(ReservationModel reservation, AppLocalizations l10n) {
+  void _completeReservation(
+      ReservationModel reservation, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -443,10 +485,15 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.read<ReservationBloc>().add(CompleteReservation(reservation.id));
+              context
+                  .read<ReservationBloc>()
+                  .add(CompleteReservation(reservation.id));
             },
             style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: Text(l10n.confirm),
+            child: Text(
+              l10n.confirm,
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -467,17 +514,20 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.read<ReservationBloc>().add(CancelReservation(reservation.id));
+              context
+                  .read<ReservationBloc>()
+                  .add(CancelReservation(reservation.id));
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.cancel),
+            child: Text(l10n.cancel,style: TextStyle(color: Colors.white),),
           ),
         ],
       ),
     );
   }
 
-  void _showReservationDetails(ReservationModel reservation, AppLocalizations l10n) {
+  void _showReservationDetails(
+      ReservationModel reservation, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -493,21 +543,28 @@ class _ReservationsAdminState extends State<ReservationsAdmin> {
                 _buildDetailRow(l10n.customerInfo, reservation.displayName),
                 _buildDetailRow(l10n.email, reservation.email),
                 _buildDetailRow(l10n.phone, reservation.phone),
-                _buildDetailRow(l10n.pickupDate, DateFormat('dd/MM/yyyy').format(reservation.pickupDate)),
-                _buildDetailRow(l10n.totalAmountLabel, CurrencyHelper.formatVND(reservation.totalAmount)),
-                _buildDetailRow(l10n.depositAmount, CurrencyHelper.formatVND(reservation.depositAmount)),
-                _buildDetailRow(l10n.paidAmount, CurrencyHelper.formatVND(reservation.paidAmount)),
-                _buildDetailRow(l10n.remainingAmount, CurrencyHelper.formatVND(reservation.remainingAmount)),
+                _buildDetailRow(l10n.pickupDate,
+                    DateFormat('dd/MM/yyyy').format(reservation.pickupDate)),
+                _buildDetailRow(l10n.totalAmountLabel,
+                    CurrencyHelper.formatVND(reservation.totalAmount)),
+                _buildDetailRow(l10n.depositAmount,
+                    CurrencyHelper.formatVND(reservation.depositAmount)),
+                _buildDetailRow(l10n.paidAmount,
+                    CurrencyHelper.formatVND(reservation.paidAmount)),
+                _buildDetailRow(l10n.remainingAmount,
+                    CurrencyHelper.formatVND(reservation.remainingAmount)),
                 _buildDetailRow(l10n.paymentMethod, reservation.paymentMethod),
                 const SizedBox(height: 16),
                 Text(
                   l10n.items,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 ...reservation.items.map((item) => ListTile(
                       leading: item['imageUrl'] != null
-                          ? Image.network(item['imageUrl'], width: 50, height: 50, fit: BoxFit.cover)
+                          ? Image.network(item['imageUrl'],
+                              width: 50, height: 50, fit: BoxFit.cover)
                           : const Icon(Icons.pets),
                       title: Text(item['name'] ?? ''),
                       subtitle: Text('${item['breed']} - ${item['category']}'),
@@ -612,7 +669,8 @@ class _DepositSettingsDialogState extends State<_DepositSettingsDialog> {
     if (_isLoading) {
       _depositType = settings.depositType;
       _depositPercentageController.text = settings.depositPercentage.toString();
-      _depositFixedAmountController.text = settings.depositFixedAmount.toString();
+      _depositFixedAmountController.text =
+          settings.depositFixedAmount.toString();
       _maxDaysController.text = settings.maxReservationDays.toString();
       _isEnabled = settings.isEnabled;
       _isLoading = false;
@@ -645,7 +703,8 @@ class _DepositSettingsDialogState extends State<_DepositSettingsDialog> {
         if (state is DepositSettingsLoaded) {
           _loadSettings(state.settings);
         } else if (state is DepositSettingsUpdateSuccess) {
-          NotificationHelper.showSuccess(context, 'Cài đặt đã được lưu thành công');
+          NotificationHelper.showSuccess(
+              context, 'Cài đặt đã được lưu thành công');
           Navigator.pop(context);
         } else if (state is DepositSettingsError) {
           NotificationHelper.showError(context, state.message);
@@ -676,7 +735,8 @@ class _DepositSettingsDialogState extends State<_DepositSettingsDialog> {
                     // Header
                     Row(
                       children: [
-                        const Icon(Icons.settings, color: primaryColor, size: 28),
+                        const Icon(Icons.settings,
+                            color: primaryColor, size: 28),
                         const SizedBox(width: 12),
                         Text(
                           l10n.depositSettings,
@@ -702,7 +762,8 @@ class _DepositSettingsDialogState extends State<_DepositSettingsDialog> {
                     // Deposit Type Selection
                     const Text(
                       'Loại tính toán tiền cọc:',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -751,15 +812,19 @@ class _DepositSettingsDialogState extends State<_DepositSettingsDialog> {
                         ),
                         keyboardType: TextInputType.number,
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d*')),
                         ],
                         validator: (value) {
-                          if (_depositType != DepositType.percentage) return null;
+                          if (_depositType != DepositType.percentage)
+                            return null;
                           if (value == null || value.isEmpty) {
                             return 'Vui lòng nhập phần trăm đặt cọc';
                           }
                           final percentage = double.tryParse(value);
-                          if (percentage == null || percentage <= 0 || percentage > 100) {
+                          if (percentage == null ||
+                              percentage <= 0 ||
+                              percentage > 100) {
                             return 'Phần trăm không hợp lệ (1-100)';
                           }
                           return null;
@@ -781,7 +846,8 @@ class _DepositSettingsDialogState extends State<_DepositSettingsDialog> {
                           FilteringTextInputFormatter.digitsOnly,
                         ],
                         validator: (value) {
-                          if (_depositType != DepositType.fixedAmount) return null;
+                          if (_depositType != DepositType.fixedAmount)
+                            return null;
                           if (value == null || value.isEmpty) {
                             return 'Vui lòng nhập số tiền đặt cọc';
                           }
@@ -823,7 +889,7 @@ class _DepositSettingsDialogState extends State<_DepositSettingsDialog> {
                     const SizedBox(height: 24),
 
                     // Example calculation
-                    if (_depositType == DepositType.percentage 
+                    if (_depositType == DepositType.percentage
                         ? _depositPercentageController.text.isNotEmpty
                         : _depositFixedAmountController.text.isNotEmpty)
                       Center(

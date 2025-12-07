@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/data/models/reservation_model.dart';
@@ -70,14 +69,14 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                     Icon(
                       Icons.book_online_outlined,
                       size: 80,
-                      color: Colors.grey.shade300,
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.noReservations,
                       style: TextStyle(
                         fontSize: 18,
-                        color: Colors.grey.shade600,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -117,8 +116,8 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(l10n.myReservations),
-        backgroundColor: theme.appBarTheme.backgroundColor ?? primaryColor,
-        foregroundColor: theme.appBarTheme.foregroundColor ?? Colors.white,
+        backgroundColor: theme.appBarTheme.backgroundColor ?? theme.colorScheme.primary,
+        foregroundColor: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
       ),
       body: bodyContent,
     );
@@ -195,8 +194,8 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                     _getPaymentStatusText(reservation.paymentStatus, l10n),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: reservation.paymentStatus == ReservationPaymentStatus.fullPaid
-                          ? Colors.green
-                          : Colors.orange,
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.secondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -227,7 +226,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                           CurrencyHelper.formatVND(reservation.totalAmount),
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: primaryColor,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                       ],
@@ -246,7 +245,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                             CurrencyHelper.formatVND(reservation.remainingAmount),
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: Colors.orange,
+                              color: theme.colorScheme.secondary,
                             ),
                           ),
                         ],
@@ -266,8 +265,8 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                       icon: const Icon(Icons.cancel_outlined),
                       label: Text(l10n.cancelReservation),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                        foregroundColor: theme.colorScheme.error,
+                        side: BorderSide(color: theme.colorScheme.error),
                       ),
                     ),
                   ),
@@ -280,33 +279,34 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
   }
 
   Widget _buildStatusChip(ReservationStatus status, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     Color color;
     IconData icon;
     String text;
 
     switch (status) {
       case ReservationStatus.pending:
-        color = Colors.orange;
+        color = theme.colorScheme.secondary;
         icon = Icons.hourglass_empty;
         text = l10n.pending;
         break;
       case ReservationStatus.confirmed:
-        color = Colors.blue;
+        color = theme.colorScheme.primary;
         icon = Icons.check_circle_outline;
         text = 'Đã xác nhận';
         break;
       case ReservationStatus.completed:
-        color = Colors.green;
+        color = theme.colorScheme.tertiary;
         icon = Icons.check_circle;
         text = l10n.completed;
         break;
       case ReservationStatus.cancelled:
-        color = Colors.red;
+        color = theme.colorScheme.error;
         icon = Icons.cancel;
         text = l10n.cancelled;
         break;
       case ReservationStatus.expired:
-        color = Colors.grey;
+        color = theme.colorScheme.onSurface.withOpacity(0.5);
         icon = Icons.access_time;
         text = 'Hết hạn';
         break;
@@ -371,7 +371,7 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -420,7 +420,8 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                         CurrencyHelper.formatVND(item['price']),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: primaryColor,
+                          // Use theme color to ensure contrast (was transparent)
+                          color: Colors.black,
                         ),
                       ),
                     ),
@@ -475,7 +476,8 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
               Navigator.pop(ctx);
               context.read<ReservationBloc>().add(CancelReservation(reservation.id));
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError),
             child: Text(l10n.ok),
           ),
         ],

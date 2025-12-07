@@ -7,6 +7,7 @@ import 'package:pet_shop/presentation/pages/mobile/pet/detail_pet.dart';
 import 'package:pet_shop/presentation/components/shipping_tracking_widget.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:pet_shop/core/utils/confirm_dialog_helper.dart';
 
 class YourOrderScreen extends StatefulWidget {
   final String? initialOrderId; // If provided, auto-open that order's details
@@ -55,6 +56,21 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
   }
 
   void cancelOrder(String orderId) async {
+    // Xác nhận trước khi hủy (sử dụng ConfirmDialogHelper)
+    final confirmed = await ConfirmDialogHelper.show(
+      context,
+      title: 'Xác nhận hủy đơn',
+      message: 'Bạn có chắc muốn hủy đơn hàng này không?',
+      confirmText: 'Hủy đơn',
+      cancelText: 'Không',
+      icon: Icons.cancel_outlined,
+      iconBgColor: Colors.red.shade50,
+      iconColor: Colors.red.shade400,
+      confirmColor: Theme.of(context).colorScheme.error,
+    );
+
+    if (confirmed != true) return;
+
     try {
       // Update order status to Cancelled
       await ordersCollection.doc(orderId).update({
@@ -446,7 +462,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                                       fg: Colors.green.shade700,
                                     ),
                                     _ChipBadge(
-                                      label: "Thanh toán: $statusPay",
+                                      label: "Thanh toán: ${(statusPay.toString().toLowerCase().contains('payment completed') || statusPay.toString().toLowerCase().contains('paid')) ? 'Thành công' : 'Không'}",
                                       icon: Icons.verified_outlined,
                                       bg: Theme.of(context)
                                           .colorScheme
@@ -762,7 +778,7 @@ class _YourOrderScreenState extends State<YourOrderScreen> {
                             .withOpacity(0.87),
                       ),
                       _ChipBadge(
-                        label: "Thanh toán: $statusPay",
+                        label: "Thanh toán: ${(statusPay.toString().toLowerCase().contains('payment completed') || statusPay.toString().toLowerCase().contains('paid')) ? 'Thành công' : 'Không'}",
                         icon: Icons.verified_outlined,
                         bg: Theme.of(context).colorScheme.surfaceVariant,
                         fg: Theme.of(context)

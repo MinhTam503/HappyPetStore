@@ -10,8 +10,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/order_success.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/checkout_screen.dart';
 import 'package:pet_shop/presentation/pages/mobile/payment/store_pickup_checkout_screen.dart';
-import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_payment_result_screen.dart';
-import 'package:pet_shop/presentation/pages/mobile/payment/vnpay_webview_screen.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 // Address selection is handled in CheckoutScreen
 import 'package:pet_shop/core/services/user_manager.dart';
@@ -27,12 +25,8 @@ import '../../../widgets/cart_item.dart';
 import '../../../bloc/cartBloc/cart_bloc.dart';
 import '../../../bloc/cartBloc/cart_event.dart';
 import '../../../bloc/cartBloc/cart_state.dart';
-import '../../../bloc/vnpay/vnpay_bloc.dart';
-import '../../../bloc/vnpay/vnpay_event.dart';
-import '../../../bloc/vnpay/vnpay_state.dart';
 
 import '../pet/detail_pet.dart';
-import 'package:pet_shop/core/config/vnpay_config.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -64,6 +58,15 @@ class _CartScreenState extends State<CartScreen> {
     _initializeUser();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload cart when returning to this screen
+    if (userIdentifier != null) {
+      context.read<CartBloc>().add(LoadCart(userIdentifier!));
+    }
+  }
+
   Future<void> _initializeUser() async {
     userIdentifier = await userManager.getUserIdentifier();
     if (userIdentifier != null) {
@@ -89,6 +92,35 @@ class _CartScreenState extends State<CartScreen> {
       print('Lỗi khi lấy dữ liệu thú cưng: $e');
       return null;
     }
+  }
+
+  // Fetch pet info needed for cart display: sold status and correct unit price
+  Future<Map<String, dynamic>> getPetInfoForCart(String petId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('Pets').doc(petId).get();
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        final status = data['status']?.toString() ?? 'available';
+        final isAvailable = (data['isAvailable'] ?? true) == true;
+        // Normalize price from pet doc
+        double price = 0.0;
+        if (data.containsKey('price')) {
+          final v = data['price'];
+          price = v is num ? v.toDouble() : double.tryParse(v.toString()) ?? 0.0;
+        } else if (data.containsKey('weight')) {
+          final v = data['weight'];
+          price = v is num ? v.toDouble() : double.tryParse(v.toString()) ?? 0.0;
+        }
+        return {
+          'isSold': status != 'available' || !isAvailable,
+          'price': price,
+        };
+      }
+    } catch (_) {}
+    return {
+      'isSold': false,
+      'price': 0.0,
+    };
   }
 
   Future<void> fetchAddresses() async {
@@ -335,14 +367,16 @@ class _CartScreenState extends State<CartScreen> {
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
 
     // 🔒 STEP 1: Use Transaction to atomically check and reserve pets (PREVENT RACE CONDITION)
-    List<String> petIds = cartItems.map((item) => item.grocery["productId"].toString()).toList();
-    
+    List<String> petIds =
+        cartItems.map((item) => item.grocery["productId"].toString()).toList();
+
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         // Read all pets in transaction
         List<DocumentSnapshot> petSnapshots = [];
         for (String petId in petIds) {
-          final petRef = FirebaseFirestore.instance.collection('Pets').doc(petId);
+          final petRef =
+              FirebaseFirestore.instance.collection('Pets').doc(petId);
           final petSnap = await transaction.get(petRef);
           petSnapshots.add(petSnap);
         }
@@ -352,20 +386,23 @@ class _CartScreenState extends State<CartScreen> {
           if (!petSnap.exists) {
             throw Exception('Thú cưng ${petSnap.id} không tồn tại!');
           }
-          
+
           final petData = petSnap.data() as Map<String, dynamic>;
           final isAvailable = petData['isAvailable'] ?? false;
-          final status = petData['status'] ?? 'available'; // Missing status = available (old pets)
-          
+          final status = petData['status'] ??
+              'available'; // Missing status = available (old pets)
+
           // Only accept pets with status='available' AND isAvailable=true
           if (status != 'available' || !isAvailable) {
-            throw Exception('Thú cưng ${petData['name'] ?? petSnap.id} đã được đặt trước hoặc bán rồi!');
+            throw Exception(
+                'Thú cưng ${petData['name'] ?? petSnap.id} đã được đặt trước hoặc bán rồi!');
           }
         }
 
         // Reserve ALL pets atomically
         for (var petSnap in petSnapshots) {
-          final petRef = FirebaseFirestore.instance.collection('Pets').doc(petSnap.id);
+          final petRef =
+              FirebaseFirestore.instance.collection('Pets').doc(petSnap.id);
           transaction.update(petRef, {
             'status': 'reserved',
             'isAvailable': false,
@@ -373,8 +410,9 @@ class _CartScreenState extends State<CartScreen> {
             'orderId': orderRef.id,
           });
         }
-        
-        print('✅ Transaction success: Reserved ${petSnapshots.length} pets atomically');
+
+        print(
+            '✅ Transaction success: Reserved ${petSnapshots.length} pets atomically');
       });
     } catch (e) {
       print('❌ Transaction failed: $e');
@@ -522,239 +560,6 @@ class _CartScreenState extends State<CartScreen> {
     return breeds.toSet().toList();
   }
 
-  // Future<void> showPaymentSheet(
-  //     String userIdentifier, List<CartModel> cartItems) async {
-  //   try {
-  //     await Stripe.instance.presentPaymentSheet();
-
-  //     for (var item in cartItems) {
-  //       final petId = item.grocery["productId"] ?? item.grocery["id"];
-  //       final docRef = FirebaseFirestore.instance.collection('Pets').doc(petId);
-  //       final docSnap = await docRef.get();
-  //       if (docSnap.exists) {
-  //         await docRef.update({
-  //           "status": "sold",
-  //           "isAvailable": false,
-  //         });
-  //       } else {
-  //         print("Pet with id $petId not found in Firestore.");
-  //       }
-  //     }
-
-  //     // Save order and get breeds for Apriori analysis
-  //     final breeds =
-  //         await saveOrderToFirestore(userIdentifier, cartItems, isPaid: true);
-  //     context.read<CartBloc>().add(ClearCart(userIdentifier));
-
-  //     if (!context.mounted) return;
-
-  //     // Show success notification
-  //     NotificationHelper.showSuccess(
-  //       context,
-  //       'Thanh toán thành công!',
-  //       'Đơn hàng của bạn đã được thanh toán và sẽ được giao sớm nhất.',
-  //     );
-
-  //     // Use new multi-breed analysis with extracted breeds
-  //     if (breeds.isNotEmpty) {
-  //       print("🌱 Stripe payment: Using breeds for Apriori: $breeds");
-  //       onOrderSuccessWithBreeds(breeds);
-  //     } else {
-  //       print("⚠️ Stripe payment: No breeds found, using fallback");
-  //       onOrderSuccessWithSuggestions(cartItems);
-  //     }
-
-  //     setState(() {
-  //       intentPaymentData = null;
-  //     });
-  //   } on StripeException catch (e) {
-  //     NotificationHelper.showError(
-  //       context,
-  //       'Thanh toán thất bại',
-  //       e.error.message ?? 'Đã xảy ra lỗi trong quá trình thanh toán',
-  //     );
-  //   } catch (error) {
-  //     NotificationHelper.showError(
-  //       context,
-  //       'Lỗi thanh toán',
-  //       'Lỗi không mong muốn: ${error.toString()}',
-  //     );
-  //   }
-  // }
-
-  // Future<Map<String, dynamic>?> makeIntentForPayment(amount, currency) async {
-  //   try {
-  //     // Debug: Check if keys are available (safe substring)
-  //     final pubKeyPreview = PublishableKey.length > 20
-  //         ? "${PublishableKey.substring(0, 20)}..."
-  //         : PublishableKey.isNotEmpty
-  //             ? "$PublishableKey (short)"
-  //             : "EMPTY!";
-  //     final secKeyPreview = SecretKey.length > 20
-  //         ? "${SecretKey.substring(0, 20)}..."
-  //         : SecretKey.isNotEmpty
-  //             ? "$SecretKey (short)"
-  //             : "EMPTY!";
-
-  //     print("🔐 PublishableKey: $pubKeyPreview");
-  //     print("🔐 SecretKey: $secKeyPreview");
-
-  //     if (SecretKey.isEmpty) {
-  //       print("❌ ERROR: SecretKey is empty!");
-  //       return null;
-  //     }
-
-  //     Map<String, dynamic>? paymentInfo = {
-  //       "amount": (amount * 100).round().toString(),
-  //       "currency": currency,
-  //       "payment_method_types[]": "card",
-  //     };
-
-  //     var response = await http.post(
-  //       Uri.parse("https://api.stripe.com/v1/payment_intents"),
-  //       body: paymentInfo,
-  //       headers: {
-  //         "Authorization": "Bearer $SecretKey",
-  //         "Content-Type": "application/x-www-form-urlencoded"
-  //       },
-  //     );
-
-  //     if (response.statusCode != 200) {
-  //       print(" Stripe API Error: ${response.body}");
-  //       return null;
-  //     }
-
-  //     print(" Payment intent created successfully");
-  //     return jsonDecode(response.body);
-  //   } catch (error) {
-  //     print(" Stripe Error: $error");
-  //     return null;
-  //   }
-  // }
-
-  // void paymentInit(double amount, String currency, String userIdentifier,
-  //     List<CartModel> carts) async {
-  //   try {
-  //     // Include shipping fee in payment amount
-  //     final grandTotal = amount + shippingFee;
-
-  //     // Check if Stripe is ready for use
-  //     final canUse = await StripeHelper.canUseStripe();
-  //     if (!canUse) {
-  //       // Show error and ask user what to do
-  //       showDialog(
-  //         context: context,
-  //         builder: (context) => AlertDialog(
-  //           title: const Text('Lỗi thanh toán Stripe'),
-  //           content: const Text(
-  //               'Không thể khởi tạo thanh toán Stripe. Bạn có muốn chuyển sang thanh toán khi nhận hàng không?'),
-  //           actions: [
-  //             TextButton(
-  //               onPressed: () => Navigator.pop(context),
-  //               child: const Text('Hủy'),
-  //             ),
-  //             TextButton(
-  //               onPressed: () async {
-  //                 Navigator.pop(context);
-
-  //                 try {
-  //                   final breeds = await saveOrderToFirestore(
-  //                       userIdentifier, carts,
-  //                       isPaid: false);
-  //                   context.read<CartBloc>().add(ClearCart(userIdentifier));
-
-  //                   if (!context.mounted) return;
-
-  //                   NotificationHelper.showSuccess(
-  //                     context,
-  //                     'Đặt hàng thành công!',
-  //                     'Đơn hàng sẽ được thanh toán khi nhận hàng.',
-  //                   );
-
-  //                   if (breeds.isNotEmpty) {
-  //                     onOrderSuccessWithBreeds(breeds);
-  //                   } else {
-  //                     onOrderSuccessWithSuggestions(carts);
-  //                   }
-  //                 } catch (fallbackError) {
-  //                   NotificationHelper.showError(
-  //                     context,
-  //                     'Lỗi đặt hàng',
-  //                     'Không thể tạo đơn hàng: $fallbackError',
-  //                   );
-  //                 }
-  //               },
-  //               child: const Text('Chuyển COD'),
-  //             ),
-  //           ],
-  //         ),
-  //       );
-  //       return;
-  //     }
-
-  //     // Convert VND to USD (approximate rate: 1 USD = 24,000 VND)
-  //     double amountInUSD = grandTotal;
-  //     print(
-  //         "💱 Payment conversion: Original amount = ${CurrencyHelper.formatVND(grandTotal)}");
-
-  //     if (currency.toLowerCase() == 'vnd') {
-  //       amountInUSD = grandTotal / 24000; // Convert VND to USD
-  //       currency = 'usd';
-  //       print("💱 Converted to USD: \$${amountInUSD.toStringAsFixed(2)}");
-  //     } else {
-  //       print("💱 Currency is already: $currency");
-  //     }
-
-  //     // Check Stripe limits (max $999,999 USD per transaction)
-  //     if (amountInUSD > 999999) {
-  //       NotificationHelper.showWarning(
-  //         context,
-  //         'Số tiền vượt quá giới hạn',
-  //         'Số tiền quá lớn cho thanh toán Stripe (tối đa \$999,999 USD ≈ ${CurrencyHelper.formatVND(999999 * 24000)}). Vui lòng chọn thanh toán khi nhận hàng.',
-  //       );
-  //       return;
-  //     }
-
-  //     // Check minimum amount (Stripe minimum is $0.50 USD)
-  //     if (amountInUSD < 0.5) {
-  //       NotificationHelper.showWarning(
-  //         context,
-  //         'Số tiền quá nhỏ',
-  //         'Số tiền quá nhỏ cho thanh toán Stripe (tối thiểu \$0.50 USD)',
-  //       );
-  //       return;
-  //     }
-
-  //     intentPaymentData = await makeIntentForPayment(amountInUSD, currency);
-  //     if (intentPaymentData == null) {
-  //       NotificationHelper.showError(
-  //         context,
-  //         'Lỗi thanh toán',
-  //         'Không thể tạo giao dịch thanh toán. Vui lòng thử lại.',
-  //       );
-  //       return;
-  //     }
-
-  //     await Stripe.instance.initPaymentSheet(
-  //       paymentSheetParameters: SetupPaymentSheetParameters(
-  //         allowsDelayedPaymentMethods: true,
-  //         paymentIntentClientSecret: intentPaymentData?["client_secret"],
-  //         style: ThemeMode.light,
-  //         merchantDisplayName: "Pet Shop",
-  //       ),
-  //     );
-
-  //     showPaymentSheet(userIdentifier, carts);
-  //   } catch (e, s) {
-  //     print("Payment Init Error: $e\n$s");
-  //     NotificationHelper.showError(
-  //       context,
-  //       'Lỗi thanh toán Stripe',
-  //       'Đã có lỗi xảy ra: $e',
-  //     );
-  //   }
-  // }
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -763,9 +568,8 @@ class _CartScreenState extends State<CartScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        iconTheme:  IconThemeData(
-          color: Theme.of(context)
-                                    .colorScheme.primary,
+        iconTheme: IconThemeData(
+          color: Theme.of(context).colorScheme.primary,
           size: 28,
         ),
         key: _scaffoldKey,
@@ -782,475 +586,397 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
       body: SafeArea(
-        child: BlocListener<VnpayBloc, VnpayState>(
-          listener: (context, vnpayState) async {
-            // Guard: nếu màn hình không phải route hiện tại (ví dụ đã chuyển sang CheckoutScreen)
-            // thì bỏ qua xử lý để tránh mở WebView trùng lặp từ screen nằm dưới stack.
-            final route = ModalRoute.of(context);
-            if (route != null && !route.isCurrent) {
-              debugPrint('⚠️ [CartScreen] Bỏ qua VNPay state vì route không còn current.');
-              return;
-            }
-            if (vnpayState is VnpayPaymentUrlCreated) {
-              // Payment URL created, open in WebView
-              final paymentUrl = vnpayState.payment.paymentUrl;
-              if (paymentUrl != null) {
-                print('🌐 Opening VNPay payment in WebView: $paymentUrl');
-
-                // Open WebView
-                final result = await Navigator.push<Map<String, String>>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => VnpayWebViewScreen(
-                      paymentUrl: paymentUrl,
-                      // Must match the returnUrl sent to VNPay
-                      returnUrl: VnpayConfig.returnUrl,
-                      onPaymentCallback: (params) {
-                        print('💰 Payment callback received: $params');
-                      },
-                    ),
-                  ),
+        child: BlocBuilder<CartBloc, CartState>(
+          builder: (context, state) {
+            if (state is CartLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is CartLoaded) {
+              final List<Map<String, dynamic>> cartItems = state.items;
+              if (cartItems.isEmpty) {
+                return const Center(
+                    child: Text("Không có thú cưng trong giỏ hàng!"));
+              }
+              List<CartModel> carts = cartItems.map((item) {
+                return CartModel(
+                  grocery: {
+                    ...item,
+                    'price':
+                        item["price"]?.toString() ?? '0', // Convert to String
+                    'productId': item["productId"]?.toString() ?? '',
+                    'name': item["name"]?.toString() ?? '',
+                    'imageUrl': item["imageUrl"]?.toString() ?? '',
+                  },
+                  quantity: item["quantity"] ?? 1,
                 );
+              }).toList();
 
-                // Handle result from WebView
-                if (result != null && mounted) {
-                  print('📦 WebView returned params: $result');
+              // Sync local selection with persisted selection from state
+              final persistedSelected = state.selectedIds;
+              if (_selectedProductIds.length != persistedSelected.length) {
+                _selectedProductIds
+                  ..clear()
+                  ..addAll(persistedSelected);
+              }
 
-                  // Verify payment with BLoC
-                  context.read<VnpayBloc>().add(
-                        VerifyVnpayCallback(result),
-                      );
+              final selectedCount = _selectedProductIds.length;
+              final selectedTotal = _calculateSelectedTotal(carts);
 
-                  // Navigate to result screen
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => VnpayPaymentResultScreen(
-                          vnpayResponse: result,
-                          onPaymentResult: (isSuccess, orderId) async {
-                            if (isSuccess && userIdentifier != null) {
-                              // Payment successful - save order
-                              print('✅ Payment successful for order: $orderId');
+              return Column(
+                children: [
+                  // Selection toolbar
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value:
+                              selectedCount == carts.length && carts.isNotEmpty,
+                          onChanged: (val) async {
+                            setState(() {
+                              _selectAll = val ?? false;
+                              _selectedProductIds.clear();
+                            });
 
-                              final carts = (context.read<CartBloc>().state
-                                      as CartLoaded)
-                                  .items
-                                  .map((item) => CartModel(
-                                        grocery: {
-                                          ...item,
-                                          'price':
-                                              item["price"]?.toString() ?? '0',
-                                          'productId':
-                                              item["productId"]?.toString() ??
-                                                  '',
-                                          'name':
-                                              item["name"]?.toString() ?? '',
-                                          'imageUrl':
-                                              item["imageUrl"]?.toString() ??
-                                                  '',
-                                        },
-                                        quantity: item["quantity"] ?? 1,
-                                      ))
-                                  .toList();
-
-                              // Save order to Firestore
-                              final breeds = await saveOrderToFirestore(
-                                userIdentifier!,
-                                carts,
-                                isPaid: true,
-                              );
-
-                              // Clear cart
-                              context
-                                  .read<CartBloc>()
-                                  .add(ClearCart(userIdentifier!));
-
-                              // Show success and navigate to order success
-                              if (mounted) {
-                                NotificationHelper.showSuccess(
-                                  context,
-                                  'Thanh toán thành công!',
-                                  'Đơn hàng đã được thanh toán qua VNPay.',
-                                );
-
-                                // Navigate to order success with suggestions
-                                if (breeds.isNotEmpty) {
-                                  onOrderSuccessWithBreeds(breeds);
-                                } else {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const OrderSuccess(suggestions: []),
-                                    ),
-                                  );
+                            if (_selectAll) {
+                              // Check each pet status before adding to selection
+                              for (final c in carts) {
+                                final id =
+                                    c.grocery['productId']?.toString() ?? '';
+                                if (id.isNotEmpty) {
+                                  final isSold = await CartItem.isPetSold(id);
+                                  if (!isSold) {
+                                    _selectedProductIds.add(id);
+                                  }
                                 }
                               }
-                            } else {
-                              print('❌ Payment failed for order: $orderId');
+                              setState(() {}); // Update UI after async check
+                            }
+
+                            if (userIdentifier != null) {
+                              context.read<CartBloc>().add(UpdateCartSelection(
+                                  userIdentifier!,
+                                  _selectedProductIds.toList()));
                             }
                           },
                         ),
-                      ),
-                    );
-                  }
-                }
-              }
-            } else if (vnpayState is VnpayError) {
-              NotificationHelper.showError(
-                context,
-                'Lỗi thanh toán VNPay',
-                vnpayState.message,
-              );
-            }
-          },
-          child: BlocBuilder<CartBloc, CartState>(
-            builder: (context, state) {
-              if (state is CartLoading) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (state is CartLoaded) {
-                final List<Map<String, dynamic>> cartItems = state.items;
-                if (cartItems.isEmpty) {
-                  return const Center(child: Text("Không có thú cưng trong giỏ hàng!"));
-                }
-                List<CartModel> carts = cartItems.map((item) {
-                  return CartModel(
-                    grocery: {
-                      ...item,
-                      'price':
-                          item["price"]?.toString() ?? '0', // Convert to String
-                      'productId': item["productId"]?.toString() ?? '',
-                      'name': item["name"]?.toString() ?? '',
-                      'imageUrl': item["imageUrl"]?.toString() ?? '',
-                    },
-                    quantity: item["quantity"] ?? 1,
-                  );
-                }).toList();
-
-                // Sync local selection with persisted selection from state
-                final persistedSelected = state.selectedIds;
-                if (_selectedProductIds.length != persistedSelected.length) {
-                  _selectedProductIds
-                    ..clear()
-                    ..addAll(persistedSelected);
-                }
-
-                final selectedCount = _selectedProductIds.length;
-                final selectedTotal = _calculateSelectedTotal(carts);
-
-                return Column(
-                  children: [
-                    // Selection toolbar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: selectedCount == carts.length &&
-                                carts.isNotEmpty,
-                            onChanged: (val) async {
-                              setState(() {
-                                _selectAll = val ?? false;
-                                _selectedProductIds.clear();
-                              });
-                              
-                              if (_selectAll) {
-                                // Check each pet status before adding to selection
-                                for (final c in carts) {
-                                  final id = c.grocery['productId']?.toString() ?? '';
-                                  if (id.isNotEmpty) {
-                                    final isSold = await CartItem.isPetSold(id);
-                                    if (!isSold) {
-                                      _selectedProductIds.add(id);
-                                    }
-                                  }
-                                }
-                                setState(() {}); // Update UI after async check
-                              }
-                              
-                              if (userIdentifier != null) {
-                                context.read<CartBloc>().add(
-                                    UpdateCartSelection(userIdentifier!,
-                                        _selectedProductIds.toList()));
-                              }
-                            },
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(context)?.selectAll ??
+                                'Chọn tất cả',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                AppLocalizations.of(context)?.selectAll ?? 'Chọn tất cả',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                            ),
+                        ),
+                        Chip(
+                          backgroundColor: Colors.black12,
+                          label: Text(
+                            '${AppLocalizations.of(context)?.selected ?? 'Đã chọn'}: $selectedCount',
+                            style: const TextStyle(color: Colors.black87),
                           ),
-                          Chip(
-                            backgroundColor: Colors.black12,
-                            label: Text(
-                              '${AppLocalizations.of(context)?.selected ?? 'Đã chọn'}: $selectedCount',
-                              style: const TextStyle(color: Colors.black87),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    // Cart items list
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: carts.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final cart = carts[index];
-                          final id =
-                              cart.grocery['productId']?.toString() ?? '';
-                          final checked = _selectedProductIds.contains(id);
-                          
-                          // Check if pet is sold using FutureBuilder
-                          return FutureBuilder<bool>(
-                            future: CartItem.isPetSold(id),
-                            initialData: false,
-                            builder: (context, snapshot) {
-                              final isSold = snapshot.data ?? false;
-                              
-                              return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Material(
-                              elevation: 1,
-                              borderRadius: BorderRadius.circular(12),
-                              // Darker background for sold pets
-                              color: isSold ? Colors.grey.shade300 : Colors.white,
-                              child: InkWell(
+                  // Cart items list
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: carts.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final cart = carts[index];
+                        final id = cart.grocery['productId']?.toString() ?? '';
+                        final checked = _selectedProductIds.contains(id);
+
+                        // Fetch sold status and correct unit price
+                        return FutureBuilder<Map<String, dynamic>>(
+                          future: getPetInfoForCart(id),
+                          initialData: const {'isSold': false, 'price': 0.0},
+                          builder: (context, snapshot) {
+                            final info = snapshot.data ?? const {'isSold': false, 'price': 0.0};
+                            final bool isSold = info['isSold'] == true;
+                            final double unitPrice = (info['price'] is num)
+                                ? (info['price'] as num).toDouble()
+                                : double.tryParse(info['price']?.toString() ?? '0') ?? 0.0;
+
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: Material(
+                                elevation: 1,
                                 borderRadius: BorderRadius.circular(12),
-                                // Disable tap for sold pets
-                                onTap: isSold ? null : () async {
-                                  DialogHelper.showLoadingDialog(context, message: 'Đang mở chi tiết...');
-                                  final Map<String, dynamic>? pet =
-                                      await getPetById(id);
-                                  await DialogHelper.safeHideLoadingDialog();
-                                  if (pet != null && mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            DetailPet(pet: pet),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Opacity(
-                                  // Reduce opacity for sold pets
-                                  opacity: isSold ? 0.6 : 1.0,
-                                  child: SizedBox(
-                                  height: 120,
-                                  child: Stack(
-                                    children: [
-                                      Positioned.fill(
-                                        child: Padding(
-                                          padding:
-                                              const EdgeInsets.only(left: 40),
-                                          child: CartItem(cart: cart),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        left: 8,
-                                        top: 0,
-                                        bottom: 0,
-                                        child: Center(
-                                          child: Checkbox(
-                                            value: checked,
-                                            // Disable checkbox if pet is sold
-                                            onChanged: isSold ? null : (val) {
-                                              setState(() {
-                                                if ((val ?? false) &&
-                                                    id.isNotEmpty) {
-                                                  _selectedProductIds.add(id);
-                                                } else {
-                                                  _selectedProductIds
-                                                      .remove(id);
-                                                  _selectAll = false;
-                                                }
-                                              });
-                                              if (userIdentifier != null) {
-                                                context.read<CartBloc>().add(
-                                                    UpdateCartSelection(
-                                                        userIdentifier!,
-                                                        _selectedProductIds
-                                                            .toList()));
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                ),
-                              ),
-                            ),
-                          );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-
-                    // Bottom bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 12,
-                            offset: const Offset(0, -4),
-                          )
-                        ],
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                  AppLocalizations.of(context)?.totalLabel ?? 'Tổng',
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.black87),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  CurrencyHelper.formatVND(selectedTotal),
-                                  style:  TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context)
-                                    .colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.5,
-                            child: ElevatedButton(
-                              onPressed:
-                                  selectedCount == 0 || userIdentifier == null
+                                // Darker background for sold pets
+                                color: isSold
+                                    ? Colors.grey.shade300
+                                    : Colors.white,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  // Disable tap for sold pets
+                                  onTap: isSold
                                       ? null
                                       : () async {
-                                          final selected = carts
-                                              .where((c) =>
-                                                  _selectedProductIds.contains(c
-                                                          .grocery['productId']
-                                                          ?.toString() ??
-                                                      ''))
-                                              .toList();
-                                          if (selected.isEmpty) {
-                                            return;
-                                          }
-                                          
-                                          // Check if any selected pet is sold
-                                          DialogHelper.showLoadingDialog(context, message: 'Đang kiểm tra...');
-                                          final List<CartModel> availablePets = [];
-                                          final List<String> soldPetNames = [];
-                                          
-                                          for (var cart in selected) {
-                                            final petId = cart.grocery['productId']?.toString() ?? '';
-                                            final isSold = await CartItem.isPetSold(petId);
-                                            if (isSold) {
-                                              soldPetNames.add(cart.grocery['name']?.toString() ?? 'Thú cưng');
-                                              // Remove sold pet from selection
-                                              _selectedProductIds.remove(petId);
-                                            } else {
-                                              availablePets.add(cart);
-                                            }
-                                          }
-                                          
-                                          await DialogHelper.safeHideLoadingDialog();
-                                          
-                                          if (soldPetNames.isNotEmpty) {
-                                            if (!mounted) return;
-                                            NotificationHelper.showError(
+                                          DialogHelper.showLoadingDialog(
                                               context,
-                                              'Thú cưng đã bán',
-                                              'Các thú cưng sau đã được bán: ${soldPetNames.join(', ')}. Vui lòng xóa khỏi giỏ hàng.',
-                                            );
-                                            setState(() {}); // Update UI to reflect deselection
-                                            return;
-                                          }
-                                          
-                                          // Show fulfillment method selection dialog
-                                          if (!mounted) return;
-                                          final method = await showDialog<FulfillmentMethod>(
-                                            context: context,
-                                            builder: (_) => const FulfillmentMethodDialog(),
-                                          );
-                                          
-                                          if (method == null || !mounted) return;
-                                          
-                                          // Navigate based on selected method
-                                          if (method == FulfillmentMethod.homeDelivery) {
-                                            // Navigate to home delivery checkout
-                                            await Navigator.push(
+                                              message: 'Đang mở chi tiết...');
+                                          final Map<String, dynamic>? pet =
+                                              await getPetById(id);
+                                          await DialogHelper
+                                              .safeHideLoadingDialog();
+                                          if (pet != null && mounted) {
+                                            Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (_) => CheckoutScreen(
-                                                  userIdentifier: userIdentifier!,
-                                                  carts: availablePets,
-                                                ),
-                                              ),
-                                            );
-                                          } else if (method == FulfillmentMethod.storePickup) {
-                                            // Navigate to store pickup checkout
-                                            await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => StorePickupCheckoutScreen(
-                                                  userIdentifier: userIdentifier!,
-                                                  carts: availablePets,
-                                                ),
+                                                builder: (context) =>
+                                                    DetailPet(pet: pet),
                                               ),
                                             );
                                           }
-                                          
-                                          if (!mounted) return;
-                                          // Reload cart from Firestore to reflect purchased items removal
-                                          context
-                                              .read<CartBloc>()
-                                              .add(LoadCart(userIdentifier!));
                                         },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme.primary,
-                                foregroundColor: Colors.black,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  child: Opacity(
+                                    // Reduce opacity for sold pets
+                                    opacity: isSold ? 0.6 : 1.0,
+                                    child: SizedBox(
+                                      height: 120,
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: 40),
+                                              child: CartItem(
+                                                // Override price with correct unit price from pet doc if available
+                                                cart: CartModel(
+                                                  grocery: {
+                                                    ...cart.grocery,
+                                                    'price': unitPrice > 0
+                                                        ? unitPrice
+                                                        : cart.grocery['price'],
+                                                  },
+                                                  quantity: cart.quantity,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            left: 8,
+                                            top: 0,
+                                            bottom: 0,
+                                            child: Center(
+                                              child: Checkbox(
+                                                value: checked,
+                                                // Disable checkbox if pet is sold
+                                                onChanged: isSold
+                                                    ? null
+                                                    : (val) {
+                                                        setState(() {
+                                                          if ((val ?? false) &&
+                                                              id.isNotEmpty) {
+                                                            _selectedProductIds
+                                                                .add(id);
+                                                          } else {
+                                                            _selectedProductIds
+                                                                .remove(id);
+                                                            _selectAll = false;
+                                                          }
+                                                        });
+                                                        if (userIdentifier !=
+                                                            null) {
+                                                          context
+                                                              .read<CartBloc>()
+                                                              .add(UpdateCartSelection(
+                                                                  userIdentifier!,
+                                                                  _selectedProductIds
+                                                                      .toList()));
+                                                        }
+                                                      },
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              child: Text(
-                AppLocalizations.of(context)?.confirm ?? 'Thanh toán',
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Bottom bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, -4),
+                        )
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(context)?.totalLabel ??
+                                    'Tổng',
                                 style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w600),
+                                    fontSize: 14, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                CurrencyHelper.formatVND(selectedTotal),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.5,
+                          child: ElevatedButton(
+                            onPressed: selectedCount == 0 ||
+                                    userIdentifier == null
+                                ? null
+                                : () async {
+                                    final selected = carts
+                                        .where((c) => _selectedProductIds
+                                            .contains(c.grocery['productId']
+                                                    ?.toString() ??
+                                                ''))
+                                        .toList();
+                                    if (selected.isEmpty) {
+                                      return;
+                                    }
+
+                                    // Check if any selected pet is sold
+                                    DialogHelper.showLoadingDialog(context,
+                                        message: 'Đang kiểm tra...');
+                                    final List<CartModel> availablePets = [];
+                                    final List<String> soldPetNames = [];
+
+                                    for (var cart in selected) {
+                                      final petId = cart.grocery['productId']
+                                              ?.toString() ??
+                                          '';
+                                      final isSold =
+                                          await CartItem.isPetSold(petId);
+                                      if (isSold) {
+                                        soldPetNames.add(
+                                            cart.grocery['name']?.toString() ??
+                                                'Thú cưng');
+                                        // Remove sold pet from selection
+                                        _selectedProductIds.remove(petId);
+                                      } else {
+                                        availablePets.add(cart);
+                                      }
+                                    }
+
+                                    await DialogHelper.safeHideLoadingDialog();
+
+                                    if (soldPetNames.isNotEmpty) {
+                                      if (!mounted) return;
+                                      NotificationHelper.showError(
+                                        context,
+                                        'Thú cưng đã bán',
+                                        'Các thú cưng sau đã được bán: ${soldPetNames.join(', ')}. Vui lòng xóa khỏi giỏ hàng.',
+                                      );
+                                      setState(
+                                          () {}); // Update UI to reflect deselection
+                                      return;
+                                    }
+
+                                    // Show fulfillment method selection dialog
+                                    if (!mounted) return;
+                                    final method =
+                                        await showDialog<FulfillmentMethod>(
+                                      context: context,
+                                      builder: (_) =>
+                                          const FulfillmentMethodDialog(),
+                                    );
+
+                                    if (method == null || !mounted) return;
+
+                                    // Navigate based on selected method
+                                    if (method ==
+                                        FulfillmentMethod.homeDelivery) {
+                                      // Navigate to home delivery checkout
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => CheckoutScreen(
+                                            userIdentifier: userIdentifier!,
+                                            carts: availablePets,
+                                          ),
+                                        ),
+                                      );
+                                    } else if (method ==
+                                        FulfillmentMethod.storePickup) {
+                                      // Navigate to store pickup checkout
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              StorePickupCheckoutScreen(
+                                            userIdentifier: userIdentifier!,
+                                            carts: availablePets,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    if (!mounted) return;
+                                    // Reload cart from Firestore to reflect purchased items removal
+                                    context
+                                        .read<CartBloc>()
+                                        .add(LoadCart(userIdentifier!));
+
+                                    // Clear selection after navigation
+                                    setState(() {
+                                      _selectedProductIds.clear();
+                                      _selectAll = false;
+                                    });
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                          )
-                        ],
-                      ),
+                            child: Text(
+                              AppLocalizations.of(context)?.confirm ??
+                                  'Thanh toán',
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        )
+                      ],
                     ),
-                  ],
-                );
-              } else if (state is CartError) {
-                return const Center(child: Text("Error: DEL{state.message}"));
-              } else {
-                return const Center(child: Text("Unexpected error occurred"));
-              }
-            },
-          ),
+                  ),
+                ],
+              );
+            } else if (state is CartError) {
+              return const Center(child: Text("Error: DEL{state.message}"));
+            } else {
+              return const Center(child: Text("Unexpected error occurred"));
+            }
+          },
         ),
       ),
     );

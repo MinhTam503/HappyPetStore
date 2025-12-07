@@ -61,18 +61,25 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
     Emitter<ReservationState> emit,
   ) async {
     try {
+      print('🔵 ReservationBloc: Starting reservation creation...');
       emit(const ReservationLoading());
       
+      print('🔵 ReservationBloc: Calling service.createReservation...');
       final reservationId = await _reservationService.createReservation(
         event.reservation,
       );
       
+      print('✅ ReservationBloc: Reservation created with ID: $reservationId');
       emit(ReservationSuccess(
         'Đặt trước thành công! Vui lòng chờ xác nhận.',
         reservationId: reservationId,
       ));
-    } catch (e) {
+      print('✅ ReservationBloc: Success state emitted');
+    } catch (e, stackTrace) {
+      print('❌ ReservationBloc: Error creating reservation: $e');
+      print('❌ StackTrace: $stackTrace');
       emit(ReservationError('Lỗi khi đặt trước: ${e.toString()}'));
+      print('❌ ReservationBloc: Error state emitted');
     }
   }
 

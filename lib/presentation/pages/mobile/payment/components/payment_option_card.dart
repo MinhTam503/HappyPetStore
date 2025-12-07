@@ -8,6 +8,7 @@ class PaymentOptionCard extends StatelessWidget {
   final double depositAmount;
   final double totalAmount;
   final int depositPercentage;
+  final bool isPercentageDeposit;
   final ValueChanged<bool> onChanged;
 
   const PaymentOptionCard({
@@ -16,6 +17,7 @@ class PaymentOptionCard extends StatelessWidget {
     required this.depositAmount,
     required this.totalAmount,
     required this.depositPercentage,
+    required this.isPercentageDeposit,
     required this.onChanged,
   });
 
@@ -44,7 +46,9 @@ class PaymentOptionCard extends StatelessWidget {
               groupValue: isPayingDeposit,
               onChanged: (val) => onChanged(val ?? true),
               title: Text(
-                l10n.payDeposit(depositPercentage),
+                isPercentageDeposit
+                    ? l10n.payDeposit(depositPercentage)
+                    : l10n.depositPaymentType,
               ),
               subtitle: Text(
                 CurrencyHelper.formatVND(depositAmount),

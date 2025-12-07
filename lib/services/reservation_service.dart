@@ -46,48 +46,76 @@ class ReservationService {
   /// Create a new reservation
   Future<String> createReservation(ReservationModel reservation) async {
     try {
+      print('🔵 ReservationService: Starting transaction...');
       // Use transaction to ensure atomicity
       return await _firestore.runTransaction<String>((transaction) async {
-        // Create reservation document
-        final reservationRef = _reservationsCollection.doc();
-        final reservationWithId = reservation.copyWith(id: reservationRef.id);
+        print('🔵 ReservationService: Transaction started, reading pets...');
+        // Step 1: READ ALL DATA FIRST (Firestore requirement)
+        final List<DocumentSnapshot> petSnapshots = [];
+        final List<DocumentReference> petRefs = [];
         
-        transaction.set(reservationRef, reservationWithId.toMap());
-
-        // Update pet status to 'reserved' for all items
         for (var item in reservation.items) {
           final petId = item['productId']?.toString() ?? item['id']?.toString();
           if (petId != null && petId.isNotEmpty) {
             final petRef = _firestore.collection('Pets').doc(petId);
+            petRefs.add(petRef);
+            print('🔵 ReservationService: Reading pet $petId...');
             final petSnap = await transaction.get(petRef);
-            
-            if (!petSnap.exists) {
-              throw Exception('Pet $petId không tồn tại!');
-            }
-
-            final petData = petSnap.data() as Map<String, dynamic>;
-            final status = petData['status'] ?? 'available';
-            final isAvailable = petData['isAvailable'] ?? false;
-
-            // Check if pet is available
-            if (status != 'available' || !isAvailable) {
-              throw Exception('Thú cưng ${petData['name'] ?? petId} đã được đặt hoặc bán!');
-            }
-
-            // Reserve the pet
-            transaction.update(petRef, {
-              'status': 'reserved',
-              'isAvailable': false,
-              'reservedAt': FieldValue.serverTimestamp(),
-              'reservationId': reservationRef.id,
-            });
+            petSnapshots.add(petSnap);
+            print('✅ ReservationService: Pet $petId read successfully');
           }
         }
 
+        print('🔵 ReservationService: Validating ${petSnapshots.length} pets...');
+        // Step 2: VALIDATE all reads
+        for (int i = 0; i < petSnapshots.length; i++) {
+          final petSnap = petSnapshots[i];
+          
+          if (!petSnap.exists) {
+            throw Exception('Pet ${petRefs[i].id} không tồn tại!');
+          }
+
+          final petData = petSnap.data() as Map<String, dynamic>;
+          final status = petData['status'] ?? 'available'; // Missing status = available (old pets)
+          final isAvailable = petData['isAvailable'] ?? true; // Old pets without this field = available
+          final petName = petData['name'] ?? petRefs[i].id;
+
+          print('🔍 ReservationService: Pet "$petName" (${petRefs[i].id}) - status: "$status", isAvailable: $isAvailable');
+
+          // Check if pet is available (prioritize status field, isAvailable is secondary)
+          if (status != 'available' || !isAvailable) {
+            print('❌ ReservationService: Pet validation failed - status="$status" (expected "available"), isAvailable=$isAvailable (expected true)');
+            throw Exception('Thú cưng $petName đã được đặt hoặc bán!');
+          }
+          print('✅ ReservationService: Pet "$petName" validated successfully');
+        }
+
+        print('🔵 ReservationService: All pets validated, creating reservation...');
+        // Step 3: PERFORM ALL WRITES AFTER READS
+        final reservationRef = _reservationsCollection.doc();
+        final reservationWithId = reservation.copyWith(id: reservationRef.id);
+        
+        transaction.set(reservationRef, reservationWithId.toMap());
+        print('✅ ReservationService: Reservation document created: ${reservationRef.id}');
+
+        // Update pet status to 'reserved'
+        print('🔵 ReservationService: Updating ${petRefs.length} pets to reserved...');
+        for (int i = 0; i < petRefs.length; i++) {
+          transaction.update(petRefs[i], {
+            'status': 'reserved',
+            'isAvailable': false,
+            'reservedAt': FieldValue.serverTimestamp(),
+            'reservationId': reservationRef.id,
+          });
+        }
+        print('✅ ReservationService: All pets updated');
+
+        print('✅ ReservationService: Transaction completed successfully: ${reservationRef.id}');
         return reservationRef.id;
       });
-    } catch (e) {
-      print('Error creating reservation: $e');
+    } catch (e, stackTrace) {
+      print('❌ ReservationService: Error creating reservation: $e');
+      print('❌ StackTrace: $stackTrace');
       rethrow;
     }
   }
@@ -229,10 +257,13 @@ class ReservationService {
 
         final reservation = ReservationModel.fromDocument(reservationSnap);
 
-        // Calculate final paid amount
-        double finalPaidAmount = reservation.paidAmount;
+        // Calculate final paid amount: if no additionalPayment provided,
+        // mark as fully paid (totalAmount)
+        double finalPaidAmount;
         if (additionalPayment != null && additionalPayment > 0) {
-          finalPaidAmount += additionalPayment;
+          finalPaidAmount = reservation.paidAmount + additionalPayment;
+        } else {
+          finalPaidAmount = reservation.totalAmount;
         }
 
         // Update reservation status

@@ -1359,7 +1359,39 @@
     "saveSettings": "Lưu Cài Đặt",
     "@saveSettings": {"description": "Save settings button"},
     "themeSettings": "Cài Đặt Giao Diện",
-    "@themeSettings": {"description": "Theme settings menu"}
+    "@themeSettings": {"description": "Theme settings menu"},
+    "confirmReservationAction": "Xác nhận đặt trước",
+    "@confirmReservationAction": {"description": "Confirm reservation action in dialog"},
+    "youWillPay": "Bạn sẽ thanh toán {type}: {amount}",
+    "@youWillPay": {
+      "description": "You will pay text",
+      "placeholders": {
+        "type": {"type": "String"},
+        "amount": {"type": "String"}
+      }
+    },
+    "depositPaymentType": "Tiền cọc",
+    "@depositPaymentType": {"description": "Deposit payment type"},
+    "fullPaymentType": "toàn bộ",
+    "@fullPaymentType": {"description": "Full payment type"},
+    "paymentMethodLabel": "Phương thức",
+    "@paymentMethodLabel": {"description": "Payment method label"},
+    "paymentNote": "Lưu ý: Bạn cần thanh toán để hoàn tất đặt trước.",
+    "@paymentNote": {"description": "Payment note in confirmation dialog"},
+    "creatingReservation": "Đang tạo đơn đặt trước...",
+    "@creatingReservation": {"description": "Creating reservation loading message"},
+    "pleaseSelectPickupDate": "Vui lòng chọn ngày đến lấy thú cưng",
+    "@pleaseSelectPickupDate": {"description": "Please select pickup date warning"},
+    "petNotFoundInCart": "Không tìm thấy thú cưng trong giỏ hàng",
+    "@petNotFoundInCart": {"description": "Pet not found in cart error"},
+    "pleaseLoginToReserve": "Vui lòng đăng nhập để đặt trước",
+    "@pleaseLoginToReserve": {"description": "Please login to reserve error"},
+    "waitForConfirmation": "Vui lòng chờ cửa hàng xác nhận.",
+    "@waitForConfirmation": {"description": "Wait for store confirmation message"},
+    "reservationTemporarilyUnavailable": "Chức năng đặt trước tạm thời không khả dụng",
+    "@reservationTemporarilyUnavailable": {"description": "Reservation feature temporarily unavailable"},
+    "pleaseSelectHomeDelivery": "Vui lòng chọn giao hàng tận nơi",
+    "@pleaseSelectHomeDelivery": {"description": "Please select home delivery message"}
 }
 
 

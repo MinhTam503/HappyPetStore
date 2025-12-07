@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
 import 'package:pet_shop/data/datasources/local/apriori/apriori_algorithm.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/cart_screen.dart';
 
 import '../../../widgets/pet_items_all.dart';
 import '../pet/detail_pet.dart';
@@ -126,13 +127,33 @@ class _OrderSuccessState extends State<OrderSuccess> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: () async {
+        // Quay về màn hình giỏ hàng và tải lại dữ liệu
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const CartScreen()),
+          (route) => false,
+        );
+        return false;
+      },
+      child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        centerTitle: true,
-        title: const Text("Thanh Toán Thành Công   "),
-      ),
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          centerTitle: true,
+          title: const Text("Thanh Toán Thành Công   "),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) =>  BottomNavigator(initialIndex: 3,)),
+                (route) => false,
+              );
+            },
+          ),
+        ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,6 +296,7 @@ class _OrderSuccessState extends State<OrderSuccess> {
           ],
         ),
       ),
+    ),
     );
   }
 }
