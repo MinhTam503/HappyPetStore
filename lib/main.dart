@@ -170,15 +170,18 @@ Future<void> main() async {
       final settingsService = SettingsService();
       final useAdminTheme = await settingsService.getUseAdminTheme();
       
+      debugPrint('🎨 App starting with theme setting: useAdminTheme=$useAdminTheme');
+      
+      final themeManager = ThemeManager();
+      
       // Load theme from Firestore if using admin theme
       if (useAdminTheme) {
-        // ThemeManager automatically loads from Firestore on initialization
-        // Just ensure it's initialized
-        ThemeManager();
+        themeManager.startListening();
+        debugPrint('🎨 Started listening to admin theme changes');
+      } else {
+        themeManager.stopListening();
+        debugPrint('🎨 Using default theme, stopped admin theme listener');
       }
-      
-      // Ensure stream gets initial value by setting it
-      await settingsService.setUseAdminTheme(useAdminTheme);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to load theme preference: $e');
@@ -248,31 +251,101 @@ class MyApp extends StatelessWidget {
           future: settingsService.getUseAdminTheme(),
           builder: (context, futureSnapshot) {
             // Load initial value from SharedPreferences
+            // Default to false (default theme) to avoid unintended admin theme startup
             final initialUseAdminTheme = futureSnapshot.data ?? false;
             
-            return StreamBuilder<SeasonalTheme>(
-              stream: themeManager.stream,
-              initialData: themeManager.current,
-              builder: (context, themeSnapshot) {
-                return StreamBuilder<bool>(
-                  stream: settingsService.useAdminThemeStream,
-                  initialData: initialUseAdminTheme,
-                  builder: (context, settingsSnapshot) {
-                    final useAdminTheme = settingsSnapshot.data ?? initialUseAdminTheme;
+            return StreamBuilder<bool>(
+              stream: settingsService.useAdminThemeStream,
+              initialData: initialUseAdminTheme,
+              builder: (context, settingsSnapshot) {
+                final useAdminTheme = settingsSnapshot.data ?? initialUseAdminTheme;
+                
+                // Control ThemeManager listener based on user preference
+                if (!kIsWeb) {
+                  if (useAdminTheme) {
+                    themeManager.startListening();
+                  } else {
+                    themeManager.stopListening();
+                  }
+                }
+                
+                // Determine which theme to use
+                SeasonalTheme currentTheme;
+                
+                if (kIsWeb) {
+                  // Web admin always uses default theme
+                  currentTheme = SeasonalTheme.defaultTheme;
+                } else if (!useAdminTheme) {
+                  // User chose default theme on mobile
+                  currentTheme = SeasonalTheme.defaultTheme;
+                } else {
+                  // User chose to follow admin theme - use current admin theme
+                  currentTheme = themeManager.current;
+                }
+                
+                // For admin theme users, listen to theme changes
+                if (kIsWeb || !useAdminTheme) {
+                  // Fixed theme - no need to listen to changes
+                  final lightScheme = themeManager.colorSchemeFor(
+                    currentTheme, 
+                    Brightness.light, 
+                    isWebAdmin: kIsWeb
+                  );
+                  final darkScheme = themeManager.colorSchemeFor(
+                    currentTheme, 
+                    Brightness.dark, 
+                    isWebAdmin: kIsWeb
+                  );
+                  
+                  return _buildMaterialApp(
+                    themeProvider,
+                    localeProvider,
+                    lightScheme,
+                    darkScheme,
+                  );
+                }
+                
+                // User chose to follow admin theme - listen to theme changes
+                return StreamBuilder<SeasonalTheme>(
+                  stream: themeManager.stream,
+                  initialData: currentTheme,
+                  builder: (context, themeSnapshot) {
                     final adminTheme = themeSnapshot.data ?? SeasonalTheme.defaultTheme;
-                
-                // On web (admin panel), always use default theme
-                // On mobile, use admin theme if enabled, otherwise default
-                final currentTheme = kIsWeb 
-                    ? SeasonalTheme.defaultTheme 
-                    : (useAdminTheme ? adminTheme : SeasonalTheme.defaultTheme);
-                
-                final lightScheme =
-                    themeManager.colorSchemeFor(currentTheme, Brightness.light, isWebAdmin: kIsWeb);
-                final darkScheme =
-                    themeManager.colorSchemeFor(currentTheme, Brightness.dark, isWebAdmin: kIsWeb);
-
-            return MaterialApp(
+                    
+                    final lightScheme = themeManager.colorSchemeFor(
+                      adminTheme, 
+                      Brightness.light, 
+                      isWebAdmin: false
+                    );
+                    final darkScheme = themeManager.colorSchemeFor(
+                      adminTheme, 
+                      Brightness.dark, 
+                      isWebAdmin: false
+                    );
+                    
+                    return _buildMaterialApp(
+                      themeProvider,
+                      localeProvider,
+                      lightScheme,
+                      darkScheme,
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      }),
+    );
+  }
+  
+  Widget _buildMaterialApp(
+    ThemeProvider themeProvider,
+    LocaleProvider localeProvider,
+    ColorScheme lightScheme,
+    ColorScheme darkScheme,
+  ) {
+    return MaterialApp(
               navigatorKey: _navKey,
               debugShowCheckedModeBanner: false,
               initialRoute: '/',
@@ -632,13 +705,5 @@ class MyApp extends StatelessWidget {
                 },
               },
             );
-                  },
-                );
-              },
-            );
-          },
-        );
-      }),
-    );
   }
 }

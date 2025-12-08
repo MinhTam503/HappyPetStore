@@ -182,7 +182,7 @@ class _DraggableChatBubbleWidgetState extends State<DraggableChatBubbleWidget>
   IconData _getBubbleIcon() {
     switch (widget.seasonalTheme) {
       case SeasonalTheme.noel:
-        return Icons.card_giftcard; // Gift for Christmas
+        return Icons.ac_unit; // Gift for Christmas
       case SeasonalTheme.tet:
         return Icons.spa; // Flower/blossom for Tet
       case SeasonalTheme.summer:

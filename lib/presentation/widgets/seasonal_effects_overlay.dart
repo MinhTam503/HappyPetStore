@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:pet_shop/core/services/theme_manager.dart';
+import 'package:pet_shop/core/services/settings_service.dart';
 
 class SeasonalEffectsOverlay extends StatefulWidget {
   final Widget child;
@@ -13,21 +14,47 @@ class SeasonalEffectsOverlay extends StatefulWidget {
 class _SeasonalEffectsOverlayState extends State<SeasonalEffectsOverlay>
     with SingleTickerProviderStateMixin {
   late final ThemeManager _themeManager;
+  late final SettingsService _settingsService;
   late final AnimationController _controller;
   late SeasonalTheme _theme;
+  bool _effectsEnabled = true;
+  bool _useAdminTheme = true;
 
   @override
   void initState() {
     super.initState();
     _themeManager = ThemeManager();
+    _settingsService = SettingsService();
     _theme = _themeManager.current;
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),
     )..repeat();
+    
+    // Listen to theme changes
     _themeManager.stream.listen((t) {
       if (mounted) setState(() => _theme = t);
     });
+    
+    // Listen to effects setting changes
+    _loadEffectsSetting();
+    _loadThemeSetting();
+    _settingsService.seasonalEffectsStream.listen((enabled) {
+      if (mounted) setState(() => _effectsEnabled = enabled);
+    });
+    _settingsService.useAdminThemeStream.listen((useAdminTheme) {
+      if (mounted) setState(() => _useAdminTheme = useAdminTheme);
+    });
+  }
+
+  Future<void> _loadEffectsSetting() async {
+    final enabled = await _settingsService.getSeasonalEffectsEnabled();
+    if (mounted) setState(() => _effectsEnabled = enabled);
+  }
+
+  Future<void> _loadThemeSetting() async {
+    final useAdminTheme = await _settingsService.getUseAdminTheme();
+    if (mounted) setState(() => _useAdminTheme = useAdminTheme);
   }
 
   @override
@@ -38,16 +65,19 @@ class _SeasonalEffectsOverlayState extends State<SeasonalEffectsOverlay>
 
   @override
   Widget build(BuildContext context) {
+    // Only show effects if user enabled admin theme AND effects are enabled
+    final showEffects = _effectsEnabled && _useAdminTheme;
+    
     return Stack(
       children: [
         widget.child,
-        if (_theme == SeasonalTheme.noel)
+        if (showEffects && _theme == SeasonalTheme.noel)
           IgnorePointer(child: _Snowfall(controller: _controller)),
-        if (_theme == SeasonalTheme.tet)
+        if (showEffects && _theme == SeasonalTheme.tet)
           IgnorePointer(child: _FallingPetals(controller: _controller)),
-        if (_theme == SeasonalTheme.summer)
+        if (showEffects && _theme == SeasonalTheme.summer)
           IgnorePointer(child: _SummerEffects(controller: _controller)),
-        if (_theme == SeasonalTheme.autumn)
+        if (showEffects && _theme == SeasonalTheme.autumn)
           IgnorePointer(child: _AutumnLeaves(controller: _controller)),
       ],
     );

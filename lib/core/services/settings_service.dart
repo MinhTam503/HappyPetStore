@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
@@ -7,6 +8,7 @@ class SettingsService {
   static const String _searchHistoryKey = 'save_search_history';
   static const String _viewedPetsHistoryKey = 'save_viewed_pets_history';
   static const String _useAdminThemeKey = 'use_admin_theme'; // true = follow admin, false = default theme
+  static const String _seasonalEffectsKey = 'seasonal_effects_enabled'; // true = show effects, false = hide
 
   // Singleton instance
   static final SettingsService _instance = SettingsService._internal();
@@ -19,6 +21,7 @@ class SettingsService {
   final _searchHistoryController = StreamController<bool>.broadcast();
   final _viewedPetsHistoryController = StreamController<bool>.broadcast();
   final _useAdminThemeController = StreamController<bool>.broadcast();
+  final _seasonalEffectsController = StreamController<bool>.broadcast();
 
   // Streams for listening to changes
   Stream<bool> get chatBubbleVisibilityStream => _chatBubbleController.stream;
@@ -26,6 +29,7 @@ class SettingsService {
   Stream<bool> get searchHistoryStream => _searchHistoryController.stream;
   Stream<bool> get viewedPetsHistoryStream => _viewedPetsHistoryController.stream;
   Stream<bool> get useAdminThemeStream => _useAdminThemeController.stream;
+  Stream<bool> get seasonalEffectsStream => _seasonalEffectsController.stream;
 
   // Chat Bubble Settings
   Future<bool> getChatBubbleVisibility() async {
@@ -115,18 +119,45 @@ class SettingsService {
   Future<bool> getUseAdminTheme() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_useAdminThemeKey) ?? false; // Default to default theme (not admin)
+      final value = prefs.getBool(_useAdminThemeKey) ?? true; // Default to admin theme (follow admin)
+      debugPrint('📖 Reading useAdminTheme from storage: $value');
+      return value;
     } catch (e) {
-      return false; // Default fallback
+      debugPrint('❌ Error reading useAdminTheme: $e');
+      return true; // Default fallback
     }
   }
 
   Future<void> setUseAdminTheme(bool useAdminTheme) async {
     try {
+      debugPrint('💾 Writing useAdminTheme to storage: $useAdminTheme');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_useAdminThemeKey, useAdminTheme);
       // Notify listeners
       _useAdminThemeController.add(useAdminTheme);
+      debugPrint('✅ Successfully saved useAdminTheme: $useAdminTheme');
+    } catch (e) {
+      debugPrint('❌ Error saving useAdminTheme: $e');
+      // Handle error silently or log
+    }
+  }
+
+  // Seasonal Effects Settings
+  Future<bool> getSeasonalEffectsEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_seasonalEffectsKey) ?? true; // Default to enabled
+    } catch (e) {
+      return true; // Default fallback
+    }
+  }
+
+  Future<void> setSeasonalEffectsEnabled(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_seasonalEffectsKey, enabled);
+      // Notify listeners
+      _seasonalEffectsController.add(enabled);
     } catch (e) {
       // Handle error silently or log
     }
@@ -139,5 +170,6 @@ class SettingsService {
     _searchHistoryController.close();
     _viewedPetsHistoryController.close();
     _useAdminThemeController.close();
+    _seasonalEffectsController.close();
   }
 }

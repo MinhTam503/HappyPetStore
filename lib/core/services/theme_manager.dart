@@ -15,20 +15,49 @@ enum SeasonalTheme {
 class ThemeManager {
   static final ThemeManager _instance = ThemeManager._internal();
   factory ThemeManager() => _instance;
-  ThemeManager._internal() {
-    _loadThemeFromFirestore();
-    _setupFirestoreListener();
-  }
+  ThemeManager._internal();
 
   final _controller = StreamController<SeasonalTheme>.broadcast();
   SeasonalTheme _current = SeasonalTheme.defaultTheme;
   final _firestore = FirebaseFirestore.instance;
+  StreamSubscription<DocumentSnapshot>? _firestoreSubscription;
+  bool _isListening = false;
 
   Stream<SeasonalTheme> get stream => _controller.stream;
   SeasonalTheme get current => _current;
 
+  /// Start listening to Firestore theme changes (only call when user wants admin theme)
+  void startListening() {
+    if (_isListening) {
+      debugPrint('🎨 ThemeManager already listening to Firestore');
+      return;
+    }
+    
+    debugPrint('🎨 ThemeManager starting to listen to Firestore');
+    _isListening = true;
+    _loadThemeFromFirestore();
+    _setupFirestoreListener();
+  }
+
+  /// Stop listening to Firestore theme changes (call when user wants default theme)
+  void stopListening() {
+    if (!_isListening) return;
+    
+    debugPrint('🎨 ThemeManager stopping Firestore listener');
+    _isListening = false;
+    _firestoreSubscription?.cancel();
+    _firestoreSubscription = null;
+    
+    // Reset to default theme
+    if (_current != SeasonalTheme.defaultTheme) {
+      _current = SeasonalTheme.defaultTheme;
+      _controller.add(SeasonalTheme.defaultTheme);
+      debugPrint('🎨 Theme reset to default');
+    }
+  }
+
   void _setupFirestoreListener() {
-    _firestore.collection('appConfig').doc('theme').snapshots().listen(
+    _firestoreSubscription = _firestore.collection('appConfig').doc('theme').snapshots().listen(
       (snapshot) {
         if (snapshot.exists) {
           final themeName = snapshot.data()?['currentTheme'] as String?;
@@ -156,10 +185,10 @@ class ThemeManager {
           seedColor: const Color(0xff08A045),
           primary: const Color(0xff08A045),
           surface: brightness == Brightness.light 
-              ? Colors.white 
+              ?  Color(0xffe7fae7) 
               : const Color(0xFF121212),
           background: brightness == Brightness.light 
-              ? Colors.white 
+              ? Color(0xffe7fae7)
               : const Color(0xFF121212),
         );
     }

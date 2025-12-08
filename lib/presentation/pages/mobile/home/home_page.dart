@@ -7,6 +7,7 @@ import 'package:pet_shop/auth/auth_service.dart';
 // Removed LocalizationHelper after migration to AppLocalizations
 import 'package:pet_shop/presentation/pages/mobile/search/search_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/favorite_screen.dart';
 import 'package:pet_shop/presentation/widgets/common/app_drawer.dart';
 import 'package:pet_shop/presentation/widgets/common/tab_indicator.dart';
 import 'package:pet_shop/presentation/widgets/home/categories_section.dart';
@@ -42,14 +43,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Scroll + dynamic search appearance
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _searchSectionKey = GlobalKey();
-  double _searchRevealOffset = -1; // measured offset at which to show inline search
+  double _searchRevealOffset =
+      -1; // measured offset at which to show inline search
   bool _showSearchInAppBar = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    
+
     // Listener cho index changes
     _tabController.addListener(() {
       if (_selectedTabIndex != _tabController.index) {
@@ -58,7 +60,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         });
       }
     });
-    
+
     // Animation listener để catch swipe gestures
     _tabController.animation?.addListener(() {
       final animationValue = _tabController.animation?.value ?? 0;
@@ -73,7 +75,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // Scroll listener for search reveal
     _scrollController.addListener(_onScroll);
     // Measure search bar position after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) => _calculateSearchOffset());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _calculateSearchOffset());
 
     _initializeData();
   }
@@ -148,8 +151,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context);
 
     return SeasonalEffectsOverlay(
-      child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        child: Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       key: _scaffoldKey,
       drawer: const AppDrawer(),
       drawerEnableOpenDragGesture: true,
@@ -159,7 +162,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           controller: _scrollController,
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
-              // App Bar - Floating và Pinned  
+              // App Bar - Floating và Pinned
               SliverAppBar(
                 floating: true,
                 pinned: true,
@@ -227,7 +230,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           SizedBox.square(
             dimension: 28,
             child: IconButton(
-              icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.primary),
+              icon: Icon(Icons.menu,
+                  color: Theme.of(context).colorScheme.primary),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               iconSize: 28,
@@ -235,9 +239,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               onPressed: () => _scaffoldKey.currentState?.openDrawer(),
             ),
           ),
-          
+
           // Search bar inline xuất hiện khi phần search gốc đã bị scroll qua
-          if (_showSearchInAppBar) 
+          if (_showSearchInAppBar)
             Expanded(
               child: Container(
                 height: 36,
@@ -258,7 +262,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: Theme.of(context).shadowColor.withOpacity(0.12),
+                          color:
+                              Theme.of(context).shadowColor.withOpacity(0.12),
                           blurRadius: 4,
                           spreadRadius: 1,
                           offset: const Offset(0, 2),
@@ -267,13 +272,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 20),
+                        Icon(Icons.search,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
+                            size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             l10n?.searchPetsPlaceholder ?? 'Search for pets',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.45),
                               fontSize: 14,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -285,23 +298,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-          
+
           // Nếu chưa show inline search => Spacer đẩy icons sang phải
           if (!_showSearchInAppBar) const Spacer(),
-          
+
           // Right icons - luôn ở bên phải cùng
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               GestureDetector(
                 onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const BottomNavigator(initialIndex: 1),
-                    ),
-                  );
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FavoriteScreen(),
+                      ));
                 },
                 child: const Icon(Icons.favorite_border, size: 28),
               ),
@@ -341,13 +352,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 TextSpan(text: "${l10n?.hello ?? 'Hello'}, "),
                 TextSpan(
                   text: "$userName\n",
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
                 TextSpan(
-                  text: l10n?.welcomeToHappyPets ?? 'Welcome to Happy Pets Shop!',
+                  text:
+                      l10n?.welcomeToHappyPets ?? 'Welcome to Happy Pets Shop!',
                   style: TextStyle(
                     fontSize: 17,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.38),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.38),
                   ),
                 ),
               ],
@@ -358,7 +374,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 10),
           Text(
-            l10n?.findPerfectCompanion ?? 'Find the perfect companion for your family',
+            l10n?.findPerfectCompanion ??
+                'Find the perfect companion for your family',
             style: TextStyle(
               fontSize: 28,
               color: Theme.of(context).colorScheme.onSurface,
@@ -410,7 +427,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: Text(
                   l10n?.searchPetsPlaceholder ?? 'Search for pets',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.45),
                     fontSize: 14,
                   ),
                 ),
@@ -488,7 +508,8 @@ class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
   _TabHeaderDelegate({required this.child, required this.selectedIndex});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: child,
