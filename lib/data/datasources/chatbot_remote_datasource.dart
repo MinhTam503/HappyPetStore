@@ -16,7 +16,7 @@ class ChatBotRemoteDataSourceImpl implements ChatBotRemoteDataSource {
 
   static String _autoBaseUrl() {
     // Use cloud n8n instance
-    return 'https://minhtam23503.app.n8n.cloud';
+    return 'https://happypethihi.app.n8n.cloud';
   }
 
   ChatBotRemoteDataSourceImpl({

@@ -250,18 +250,20 @@ class MyApp extends StatelessWidget {
         return FutureBuilder<bool>(
           future: settingsService.getUseAdminTheme(),
           builder: (context, futureSnapshot) {
-            // Load initial value from SharedPreferences
-            // Default to false (default theme) to avoid unintended admin theme startup
-            final initialUseAdminTheme = futureSnapshot.data ?? false;
-            
+            // Only control ThemeManager after the real value is loaded
+            final hasSetting = futureSnapshot.connectionState == ConnectionState.done && futureSnapshot.hasData;
+            final loadedUseAdminTheme = hasSetting ? (futureSnapshot.data ?? false) : null;
+
             return StreamBuilder<bool>(
               stream: settingsService.useAdminThemeStream,
-              initialData: initialUseAdminTheme,
+              // Do not provide misleading initialData; wait for real value
               builder: (context, settingsSnapshot) {
-                final useAdminTheme = settingsSnapshot.data ?? initialUseAdminTheme;
-                
-                // Control ThemeManager listener based on user preference
-                if (!kIsWeb) {
+                final useAdminTheme = settingsSnapshot.hasData
+                    ? settingsSnapshot.data!
+                    : (loadedUseAdminTheme ?? false);
+
+                // Control ThemeManager listener based on user preference (only after we have a real value)
+                if (!kIsWeb && hasSetting) {
                   if (useAdminTheme) {
                     themeManager.startListening();
                   } else {
