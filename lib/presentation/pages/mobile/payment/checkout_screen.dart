@@ -542,6 +542,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 // User cancelled - reset flag
                 _isProcessingVnpay = false;
                 _lastPaymentUrlOpened = null;
+                if (mounted) {
+                  NotificationHelper.showInfo(
+                    context,
+                    'Đã hủy thanh toán',
+                    'Bạn có thể thử lại khi sẵn sàng.',
+                  );
+                }
               }
             
           } else if (state is VnpayPaymentVerified) {
@@ -598,8 +605,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 NotificationHelper.showError(context, 'Lỗi xử lý đơn hàng', e.toString());
               }
             } else {
-              // Payment failed
-              NotificationHelper.showError(context, 'Thanh toán thất bại', 'Giao dịch không thành công.');
+              // Payment failed or cancelled
+              await DialogHelper.safeHideLoadingDialog();
+              if (!mounted) return;
+              NotificationHelper.showWarning(
+                context,
+                'Thanh toán chưa hoàn tất',
+                'Đơn hàng chưa được tạo. Bạn có thể thử lại bất cứ lúc nào.',
+              );
             }
           } else if (state is VnpayError) {
             await DialogHelper.safeHideLoadingDialog();

@@ -136,7 +136,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         FirebaseFirestore.instance.collection('Pets').count().get(),
         FirebaseFirestore.instance.collection('users').count().get(),
         FirebaseFirestore.instance.collection('orders').count().get(),
-        FirebaseFirestore.instance.collection('ordersWeb').count().get(),
+        FirebaseFirestore.instance.collection('reservations').count().get(),
       ];
 
       final results = await Future.wait(futures);
@@ -184,7 +184,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
       // Fetch data
       final results = await Future.wait([
         FirebaseFirestore.instance.collection('orders').limit(200).get(),
-        FirebaseFirestore.instance.collection('ordersWeb').limit(200).get(),
+        FirebaseFirestore.instance.collection('reservations').limit(200).get(),
       ]);
 
       final revenue = <String, double>{};
@@ -248,12 +248,12 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         }
       }
 
-      // Process web orders
+      // Process reservations
       for (final doc in results[1].docs) {
         final data = doc.data();
-        final amount = _parseDouble(data['totalAmount'] ?? data['total']);
-        final status = (data['statusOrder'] ?? data['status'] ?? 'Pending') as String;
-        // Determine completion date: prefer completedAt, fallback to shippingInfo actualDeliveryTime/deliveredAt or delivered event, then createdAt/timestamp
+        final amount = _parseDouble(data['totalAmount']);
+        final status = (data['status'] ?? 'pending') as String;
+        // Reservations use completedAt when marked as completed
         DateTime? date;
         final rawCompleted = data['completedAt'];
         if (rawCompleted is Timestamp) {
@@ -263,29 +263,9 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
         } else if (rawCompleted is String) {
           date = DateTime.tryParse(rawCompleted);
         }
-        if (date == null && data['shippingInfo'] is Map) {
-          try {
-            final si = Map<String, dynamic>.from(data['shippingInfo']);
-            final actual = si['actualDeliveryTime'] ?? si['deliveredAt'];
-            if (actual is String) {
-              date = DateTime.tryParse(actual);
-            }
-            if (date == null && si['trackingHistory'] is List) {
-              final hist = List.from(si['trackingHistory']);
-              for (final item in hist.reversed) {
-                if (item is Map && (item['status']?.toString() == 'delivered')) {
-                  final t = item['timestamp'];
-                  if (t is String) {
-                    date = DateTime.tryParse(t);
-                  }
-                  break;
-                }
-              }
-            }
-          } catch (_) {}
-        }
+        // Fallback to createdAt if no completedAt
         if (date == null) {
-          final rawTs = data['timestamp'] ?? data['createdAt'];
+          final rawTs = data['createdAt'];
           if (rawTs is Timestamp) {
             date = rawTs.toDate();
           } else if (rawTs is int) {
@@ -294,7 +274,7 @@ class _OptimizedDashboardPageState extends State<DashboardPage>
             date = DateTime.tryParse(rawTs);
           }
         }
-        if (date != null && inRange(date) && status == 'Completed' && amount > 0) {
+        if (date != null && inRange(date) && status == 'completed' && amount > 0) {
           addAmount(date, amount);
         }
       }

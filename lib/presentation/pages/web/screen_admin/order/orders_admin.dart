@@ -27,13 +27,14 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     'Cancelled'
   ];
 
-  // Platform filter options
+
+  // Delivery type filter options
   List<String> get platforms => [
         AppLocalizations.of(context)!.all,
-        AppLocalizations.of(context)!.mobileApp,
-        AppLocalizations.of(context)!.webApp
+        AppLocalizations.of(context)!.homeDelivery,
+        AppLocalizations.of(context)!.storePickup
       ];
-  int selectedPlatformIndex = 0; // 0=All, 1=Mobile, 2=Web
+  int selectedPlatformIndex = 0; // 0=All, 1=Home Delivery (orders), 2=Store Pickup (reservations)
 
   List<String> get statuses => [
         AppLocalizations.of(context)!.all,
@@ -58,29 +59,28 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   // Get the appropriate collection based on selected platform
   Stream<List<Map<String, dynamic>>> _getOrdersStream() {
     if (selectedPlatformIndex == 1) {
-      // Mobile App
+      // Home Delivery (orders)
       return FirebaseFirestore.instance
           .collection('orders')
           .snapshots()
           .map(_processSnapshot);
     } else if (selectedPlatformIndex == 2) {
-      // Web App
+      // Store Pickup (reservations)
       return FirebaseFirestore.instance
-          .collection('ordersWeb')
+          .collection('reservations')
           .snapshots()
           .map(_processSnapshot);
     } else {
-      // All
       // All - combine both collections
       return Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
         final ordersSnapshot =
             await FirebaseFirestore.instance.collection('orders').get();
-        final ordersWebSnapshot =
-            await FirebaseFirestore.instance.collection('ordersWeb').get();
+        final reservationsSnapshot =
+            await FirebaseFirestore.instance.collection('reservations').get();
 
         List<Map<String, dynamic>> allOrders = [];
         allOrders.addAll(_processSnapshot(ordersSnapshot));
-        allOrders.addAll(_processSnapshot(ordersWebSnapshot));
+        allOrders.addAll(_processSnapshot(reservationsSnapshot));
         return allOrders;
       });
     }
@@ -408,23 +408,74 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                         delegate: SliverChildBuilderDelegate(
                           (context, i) {
                             final order = paginatedOrders[i];
+                            final collection = order['collection'] ?? 'orders';
+                            
+                            // Log order data for debugging
+                            print('🔍 OrderCard #$i - Collection: $collection');
+                            print('🔍 Order keys: ${order.keys.toList()}');
+                            
                             final orderId =
                                 (order['orderId'] ?? order['id'] ?? '')
                                     .toString();
-                            final email = (order['email'] ?? '').toString();
+                            
+                            // Handle different field names for orders vs reservations
+                            String email;
+                            if (collection == 'reservations') {
+                              email = (order['email'] ?? order['userEmail'] ?? '').toString();
+                            } else {
+                              email = (order['email'] ?? '').toString();
+                            }
+                            
                             final total =
                                 order['totalAmount']?.toString() ?? '0';
                             final subtotal =
                                 (order['subtotal'] ?? total).toString();
                             final shippingFee =
                                 order['shippingFee']?.toString() ?? '0';
-                            final status =
-                                (order['statusOrder'] ?? '').toString();
+                            
+                            // Handle status field difference: 
+                            // - orders use 'statusOrder'
+                            // - reservations use 'status'
+                            String status = '';
+                            if (collection == 'reservations') {
+                              status = (order['status'] ?? 'pending').toString();
+                              // Map reservation statuses to order statuses
+                              switch (status.toLowerCase()) {
+                                case 'pending':
+                                  status = 'Pending';
+                                  break;
+                                case 'confirmed':
+                                case 'processing':
+                                  status = 'Processing';
+                                  break;
+                                case 'completed':
+                                  status = 'Completed';
+                                  break;
+                                case 'cancelled':
+                                  status = 'Cancelled';
+                                  break;
+                                default:
+                                  status = 'Pending';
+                              }
+                            } else {
+                              status = (order['statusOrder'] ?? 'Pending').toString();
+                            }
+                            
+                            print('🔍 Status extracted: $status');
+                            print('🔍 Total: $total');
+                            print('🔍 Email: $email');
 
                             // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
                             String address = '';
                             try {
-                              if (order['shippingAddress'] != null) {
+                              if (collection == 'reservations') {
+                                // Reservations: show customer name and phone instead of address
+                                final displayName = order['displayName'] ?? order['userName'] ?? '';
+                                final phone = order['phone'] ?? order['userPhone'] ?? '';
+                                address = displayName.isNotEmpty && phone.isNotEmpty
+                                    ? '$displayName • $phone'
+                                    : (displayName.isNotEmpty ? displayName : phone);
+                              } else if (order['shippingAddress'] != null) {
                                 address = order['shippingAddress'].toString();
                               } else if (order['address'] != null) {
                                 address = order['address'].toString();
@@ -443,9 +494,10 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                               address = '';
                             }
 
-                            final createdAt =
-                                order['timestamp'] ?? order['createdAt'];
-                            final collection = order['collection'] ?? 'orders';
+                            // Handle timestamp for both orders and reservations
+                            final createdAt = order['timestamp'] ?? 
+                                            order['createdAt'] ?? 
+                                            order['pickupDate'];
 
                             return OrderCard(
                               orderId: orderId,
@@ -474,59 +526,93 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                   // Store old status for notification
                                   final oldStatus = status;
 
-                                  final payload = {
-                                    'statusOrder': newStatus,
-                                    if (newStatus == 'Completed')
-                                      'statusPayment': 'Payment Completed',
-                                    if (newStatus == 'Completed')
-                                      'completedAt': FieldValue.serverTimestamp(),
-                                    if (newStatus == 'Cancelled')
-                                      'cancelledAt': FieldValue.serverTimestamp(),
-                                  };
+                                  // Build payload based on collection type
+                                  Map<String, dynamic> payload;
+                                  if (collection == 'reservations') {
+                                    // Reservations use lowercase 'status' field
+                                    String reservationStatus = newStatus.toLowerCase();
+                                    payload = {
+                                      'status': reservationStatus,
+                                      if (newStatus == 'Completed')
+                                        'completedAt': FieldValue.serverTimestamp(),
+                                      if (newStatus == 'Cancelled')
+                                        'cancelledAt': FieldValue.serverTimestamp(),
+                                    };
+                                  } else {
+                                    // Orders use 'statusOrder' field
+                                    payload = {
+                                      'statusOrder': newStatus,
+                                      if (newStatus == 'Completed')
+                                        'statusPayment': 'Payment Completed',
+                                      if (newStatus == 'Completed')
+                                        'completedAt': FieldValue.serverTimestamp(),
+                                      if (newStatus == 'Cancelled')
+                                        'cancelledAt': FieldValue.serverTimestamp(),
+                                    };
+                                  }
+                                  
+                                  print('📝 Updating $collection/$orderId with payload: $payload');
                                   await updateOrder(
                                       orderId, collection, payload);
 
                                   // Update pet status based on order status
-                                  final orderItems = (order['items'] as List?) ?? [];
-                                  for (var item in orderItems) {
-                                    final petId = item['productId']?.toString() ?? item['id']?.toString();
+                                  // Handle both orders (items array) and reservations (single petId)
+                                  List<String> petIds = [];
+                                  
+                                  if (collection == 'reservations') {
+                                    // Reservations have single petId
+                                    final petId = order['petId']?.toString();
                                     if (petId != null && petId.isNotEmpty) {
-                                      try {
-                                        final petDoc = await FirebaseFirestore.instance
-                                            .collection('Pets')
-                                            .doc(petId)
-                                            .get();
-                                        
-                                        if (petDoc.exists) {
-                                          if (newStatus == 'Completed') {
-                                            // Mark as sold when order is completed
-                                            await FirebaseFirestore.instance
-                                                .collection('Pets')
-                                                .doc(petId)
-                                                .update({
-                                              'status': 'sold',
-                                              'isAvailable': false,
-                                              'soldAt': FieldValue.serverTimestamp(),
-                                            });
-                                            print('✅ Pet $petId marked as sold (order completed)');
-                                          } else if (newStatus == 'Cancelled') {
-                                            // Release pet back to available when order is cancelled
-                                            await FirebaseFirestore.instance
-                                                .collection('Pets')
-                                                .doc(petId)
-                                                .update({
-                                              'status': 'available',
-                                              'isAvailable': true,
-                                              'reservedAt': FieldValue.delete(),
-                                              'orderId': FieldValue.delete(),
-                                              'cancelledAt': FieldValue.serverTimestamp(),
-                                            });
-                                            print('✅ Pet $petId released back to available (order cancelled)');
-                                          }
-                                        }
-                                      } catch (e) {
-                                        print('❌ Error updating pet $petId status: $e');
+                                      petIds.add(petId);
+                                    }
+                                  } else {
+                                    // Orders have items array
+                                    final orderItems = (order['items'] as List?) ?? [];
+                                    for (var item in orderItems) {
+                                      final petId = item['productId']?.toString() ?? item['id']?.toString();
+                                      if (petId != null && petId.isNotEmpty) {
+                                        petIds.add(petId);
                                       }
+                                    }
+                                  }
+                                  
+                                  // Update all pet statuses
+                                  for (final petId in petIds) {
+                                    try {
+                                      final petDoc = await FirebaseFirestore.instance
+                                          .collection('Pets')
+                                          .doc(petId)
+                                          .get();
+                                      
+                                      if (petDoc.exists) {
+                                        if (newStatus == 'Completed') {
+                                          // Mark as sold when order is completed
+                                          await FirebaseFirestore.instance
+                                              .collection('Pets')
+                                              .doc(petId)
+                                              .update({
+                                            'status': 'sold',
+                                            'isAvailable': false,
+                                            'soldAt': FieldValue.serverTimestamp(),
+                                          });
+                                          print('✅ Pet $petId marked as sold (order completed)');
+                                        } else if (newStatus == 'Cancelled') {
+                                          // Release pet back to available when order is cancelled
+                                          await FirebaseFirestore.instance
+                                              .collection('Pets')
+                                              .doc(petId)
+                                              .update({
+                                            'status': 'available',
+                                            'isAvailable': true,
+                                            'reservedAt': FieldValue.delete(),
+                                            'orderId': FieldValue.delete(),
+                                            'cancelledAt': FieldValue.serverTimestamp(),
+                                          });
+                                          print('✅ Pet $petId released back to available (order cancelled)');
+                                        }
+                                      }
+                                    } catch (e) {
+                                      print('❌ Error updating pet $petId status: $e');
                                     }
                                   }
 
@@ -546,7 +632,9 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                       '🔍 Current tracking number: ${order['trackingNumber']}');
 
                                   // Tạo shipment khi chuyển sang Processing (chỉ nếu chưa có tracking number)
+                                  // Skip shipment creation for store pickup (reservations)
                                   if (newStatus == 'Processing' &&
+                                      collection == 'orders' && // Only for home delivery orders
                                       (order['trackingNumber'] == null ||
                                           order['trackingNumber']
                                               .toString()
@@ -869,9 +957,37 @@ class _OrdersAdminState extends State<OrdersAdmin> {
     final emailController = TextEditingController(text: order['email'] ?? '');
     final totalAmountController =
         TextEditingController(text: (order['totalAmount'] ?? '').toString());
-    String selected = (order['statusOrder'] ?? 'Pending').toString();
-    final orderId = (order['orderId'] ?? order['id'] ?? '').toString();
     final collection = order['collection'] ?? 'orders';
+    
+    // Get status from correct field
+    String selected;
+    if (collection == 'reservations') {
+      final rawStatus = (order['status'] ?? 'pending').toString();
+      // Convert to capitalized format
+      switch (rawStatus.toLowerCase()) {
+        case 'pending':
+          selected = 'Pending';
+          break;
+        case 'confirmed':
+        case 'processing':
+          selected = 'Processing';
+          break;
+        case 'completed':
+          selected = 'Completed';
+          break;
+        case 'cancelled':
+          selected = 'Cancelled';
+          break;
+        default:
+          selected = 'Pending';
+      }
+    } else {
+      selected = (order['statusOrder'] ?? 'Pending').toString();
+    }
+    
+    final orderId = (order['orderId'] ?? order['id'] ?? '').toString();
+    
+    print('🔍 Edit Dialog - Collection: $collection, Status: $selected');
 
     showDialog(
       context: context,
@@ -924,15 +1040,32 @@ class _OrdersAdminState extends State<OrdersAdmin> {
             style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary),
             onPressed: () async {
-              await updateOrder(orderId, collection, {
-                'email': emailController.text.trim(),
-                'totalAmount':
-                    double.tryParse(totalAmountController.text.trim()) ??
-                        (order['totalAmount'] ?? 0),
-                'statusOrder': selected,
-                if (selected == 'Completed')
-                  'statusPayment': 'Payment Completed',
-              });
+              // Build update payload based on collection type
+              Map<String, dynamic> updatePayload;
+              if (collection == 'reservations') {
+                updatePayload = {
+                  'email': emailController.text.trim(),
+                  'totalAmount':
+                      double.tryParse(totalAmountController.text.trim()) ??
+                          (order['totalAmount'] ?? 0),
+                  'status': selected.toLowerCase(),
+                  if (selected == 'Completed')
+                    'completedAt': FieldValue.serverTimestamp(),
+                };
+              } else {
+                updatePayload = {
+                  'email': emailController.text.trim(),
+                  'totalAmount':
+                      double.tryParse(totalAmountController.text.trim()) ??
+                          (order['totalAmount'] ?? 0),
+                  'statusOrder': selected,
+                  if (selected == 'Completed')
+                    'statusPayment': 'Payment Completed',
+                };
+              }
+              
+              print('📝 Edit save - Updating $collection/$orderId: $updatePayload');
+              await updateOrder(orderId, collection, updatePayload);
               if (!mounted) return;
               Navigator.pop(context);
             },
@@ -948,17 +1081,97 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   Future<void> _showOrderDetailsDialog(Map<String, dynamic> order) async {
     if (!mounted) return;
 
+    final String collection = order['collection'] ?? 'orders';
     final String orderId = (order['orderId'] ?? order['id'] ?? '').toString();
-    final String email = (order['email'] ?? '').toString();
+    
+    // Handle different field names for reservations vs orders
+    String email, status, statusPay, method;
+    if (collection == 'reservations') {
+      email = (order['email'] ?? order['userEmail'] ?? '').toString();
+      final rawStatus = (order['status'] ?? 'pending').toString();
+      // Convert reservation status to order status format
+      switch (rawStatus.toLowerCase()) {
+        case 'pending':
+          status = 'Pending';
+          break;
+        case 'confirmed':
+        case 'processing':
+          status = 'Processing';
+          break;
+        case 'completed':
+          status = 'Completed';
+          break;
+        case 'cancelled':
+          status = 'Cancelled';
+          break;
+        default:
+          status = 'Pending';
+      }
+      statusPay = (order['paymentStatus'] ?? '').toString();
+      method = (order['paymentMethod'] ?? '').toString();
+    } else {
+      email = (order['email'] ?? '').toString();
+      status = (order['statusOrder'] ?? '').toString();
+      statusPay = (order['statusPayment'] ?? '').toString();
+      method = (order['paymentMethod'] ?? '').toString();
+    }
+    
     final String total = (order['totalAmount'] ?? '0').toString();
-    final String statusPay = (order['statusPayment'] ?? '').toString();
-    final String method = (order['paymentMethod'] ?? '').toString();
-    final String status = (order['statusOrder'] ?? '').toString();
+    
+    // Translate payment method to Vietnamese
+    String getPaymentMethodVN(String method) {
+      switch (method.toLowerCase()) {
+        case 'cod':
+          return 'Thanh toán khi nhận hàng';
+        case 'vnpay':
+          return 'VNPay';
+        case 'stripe':
+          return 'Stripe';
+        default:
+          return method;
+      }
+    }
+    
+    // Translate payment status to Vietnamese with COD logic
+    String getPaymentStatusVN(String status, String paymentMethod, String orderStatus) {
+      // Special logic for COD orders
+      if (paymentMethod.toLowerCase() == 'cod') {
+        if (orderStatus == 'Completed') {
+          return 'Đã thanh toán';
+        } else if (orderStatus == 'Cancelled') {
+          return 'Chưa thanh toán';
+        } else {
+          return 'Chưa thanh toán';
+        }
+      }
+      
+      // For non-COD orders - check exact string 'Payment Completed' first
+      if (status.contains('Payment Completed')) {
+        // VNPay or other payment methods completed
+        return 'Đã thanh toán';
+      }
+      
+      // Check other payment statuses (case-insensitive)
+      final lowerStatus = status.toLowerCase();
+      if (lowerStatus == 'fullpaid' || lowerStatus == 'completed') {
+        return 'Đã thanh toán';
+      } else if (lowerStatus == 'pending' || lowerStatus == 'depositpaid') {
+        return 'Chưa thanh toán';
+      }
+      
+      return status;
+    }
 
-    // Logic để lấy địa chỉ: shippingAddress (mới) hoặc deliveryInfo (cũ)
+    // Logic để lấy địa chỉ/thông tin: different for reservations vs orders
     String address = '';
+    String phone = '';
     try {
-      if (order['shippingAddress'] != null) {
+      if (collection == 'reservations') {
+        // For reservations: show customer name and phone
+        final displayName = order['displayName'] ?? order['userName'] ?? '';
+        phone = (order['phone'] ?? order['userPhone'] ?? '').toString();
+        address = displayName.isNotEmpty ? displayName : 'N/A';
+      } else if (order['shippingAddress'] != null) {
         address = order['shippingAddress'].toString();
       } else if (order['address'] != null) {
         address = order['address'].toString();
@@ -975,17 +1188,50 @@ class _OrdersAdminState extends State<OrdersAdmin> {
       }
     } catch (e) {
       address = '';
+      if (collection == 'reservations') {
+        phone = '';
+      }
     }
 
-    final String phone = (order['phone'] ?? '').toString();
-    final dynamic ts = order['timestamp'] ?? order['createdAt'];
-    final List<Map<String, dynamic>> items = (order['items'] is List)
-        ? (order['items'] as List)
+    // For orders, get phone from order data
+    if (collection != 'reservations') {
+      phone = (order['phone'] ?? '').toString();
+    }
+    
+    final dynamic ts = order['timestamp'] ?? order['createdAt'] ?? order['pickupDate'];
+    
+    // Handle items differently for orders vs reservations
+    List<Map<String, dynamic>> items = [];
+    if (collection == 'reservations') {
+      // Reservations have items array or single pet data
+      if (order['items'] != null && order['items'] is List) {
+        items = (order['items'] as List)
             .where((e) => e is Map)
             .map<Map<String, dynamic>>(
                 (e) => Map<String, dynamic>.from(e as Map))
-            .toList()
-        : const [];
+            .toList();
+      } else {
+        // Fallback to single pet data
+        items = [
+          {
+            'name': order['petName'] ?? 'Pet',
+            'price': order['petPrice'] ?? order['totalAmount'] ?? '0',
+            'imageUrl': order['petImage'] ?? order['imageUrl'] ?? '',
+            'quantity': 1,
+            'productId': order['petId'] ?? '',
+          }
+        ];
+      }
+    } else {
+      // Orders have items array
+      items = (order['items'] is List)
+          ? (order['items'] as List)
+              .where((e) => e is Map)
+              .map<Map<String, dynamic>>(
+                  (e) => Map<String, dynamic>.from(e as Map))
+              .toList()
+          : const [];
+    }
 
     Color _statusColor(String s) {
       switch (s) {
@@ -1127,14 +1373,14 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                       child: _kv(
                                           AppLocalizations.of(context)!
                                               .statusPay,
-                                          statusPay)),
+                                          getPaymentStatusVN(statusPay, method, status))),
                                   if (!isNarrow) const SizedBox(width: 24),
                                   if (!isNarrow)
                                     Expanded(
                                         child: _kv(
                                             AppLocalizations.of(context)!
                                                 .paymentMethod,
-                                            method)),
+                                            getPaymentMethodVN(method))),
                                 ],
                               ),
                               if (isNarrow) const SizedBox(height: 8),
@@ -1144,7 +1390,7 @@ class _OrdersAdminState extends State<OrdersAdmin> {
                                       child: _kv(
                                           AppLocalizations.of(context)!
                                               .paymentMethod,
-                                          method))
+                                          getPaymentMethodVN(method)))
                                 ]),
                               const SizedBox(height: 8),
                               Row(
@@ -1378,6 +1624,19 @@ class _OrdersAdminState extends State<OrdersAdmin> {
   Future<void> _createShipmentManually(Map<String, dynamic> order) async {
     final orderId = (order['orderId'] ?? order['id'] ?? '').toString();
     final collection = order['collection'] ?? 'orders';
+
+    // Skip shipment creation for store pickup (reservations)
+    if (collection == 'reservations') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Đơn đặt tại cửa hàng không cần tạo vận đơn'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
 
     // Get address
     String address = '';

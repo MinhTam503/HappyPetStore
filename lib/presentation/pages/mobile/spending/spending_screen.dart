@@ -7,6 +7,8 @@ import 'package:pet_shop/presentation/bloc/spending/spending_bloc.dart';
 import 'package:pet_shop/presentation/bloc/spending/spending_event.dart';
 import 'package:pet_shop/presentation/bloc/spending/spending_state.dart';
 import 'package:pet_shop/presentation/pages/mobile/order/your_order_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pet_shop/presentation/pages/mobile/reservation/my_reservations_screen.dart';
 
 class SpendingScreen extends StatefulWidget {
   final String userId;
@@ -452,76 +454,124 @@ class _SpendingScreenState extends State<SpendingScreen>
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          // Order header
-          ListTile(
-            title: Text(
-              '${l10n?.orderLabel ?? 'Đơn hàng'} #${order.orderId.substring(0, 8)}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              _formatDateTime(order.timestamp),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-            trailing: Text(
-              CurrencyHelper.formatVND(order.amount),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+      child: InkWell(
+        onTap: () {
+          // Close bottom sheet and show order/reservation details
+          Navigator.pop(context);
+          _showOrderOrReservationDetails(order);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          children: [
+            // Order header
+            ListTile(
+              title: Text(
+                '${l10n?.orderLabel ?? 'Đơn hàng'} #${order.orderId.substring(0, 8)}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                _formatDateTime(order.timestamp),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              trailing: Text(
+                CurrencyHelper.formatVND(order.amount),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
-          ),
-          const Divider(height: 1),
+            const Divider(height: 1),
 
-          // Pets in order
-          ...order.pets.map((pet) => ListTile(
-                leading: pet.imageUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          pet.imageUrl!,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+            // Pets in order
+            if (order.pets.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Không có thông tin thú cưng',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+              )
+            else
+              ...order.pets.map((pet) => ListTile(
+                    leading: pet.imageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              pet.imageUrl!,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 50,
+                                height: 50,
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.pets),
+                              ),
+                            ),
+                          )
+                        : Container(
                             width: 50,
                             height: 50,
-                            color: Colors.grey.shade200,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             child: const Icon(Icons.pets),
                           ),
-                        ),
-                      )
-                    : Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.pets),
-                      ),
-                title: Text(pet.name),
-                // subtitle: Text('${l10n?.quantityLabel ?? 'SL'}: ${pet.quantity}'),
-                trailing: Text(
-                  CurrencyHelper.formatVND(pet.price),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                onTap: () {
-                  // Show order details
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => YourOrderScreen(initialOrderId: order.orderId),
+                    title: Text(pet.name),
+                    // subtitle: Text('${l10n?.quantity ?? 'SL'}: ${pet.quantity}'),
+                    trailing: Text(
+                      CurrencyHelper.formatVND(pet.price),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  );
-                },
-              )),
-        ],
+                  )),
+          ],
+        ),
       ),
     );
   }
+
+  Future<void> _showOrderOrReservationDetails(OrderItem order) async {
+    // Check if this is a reservation or order by querying both collections
+    try {
+      final reservationDoc = await FirebaseFirestore.instance
+          .collection('reservations')
+          .doc(order.orderId)
+          .get();
+
+      if (reservationDoc.exists) {
+        // It's a reservation - navigate to MyReservationsScreen with reservationId
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MyReservationsScreen(
+              initialReservationId: order.orderId,
+            ),
+          ),
+        );
+      } else {
+        // It's an order - navigate to YourOrderScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => YourOrderScreen(initialOrderId: order.orderId),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error checking order type: $e');
+      // Default to order screen on error
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => YourOrderScreen(initialOrderId: order.orderId),
+        ),
+      );
+    }
+  }
+
+
 
   String _formatDateTime(DateTime dt) {
     return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} • ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';

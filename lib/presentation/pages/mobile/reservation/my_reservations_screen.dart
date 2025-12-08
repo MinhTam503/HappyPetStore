@@ -13,10 +13,12 @@ import 'package:pet_shop/presentation/bloc/reservation/reservation_state.dart';
 /// My Reservations Screen - User view their reservations
 class MyReservationsScreen extends StatefulWidget {
   final bool isEmbedded; // If true, hide AppBar (used in tabs)
+  final String? initialReservationId; // If provided, auto-show details dialog
   
   const MyReservationsScreen({
     Key? key,
     this.isEmbedded = false,
+    this.initialReservationId,
   }) : super(key: key);
 
   @override
@@ -24,6 +26,8 @@ class MyReservationsScreen extends StatefulWidget {
 }
 
 class _MyReservationsScreenState extends State<MyReservationsScreen> {
+  bool _hasShownInitialDialog = false;
+  
   @override
   void initState() {
     super.initState();
@@ -31,6 +35,22 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
     if (userId != null) {
       context.read<ReservationBloc>().add(LoadUserReservations(userId));
     }
+  }
+  
+  void _showInitialDialogIfNeeded(List<ReservationModel> reservations, AppLocalizations l10n) {
+    if (_hasShownInitialDialog || widget.initialReservationId == null) return;
+    
+    final targetReservation = reservations.firstWhere(
+      (r) => r.id == widget.initialReservationId,
+      orElse: () => reservations.first,
+    );
+    
+    _hasShownInitialDialog = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showReservationDetails(targetReservation, l10n);
+      }
+    });
   }
 
   @override
@@ -83,6 +103,9 @@ class _MyReservationsScreenState extends State<MyReservationsScreen> {
                 ),
               );
             }
+            
+            // Auto-show dialog if initialReservationId is provided
+            _showInitialDialogIfNeeded(state.reservations, l10n);
 
             return RefreshIndicator(
               onRefresh: () async {

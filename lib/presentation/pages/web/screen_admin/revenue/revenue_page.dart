@@ -16,8 +16,8 @@ class RevenuePage extends StatefulWidget {
 class _RevenuePageState extends State<RevenuePage> {
   final CollectionReference ordersCollection =
       FirebaseFirestore.instance.collection('orders');
-  final CollectionReference ordersWebCollection =
-      FirebaseFirestore.instance.collection('ordersWeb');
+  final CollectionReference reservationsCollection =
+      FirebaseFirestore.instance.collection('reservations');
 
   // Add ScrollController for horizontal scrolling
   final ScrollController _scrollController = ScrollController();
@@ -28,7 +28,7 @@ class _RevenuePageState extends State<RevenuePage> {
   double totalRevenue = 0.0; // Biến lưu tổng doanh thu
   String revenueUnit = '₫'; // Track unit for chart display
   String statisticType = 'month'; // 'month' hoặc 'day'
-  String dataSource = 'all'; // 'all', 'orders', 'ordersWeb'
+  String dataSource = 'all'; // always 'all' (orders + reservations)
   DateTime? selectedDate;
   int selectedYear = DateTime.now().year;
   DateTimeRange? selectedRange;
@@ -211,22 +211,20 @@ class _RevenuePageState extends State<RevenuePage> {
 
   Future<void> fetchRevenueData(int month,
       {int? year, DateTimeRange? range}) async {
-    // Lấy dữ liệu từ collection dựa trên dataSource được chọn
+    // Lấy dữ liệu từ orders và reservations
     List<QuerySnapshot> snapshots = [];
 
-    if (dataSource == 'all' || dataSource == 'orders') {
-      QuerySnapshot ordersSnapshot = await ordersCollection
-          .where('statusOrder', isEqualTo: 'Completed')
-          .get();
-      snapshots.add(ordersSnapshot);
-    }
+    // Fetch orders
+    QuerySnapshot ordersSnapshot = await ordersCollection
+        .where('statusOrder', isEqualTo: 'Completed')
+        .get();
+    snapshots.add(ordersSnapshot);
 
-    if (dataSource == 'all' || dataSource == 'ordersWeb') {
-      QuerySnapshot ordersWebSnapshot = await ordersWebCollection
-          .where('statusOrder', isEqualTo: 'Completed')
-          .get();
-      snapshots.add(ordersWebSnapshot);
-    }
+    // Fetch reservations
+    QuerySnapshot reservationsSnapshot = await reservationsCollection
+        .where('status', isEqualTo: 'completed')
+        .get();
+    snapshots.add(reservationsSnapshot);
 
     Map<String, double> revenueData = {};
     double total = 0.0;
@@ -243,10 +241,13 @@ class _RevenuePageState extends State<RevenuePage> {
     }
 
     // Xử lý dữ liệu từ tất cả các snapshots
-    for (var snapshot in snapshots) {
+    for (int snapIdx = 0; snapIdx < snapshots.length; snapIdx++) {
+      final snapshot = snapshots[snapIdx];
+      final isReservation = snapIdx == 1; // Second snapshot is reservations
+      
       for (var doc in snapshot.docs) {
         DateTime date;
-        var timestamp = doc['timestamp'];
+        var timestamp = isReservation ? doc['createdAt'] : doc['timestamp'];
         if (timestamp is Timestamp) {
           date = timestamp.toDate();
         } else if (timestamp is String) {
@@ -254,6 +255,17 @@ class _RevenuePageState extends State<RevenuePage> {
         } else {
           continue;
         }
+        
+        // For completed reservations, prefer completedAt if available
+        if (isReservation) {
+          final completedAt = doc['completedAt'];
+          if (completedAt is Timestamp) {
+            date = completedAt.toDate();
+          } else if (completedAt is String) {
+            date = DateTime.parse(completedAt);
+          }
+        }
+        
         double totalAmount = double.parse(doc['totalAmount'].toString());
         if (range != null) {
           // Fix: Use proper date comparison with time normalization
@@ -337,60 +349,56 @@ class _RevenuePageState extends State<RevenuePage> {
       date = DateTime(year, m, d);
     }
 
-    // Lấy dữ liệu từ collection dựa trên dataSource được chọn
+    // Lấy dữ liệu từ cả orders và reservations
     final List<Map<String, dynamic>> orders = [];
 
-    if (dataSource == 'all' || dataSource == 'orders') {
-      final snap = await ordersCollection
-          .where('statusOrder', isEqualTo: 'Completed')
-          .get();
+    // Fetch orders
+    final snap = await ordersCollection
+        .where('statusOrder', isEqualTo: 'Completed')
+        .get();
 
-      // Xử lý orders từ collection orders
-      for (final doc in snap.docs) {
-        final data = (doc.data() as Map).cast<String, dynamic>();
-        final ts = data['timestamp'];
-        DateTime docDate;
-        if (ts is Timestamp) {
-          docDate = ts.toDate();
-        } else if (ts is String) {
-          docDate = DateTime.tryParse(ts) ?? DateTime(1970);
-        } else {
-          continue;
-        }
-        if (date != null &&
-            docDate.year == date.year &&
-            docDate.month == date.month &&
-            docDate.day == date.day) {
-          data['source'] = 'orders'; // Đánh dấu nguồn
-          orders.add(data);
-        }
+    for (final doc in snap.docs) {
+      final data = (doc.data() as Map).cast<String, dynamic>();
+      final ts = data['timestamp'];
+      DateTime docDate;
+      if (ts is Timestamp) {
+        docDate = ts.toDate();
+      } else if (ts is String) {
+        docDate = DateTime.tryParse(ts) ?? DateTime(1970);
+      } else {
+        continue;
+      }
+      if (date != null &&
+          docDate.year == date.year &&
+          docDate.month == date.month &&
+          docDate.day == date.day) {
+        data['source'] = 'order';
+        orders.add(data);
       }
     }
 
-    if (dataSource == 'all' || dataSource == 'ordersWeb') {
-      final snapWeb = await ordersWebCollection
-          .where('statusOrder', isEqualTo: 'Completed')
-          .get();
+    // Fetch reservations
+    final snapRes = await reservationsCollection
+        .where('status', isEqualTo: 'completed')
+        .get();
 
-      // Xử lý orders từ collection ordersWeb
-      for (final doc in snapWeb.docs) {
-        final data = (doc.data() as Map).cast<String, dynamic>();
-        final ts = data['timestamp'];
-        DateTime docDate;
-        if (ts is Timestamp) {
-          docDate = ts.toDate();
-        } else if (ts is String) {
-          docDate = DateTime.tryParse(ts) ?? DateTime(1970);
-        } else {
-          continue;
-        }
-        if (date != null &&
-            docDate.year == date.year &&
-            docDate.month == date.month &&
-            docDate.day == date.day) {
-          data['source'] = 'ordersWeb'; // Đánh dấu nguồn
-          orders.add(data);
-        }
+    for (final doc in snapRes.docs) {
+      final data = (doc.data() as Map).cast<String, dynamic>();
+      final ts = data['completedAt'] ?? data['createdAt'];
+      DateTime docDate;
+      if (ts is Timestamp) {
+        docDate = ts.toDate();
+      } else if (ts is String) {
+        docDate = DateTime.tryParse(ts) ?? DateTime(1970);
+      } else {
+        continue;
+      }
+      if (date != null &&
+          docDate.year == date.year &&
+          docDate.month == date.month &&
+          docDate.day == date.day) {
+        data['source'] = 'reservation';
+        orders.add(data);
       }
     }
 
@@ -515,54 +523,52 @@ class _RevenuePageState extends State<RevenuePage> {
                             children: [
                               Row(
                                 children: [
-                                  if (dataSource == 'all') ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: (source == 'ordersWeb'
-                                                ? Colors.green.shade50
-                                                : Colors.green.shade50)
-                                            .withOpacity(.6),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withOpacity(.35),
-                                          width: 0.6,
-                                        ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: (source == 'reservation'
+                                              ? Colors.orange.shade50
+                                              : Colors.blue.shade50)
+                                          .withOpacity(.6),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: (source == 'reservation'
+                                                ? Colors.orange
+                                                : Colors.blue)
+                                            .withOpacity(.35),
+                                        width: 0.6,
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            source == 'ordersWeb'
-                                                ? Icons.web
-                                                : Icons.phone_android,
-                                            size: 14,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          source == 'reservation'
+                                              ? Icons.store
+                                              : Icons.local_shipping,
+                                          size: 14,
+                                          color: source == 'reservation'
+                                              ? Colors.orange.shade700
+                                              : Colors.blue.shade700,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          source == 'reservation'
+                                              ? l10n.storePickup
+                                              : l10n.homeDelivery,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .primary,
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            source == 'ordersWeb'
-                                                ? 'Web'
-                                                : 'Mobile',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 8),
-                                  ],
+                                  ),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       email,
@@ -783,96 +789,63 @@ class _RevenuePageState extends State<RevenuePage> {
     );
   }
 
-  String _getDataSourceTitle() {
-    final l10n = AppLocalizations.of(context)!;
-    switch (dataSource) {
-      case 'orders':
-        return '(${l10n.mobileApp})';
-      case 'ordersWeb':
-        return '(${l10n.web})';
-      case 'all':
-      default:
-        return '(${l10n.mobileApp} & ${l10n.web})';
-    }
-  }
-
   String _getRevenueTitle() {
     final l10n = AppLocalizations.of(context)!;
-    switch (dataSource) {
-      case 'orders':
-        return l10n.totalRevenueMobile;
-      case 'ordersWeb':
-        return l10n.totalRevenueWeb;
-      case 'all':
-      default:
-        return l10n.totalRevenueAll;
-    }
+    return l10n.totalRevenueAll;
   }
 
   String _getChartTitle() {
     final l10n = AppLocalizations.of(context)!;
-    switch (dataSource) {
-      case 'orders':
-        return l10n.dailyRevenueOverviewMobile;
-      case 'ordersWeb':
-        return l10n.dailyRevenueOverviewWeb;
-      case 'all':
-      default:
-        return l10n.dailyRevenueOverviewAll;
-    }
+    return l10n.dailyRevenueOverviewAll;
   }
 
   Future<void> showOrdersForDay(String day) async {
     final date = DateTime(selectedYear, selectedMonth, int.tryParse(day) ?? 1);
 
-    // Lấy dữ liệu từ collection dựa trên dataSource được chọn
+    // Lấy dữ liệu từ cả orders và reservations
     final List<Map<String, dynamic>> orders = [];
 
-    if (dataSource == 'all' || dataSource == 'orders') {
-      final snap = await ordersCollection
-          .where('statusOrder', isEqualTo: 'Completed')
-          .get();
+    // Fetch orders
+    final snap = await ordersCollection
+        .where('statusOrder', isEqualTo: 'Completed')
+        .get();
 
-      // Xử lý orders từ collection orders
-      for (final doc in snap.docs) {
-        final data = (doc.data() as Map).cast<String, dynamic>();
-        final ts = data['timestamp'];
-        DateTime d;
-        if (ts is Timestamp) {
-          d = ts.toDate();
-        } else if (ts is String) {
-          d = DateTime.tryParse(ts) ?? DateTime(1970);
-        } else {
-          continue;
-        }
-        if (d.year == date.year && d.month == date.month && d.day == date.day) {
-          data['source'] = 'orders'; // Đánh dấu nguồn
-          orders.add(data);
-        }
+    for (final doc in snap.docs) {
+      final data = (doc.data() as Map).cast<String, dynamic>();
+      final ts = data['timestamp'];
+      DateTime d;
+      if (ts is Timestamp) {
+        d = ts.toDate();
+      } else if (ts is String) {
+        d = DateTime.tryParse(ts) ?? DateTime(1970);
+      } else {
+        continue;
+      }
+      if (d.year == date.year && d.month == date.month && d.day == date.day) {
+        data['source'] = 'order';
+        orders.add(data);
       }
     }
 
-    if (dataSource == 'all' || dataSource == 'ordersWeb') {
-      final snapWeb = await ordersWebCollection
-          .where('statusOrder', isEqualTo: 'Completed')
-          .get();
+    // Fetch reservations
+    final snapRes = await reservationsCollection
+        .where('status', isEqualTo: 'completed')
+        .get();
 
-      // Xử lý orders từ collection ordersWeb
-      for (final doc in snapWeb.docs) {
-        final data = (doc.data() as Map).cast<String, dynamic>();
-        final ts = data['timestamp'];
-        DateTime d;
-        if (ts is Timestamp) {
-          d = ts.toDate();
-        } else if (ts is String) {
-          d = DateTime.tryParse(ts) ?? DateTime(1970);
-        } else {
-          continue;
-        }
-        if (d.year == date.year && d.month == date.month && d.day == date.day) {
-          data['source'] = 'ordersWeb'; // Đánh dấu nguồn
-          orders.add(data);
-        }
+    for (final doc in snapRes.docs) {
+      final data = (doc.data() as Map).cast<String, dynamic>();
+      final ts = data['completedAt'] ?? data['createdAt'];
+      DateTime d;
+      if (ts is Timestamp) {
+        d = ts.toDate();
+      } else if (ts is String) {
+        d = DateTime.tryParse(ts) ?? DateTime(1970);
+      } else {
+        continue;
+      }
+      if (d.year == date.year && d.month == date.month && d.day == date.day) {
+        data['source'] = 'reservation';
+        orders.add(data);
       }
     }
 
@@ -991,72 +964,50 @@ class _RevenuePageState extends State<RevenuePage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (dataSource == 'all') ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: source == 'ordersWeb'
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.1)
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .secondary
-                                                .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: source == 'ordersWeb'
-                                              ? Theme.of(context)
-                                                  .colorScheme
-                                                  .primary
-                                                  .withOpacity(0.3)
-                                              : Theme.of(context)
-                                                  .colorScheme
-                                                  .secondary
-                                                  .withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            source == 'ordersWeb'
-                                                ? Icons.web
-                                                : Icons.phone_android,
-                                            size: 16,
-                                            color: source == 'ordersWeb'
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .primary
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .primary,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            source == 'ordersWeb'
-                                                ? 'Web'
-                                                : 'Mobile',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: source == 'ordersWeb'
-                                                  ? Theme.of(context)
-                                                      .colorScheme
-                                                      .primary
-                                                  : Theme.of(context)
-                                                      .colorScheme
-                                                      .primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: source == 'reservation'
+                                          ? Colors.orange.withOpacity(0.1)
+                                          : Colors.blue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: source == 'reservation'
+                                            ? Colors.orange.withOpacity(0.3)
+                                            : Colors.blue.withOpacity(0.3),
+                                        width: 1,
                                       ),
                                     ),
-                                    const SizedBox(height: 12),
-                                  ],
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          source == 'reservation'
+                                              ? Icons.store
+                                              : Icons.local_shipping,
+                                          size: 16,
+                                          color: source == 'reservation'
+                                              ? Colors.orange.shade700
+                                              : Colors.blue.shade700,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          source == 'reservation'
+                                              ? l10n.storePickup
+                                              : l10n.homeDelivery,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: source == 'reservation'
+                                                ? Colors.orange.shade700
+                                                : Colors.blue.shade700,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
                                   _rowIconText(Icons.email, email),
                                   const SizedBox(height: 10),
                                   _rowIconText(Icons.attach_money,
@@ -1519,41 +1470,6 @@ class _RevenuePageState extends State<RevenuePage> {
               // Bộ lọc thống kê
               Row(
                 children: [
-                  Text(l10n.dataSource,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).textTheme.bodyLarge?.color)),
-                  const SizedBox(width: 8),
-                  DropdownButton<String>(
-                    value: dataSource,
-                    dropdownColor: Theme.of(context).cardColor,
-                    style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyLarge?.color),
-                    items: [
-                      DropdownMenuItem(value: 'all', child: Text(l10n.all)),
-                      DropdownMenuItem(
-                          value: 'orders', child: Text(l10n.mobileApp)),
-                      DropdownMenuItem(
-                          value: 'ordersWeb', child: Text(l10n.web)),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        dataSource = value;
-                        // Reset dữ liệu khi thay đổi nguồn
-                        dailyRevenue = {};
-                        rangeDays = [];
-                      });
-                      // Fetch lại dữ liệu với nguồn mới
-                      if (statisticType == 'month') {
-                        fetchRevenueData(selectedMonth, year: selectedYear);
-                      } else if (selectedRange != null) {
-                        fetchRevenueData(selectedMonth,
-                            year: selectedYear, range: selectedRange);
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 16),
                   Text(l10n.year,
                       style: TextStyle(
                           fontWeight: FontWeight.w500,

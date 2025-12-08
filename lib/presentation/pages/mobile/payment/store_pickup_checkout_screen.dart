@@ -284,6 +284,13 @@ class _StorePickupCheckoutScreenState extends State<StorePickupCheckoutScreen> {
             if (result != null && mounted) {
               // Verify VNPay callback immediately
               context.read<VnpayBloc>().add(VerifyVnpayCallback(result));
+            } else if (mounted) {
+              // User cancelled or closed payment window
+              NotificationHelper.showInfo(
+                context,
+                'Đã hủy thanh toán',
+                'Bạn có thể thử lại khi sẵn sàng.',
+              );
             }
           } else if (state is VnpayPaymentVerified) {
             if (state.isSuccess) {
@@ -356,11 +363,13 @@ class _StorePickupCheckoutScreenState extends State<StorePickupCheckoutScreen> {
                 );
               }
             } else {
-              // Payment failed
-              NotificationHelper.showError(
+              // Payment failed or cancelled
+              await DialogHelper.safeHideLoadingDialog();
+              if (!mounted) return;
+              NotificationHelper.showWarning(
                 context,
-                'Thanh toán thất bại',
-                'Giao dịch không thành công.',
+                'Thanh toán chưa hoàn tất',
+                'Đơn đặt trước chưa được tạo. Bạn có thể thử lại bất cứ lúc nào.',
               );
             }
           } else if (state is VnpayError) {
