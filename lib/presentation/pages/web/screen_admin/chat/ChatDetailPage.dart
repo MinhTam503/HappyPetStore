@@ -7,9 +7,9 @@ import 'components/date_chip.dart';
 import 'components/message_row.dart';
 
 class ChatDetailPage extends StatefulWidget {
-  final String customerEmail;
+  final String customerId; // Đổi từ customerEmail sang customerId (uid)
 
-  const ChatDetailPage({super.key, required this.customerEmail});
+  const ChatDetailPage({super.key, required this.customerId});
 
   @override
   State<ChatDetailPage> createState() => _ChatDetailPageState();
@@ -19,10 +19,38 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Thông tin shop
-  final String shopEmail = 'shop@gmail.com';
+  // Thông tin shop - must match CustomerChatRepositoryImpl.shopId
+  final String shopEmail = 'shop_admin';
   final String shopImage =
       'https://cdn-icons-png.flaticon.com/512/616/616408.png';
+  
+  String _customerImageUrl = '';
+  String _customerName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomerAvatar();
+  }
+
+  Future<void> _loadCustomerAvatar() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.customerId) // Sử dụng customerId (uid) thay vì query bằng email
+          .get();
+      
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        setState(() {
+          _customerImageUrl = userData['imageUrl'] ?? '';
+          _customerName = userData['displayName'] ?? userData['name'] ?? userData['email'] ?? 'Customer';
+        });
+      }
+    } catch (e) {
+      // Keep empty if error
+    }
+  }
 
   @override
   void dispose() {
@@ -36,20 +64,33 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     if (message.isEmpty) return;
 
     final conversationRef = FirebaseFirestore.instance
-        .collection('conversations')
-        .doc(widget.customerEmail);
+        .collection('customerConversations')
+        .doc(widget.customerId); // Sử dụng customerId thay vì customerEmail
 
-    await conversationRef.collection('messages').add({
-      'message': message,
-      'sender': shopEmail,
-      'imageUrl': shopImage,
+    final messageDoc = conversationRef.collection('messages').doc();
+    await messageDoc.set({
+      'senderId': shopEmail,
+      'text': message,
+      'imageUrl': null,
       'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'reactions': {},
     });
 
-    await conversationRef.set({
-      'lastMessage': message,
-      'timestamp': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    // Update conversation metadata
+    final conversationDoc = await conversationRef.get();
+    if (conversationDoc.exists) {
+      final data = conversationDoc.data() as Map<String, dynamic>;
+      final unreadCount = Map<String, int>.from(data['unreadCount'] ?? {});
+      unreadCount[widget.customerId] = (unreadCount[widget.customerId] ?? 0) + 1; // Sử dụng customerId
+      
+      await conversationRef.update({
+        'lastMessage': message,
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'lastMessageSenderId': shopEmail,
+        'unreadCount': unreadCount,
+      });
+    }
 
     _controller.clear();
 
@@ -84,8 +125,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     final messages = FirebaseFirestore.instance
-        .collection('conversations')
-        .doc(widget.customerEmail)
+        .collection('customerConversations')
+        .doc(widget.customerId) // Sử dụng customerId thay vì customerEmail
         .collection('messages')
         .orderBy('timestamp')
         .snapshots();
@@ -99,23 +140,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           children: [
             const SizedBox(width: 8),
             CircleAvatar(
+              backgroundImage: _customerImageUrl.isNotEmpty 
+                  ? NetworkImage(_customerImageUrl)
+                  : null,
               backgroundColor: Theme.of(context)
                                     .colorScheme.primary.withOpacity(.12),
-              child: Text(
-                widget.customerEmail.isNotEmpty
-                    ? widget.customerEmail[0].toUpperCase()
-                    : '?',
-                style:  TextStyle(
-                  color: Theme.of(context)
-                                    .colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _customerImageUrl.isEmpty
+                  ? Icon(
+                      Icons.person,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                widget.customerEmail,
+                _customerName.isNotEmpty ? _customerName : 'Customer', // Hiển thị tên thay vì uid
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -165,7 +205,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final msg = docs[index];
-                      final isMe = msg['sender'] == shopEmail;
+                      final isMe = msg['senderId'] == shopEmail;
                       final ts = msg['timestamp'];
                       final showDateHeader = index == 0
                           ? true
@@ -182,8 +222,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           MessageRow(
                             isMe: isMe,
                             avatarUrl:
-                                isMe ? shopImage : (msg['imageUrl'] ?? ''),
-                            text: (msg['message'] ?? '').toString(),
+                                isMe ? shopImage : _customerImageUrl,
+                            text: (msg['text'] ?? '').toString(),
                             time: _fmtTime(ts),
                           ),
                         ],

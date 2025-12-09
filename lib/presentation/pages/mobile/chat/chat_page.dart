@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:pet_shop/auth/auth_service.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/data/repositories/customer_chat_repository_impl.dart';
 import 'package:pet_shop/domain/entities/chat_entities.dart';
 import 'package:pet_shop/presentation/bloc/customer_chat/customer_chat_bloc.dart';
@@ -41,6 +41,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
   Map<String, dynamic>? user;
   bool _isUploading = false;
   String? _conversationId;
+  String? _customerId; // Lưu customerId riêng
 
   @override
   void initState() {
@@ -49,22 +50,27 @@ class _ChatPageContentState extends State<ChatPageContent> {
   }
 
   Future<void> _initializeChat() async {
+    // Lấy user info và user ID giống như favorite_screen
+    final userManager = UserManager();
+    await userManager.initialize();
+    
     final userData = await authService.value.getUserInfo();
+    final customerId = await userManager.getUserIdForOperations();
+    
     setState(() {
       user = userData;
+      _customerId = customerId;
+      _conversationId = customerId;
     });
 
-    if (user != null && user!['email'] != null) {
-      final customerId = user!['email'];
-      _conversationId = customerId;
-
+    if (_customerId != null && user != null) {
       // Create or get conversation
       final repository = CustomerChatRepositoryImpl();
       await repository.getOrCreateConversation(
-        customerId: customerId,
+        customerId: _customerId!,
         participantsInfo: {
-          customerId: {
-            'name': user!['name'] ?? 'Customer',
+          _customerId!: {
+            'name': user!['displayName'] ?? user!['name'] ?? 'Customer',
             'imageUrl': user!['imageUrl'] ?? '',
           },
           'shop_admin': {
@@ -99,12 +105,12 @@ class _ChatPageContentState extends State<ChatPageContent> {
 
   void _sendMessage() {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _conversationId == null || user == null) return;
+    if (text.isEmpty || _conversationId == null || _customerId == null) return;
 
     context.read<CustomerChatBloc>().add(
           SendCustomerMessage(
             conversationId: _conversationId!,
-            senderId: user!['email'],
+            senderId: _customerId!, // Sử dụng customerId (uid)
             text: text,
           ),
         );
@@ -114,7 +120,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
   }
 
   Future<void> _pickAndSendImage() async {
-    if (_conversationId == null || user == null) return;
+    if (_conversationId == null || _customerId == null) return;
 
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -127,11 +133,10 @@ class _ChatPageContentState extends State<ChatPageContent> {
       setState(() => _isUploading = true);
 
       // Upload to Firebase Storage
-      final customerEmail = user!['email'];
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('chat_images')
-          .child('${customerEmail}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+          .child('${_customerId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
       await storageRef.putFile(File(image.path));
       final imageUrl = await storageRef.getDownloadURL();
@@ -141,7 +146,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
         context.read<CustomerChatBloc>().add(
               SendCustomerImageMessage(
                 conversationId: _conversationId!,
-                senderId: user!['email'],
+                senderId: _customerId!, // Sử dụng customerId (uid)
                 imageUrl: imageUrl,
               ),
             );
@@ -172,13 +177,13 @@ class _ChatPageContentState extends State<ChatPageContent> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    if (user == null || _conversationId == null) {
+    if (user == null || _conversationId == null || _customerId == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -235,7 +240,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final msg = messages[index];
-                      final isMe = msg.senderId == user!['email'];
+                      final isMe = msg.senderId == _customerId; // Sử dụng customerId để so sánh
                       final hasImage = msg.imageUrl != null && msg.imageUrl!.isNotEmpty;
                       final hasText = msg.text != null && msg.text!.isNotEmpty;
 
@@ -325,7 +330,7 @@ class _ChatPageContentState extends State<ChatPageContent> {
             ),
           ),
           if (isMe) const SizedBox(width: 8),
-          if (isMe) _buildAvatar(user!['email']),
+          if (isMe) _buildAvatar(_customerId!), // Sử dụng customerId
         ],
       ),
     );

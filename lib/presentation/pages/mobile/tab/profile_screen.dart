@@ -8,6 +8,7 @@ import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
+import 'package:pet_shop/helpers/phone_utils.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/pages/mobile/auth/change_password_page.dart';
 import 'package:pet_shop/presentation/pages/mobile/chat/chat_page.dart';
@@ -100,7 +101,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         (userInfo?['displayName'] as String?)?.trim().isNotEmpty == true
             ? userInfo!['displayName']
             : 'Guest';
+    
+    // Handle virtual email: if email ends with @petshop.local, show phone instead
     String email = (userInfo?['email'] as String?) ?? '';
+    String displayText = email;
+    
+    if (email.endsWith('@petshop.local')) {
+      // Virtual email - extract and show phone number
+      final phone = (userInfo?['phone'] ?? userInfo?['phoneNumber']) as String?;
+      if (phone != null && phone.isNotEmpty) {
+        // Convert +84 format to 0 format for display
+        displayText = PhoneUtils.toDisplay09(phone);
+      } else {
+        displayText = '';
+      }
+    }
+    
     String? imageUrl = (userInfo?['imageUrl'] as String?);
 
     return Scaffold(
@@ -131,7 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 0),
                   child: _ProfileHeader(
                     displayName: displayName,
-                    email: email,
+                    email: displayText,
                     imageUrl: imageUrl,
                   ),
                 ),

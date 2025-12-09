@@ -374,12 +374,25 @@ class _LoginPageNewState extends State<LoginPageNew>
           .collection("users")
           .doc(user.uid)
           .get();
-
-      String role = "user";
-      if (userDoc.exists) {
-        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-        role = userData['role'] ?? 'user';
+      // If the social account hasn't been registered in our system yet,
+      // block login and ask the user to register first.
+      if (!userDoc.exists) {
+        await DialogHelper.hideLoadingDialog(context);
+        // Sign out the temporary Firebase session from social provider
+        try {
+          await authService.value.signOut();
+        } catch (e) {
+          debugPrint('Error signing out after unregistered social login: $e');
+        }
+        if (mounted) {
+          _showSnackbar("Tài khoản chưa tồn tại. Vui lòng đăng ký trước!");
+        }
+        return;
       }
+
+      // Proceed with normal login flow for existing users
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      String role = userData['role'] ?? 'user';
 
       await DialogHelper.hideLoadingDialog(context);
 

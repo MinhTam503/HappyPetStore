@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
+import 'package:pet_shop/auth/auth_service.dart';
 import 'package:pet_shop/auth/stripe_helper.dart';
 import 'package:pet_shop/core/di/recommendation_di.dart';
 import 'package:pet_shop/core/services/onboarding_service.dart';
@@ -363,6 +364,19 @@ class MyApp extends StatelessWidget {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
+              // Tự động đóng bàn phím khi tap ra ngoài
+              builder: (context, child) {
+                return GestureDetector(
+                  onTap: () {
+                    // Đóng bàn phím khi tap vào vùng trống
+                    final currentFocus = FocusScope.of(context);
+                    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    }
+                  },
+                  child: child,
+                );
+              },
               onGenerateRoute: (settings) {
                 // Handle payment success URL with query parameters
                 if (settings.name != null &&
@@ -468,13 +482,13 @@ class MyApp extends StatelessWidget {
                             settings: settings);
                       case 'chat':
                       case 'inbox':
-                        // /admin/chat/:email -> Chat detail; otherwise inbox
+                        // /admin/chat/:customerId -> Chat detail; otherwise inbox
                         if (section == 'chat' && segs.length >= 3) {
-                          final email =
+                          final customerId =
                               Uri.decodeComponent(segs.sublist(2).join('/'));
                           return MaterialPageRoute(
                               builder: (_) =>
-                                  ChatDetailPage(customerEmail: email),
+                                  ChatDetailPage(customerId: customerId),
                               settings: settings);
                         }
                         return MaterialPageRoute(
@@ -665,16 +679,20 @@ class MyApp extends StatelessWidget {
                                       debugPrint(
                                           ' User verified (email: ${user.emailVerified}, social: $isSocialLogin), navigating to BottomNavigator');
                                     }
-                                    return SeasonalEffectsOverlay(
-                                      child: const BottomNavigator(),
+                                    
+                                    // Ensure user document exists in Firestore
+                                    authService.value.ensureUserDocument(user);
+                                    
+                                    return const SeasonalEffectsOverlay(
+                                      child: BottomNavigator(),
                                     );
                                   } else {
                                     if (kDebugMode) {
                                       debugPrint(
                                           ' Email not verified and not social login, showing LoginOrRegister');
                                     }
-                                    return SeasonalEffectsOverlay(
-                                      child: const LoginOrRegister(),
+                                    return const SeasonalEffectsOverlay(
+                                      child: LoginOrRegister(),
                                     );
                                   }
                                 } else {
@@ -683,8 +701,8 @@ class MyApp extends StatelessWidget {
                                     debugPrint(
                                         ' User not authenticated, showing LoginOrRegister');
                                   }
-                                  return SeasonalEffectsOverlay(
-                                    child: const LoginOrRegister(),
+                                  return const SeasonalEffectsOverlay(
+                                    child: LoginOrRegister(),
                                   );
                                 }
                               },

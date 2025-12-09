@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pet_shop/auth/auth_service.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -87,29 +86,29 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
   void _sendOTP() async {
     if (!mounted) return;
 
-  final l10n = AppLocalizations.of(context);
-  DialogHelper.showLoadingDialog(context,
-    message: l10n?.otpError ?? 'Đang gửi OTP...'); // fallback until key generated
+    final l10n = AppLocalizations.of(context);
+    DialogHelper.showLoadingDialog(context,
+        message: l10n?.otpError ?? 'Đang gửi OTP...');
 
     try {
       await authService.value.verifyPhoneNumber(
         phoneNumber: widget.phoneNumber,
         verificationCompleted: (PhoneAuthCredential credential) async {
           if (mounted) {
-            DialogHelper.hideLoadingDialog(context);
+            await DialogHelper.hideLoadingDialog(context);
             await _verifyOTP(credential);
           }
         },
         verificationFailed: (FirebaseAuthException e) async {
           if (mounted) {
-            DialogHelper.hideLoadingDialog(context);
-      _showSnackbar(
-        "${l10n?.verificationFailed ?? 'Gửi OTP thất bại'}: ${e.message}");
+            await DialogHelper.hideLoadingDialog(context);
+            _showSnackbar(
+                "${l10n?.verificationFailed ?? 'Gửi OTP thất bại'}: ${e.message}");
           }
         },
         codeSent: (String verificationId, int? resendToken) async {
           if (mounted) {
-            DialogHelper.hideLoadingDialog(context);
+            await DialogHelper.hideLoadingDialog(context);
             setState(() {
               _verificationId = verificationId;
             });
@@ -126,8 +125,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
       );
     } catch (e) {
       if (mounted) {
-        DialogHelper.hideLoadingDialog(context);
-  _showSnackbar("${l10n?.otpError ?? 'Lỗi gửi OTP'}: $e");
+        await DialogHelper.hideLoadingDialog(context);
+        _showSnackbar("${l10n?.otpError ?? 'Lỗi gửi OTP'}: $e");
       }
     }
   }
@@ -141,15 +140,15 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
 
   Future<void> _verifyOTP(PhoneAuthCredential? credential) async {
     if (_currentOTP.length != 6 && credential == null) {
-  final l10n = AppLocalizations.of(context);
-  _showSnackbar(l10n?.verificationFailed ?? 'Vui lòng nhập 6 chữ số');
+      final l10n = AppLocalizations.of(context);
+      _showSnackbar(l10n?.verificationFailed ?? 'Vui lòng nhập 6 chữ số');
       return;
     }
 
     if (!mounted) return;
-  final l10n = AppLocalizations.of(context);
-  DialogHelper.showLoadingDialog(context,
-    message: l10n?.verificationFailed ?? 'Đang xác thực...');
+    final l10n = AppLocalizations.of(context);
+    DialogHelper.showLoadingDialog(context,
+        message: l10n?.verificationFailed ?? 'Đang xác thực...');
 
     try {
       PhoneAuthCredential finalCredential;
@@ -159,7 +158,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
       } else {
         if (_verificationId == null) {
           if (mounted) {
-            DialogHelper.hideLoadingDialog(context);
+            await DialogHelper.hideLoadingDialog(context);
             _showSnackbar(l10n?.verificationFailed ?? 'Lỗi xác thực. Vui lòng thử lại.');
           }
           return;
@@ -183,8 +182,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        DialogHelper.hideLoadingDialog(context);
-    String errorMessage = l10n?.verificationFailed ?? 'Xác thực thất bại';
+        await DialogHelper.hideLoadingDialog(context);
+        String errorMessage = l10n?.verificationFailed ?? 'Xác thực thất bại';
 
         switch (e.code) {
           case 'invalid-verification-code':
@@ -204,8 +203,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
       }
     } catch (e) {
       if (mounted) {
-        DialogHelper.hideLoadingDialog(context);
-    _showSnackbar("${l10n?.unknownErrorOccurred ?? 'Lỗi không xác định'}: $e");
+        await DialogHelper.hideLoadingDialog(context);
+        _showSnackbar("${l10n?.unknownErrorOccurred ?? 'Lỗi không xác định'}: $e");
       }
     }
   }
@@ -214,53 +213,76 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
     try {
       if (widget.registrationData == null) {
         await DialogHelper.hideLoadingDialog(context);
-    final l10n = AppLocalizations.of(context);
-    _showSnackbar(l10n?.missingRegistrationInfo ?? 'Thiếu thông tin đăng ký!');
+        final l10n = AppLocalizations.of(context);
+        _showSnackbar(l10n?.missingRegistrationInfo ?? 'Thiếu thông tin đăng ký!');
         return;
       }
 
       final String phone = widget.registrationData!['phone'];
+      final String password = widget.registrationData!['password'];
       final String name = widget.registrationData!['name'];
 
-      // Sign in (or create) using phone credential directly
-      UserCredential userCredential =
+      // Sign in using phone credential to verify OTP
+      UserCredential phoneCredential =
           await authService.value.signInWithPhoneCredential(credential);
 
-      final user = userCredential.user;
-      if (user != null) {
-        // Update Firestore user profile to align with phone-only account (no fake email)
-        await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-          "uid": user.uid,
-          "email": null,
-          "displayName": name,
-          "imageUrl": user.photoURL ??
-              "https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg",
-          "phone": phone,
-          "phoneNumber": user.phoneNumber ?? phone,
-          "provider": "phone",
-          "role": "user",
-          "address": [],
-          "dateOfBirth": null,
-          "gender": null,
-          "bio": null,
-          "createdAt": FieldValue.serverTimestamp(),
-          "updatedAt": FieldValue.serverTimestamp(),
-          "phoneVerified": true,
-        }, SetOptions(merge: true));
-
-        // Sign out to prevent auto-login after registration
-        await authService.value.signOut();
-
+      final phoneUser = phoneCredential.user;
+      if (phoneUser == null) {
+        await DialogHelper.hideLoadingDialog(context);
         if (mounted) {
-          DialogHelper.hideLoadingDialog(context);
-          Navigator.pop(context, true);
+          final l10n = AppLocalizations.of(context);
+          _showSnackbar(l10n?.registrationError ?? 'Xác thực OTP thất bại!');
         }
+        return;
+      }
+
+      // Create email from phone for password authentication
+      final emailFromPhone = '${phone.replaceAll('+', '').replaceAll(' ', '')}@petshop.local';
+
+      try {
+        // Link email/password to phone account
+        final emailCredential = EmailAuthProvider.credential(
+          email: emailFromPhone,
+          password: password,
+        );
+        await phoneUser.linkWithCredential(emailCredential);
+      } catch (linkError) {
+        debugPrint('⚠️ Error linking email/password: $linkError');
+        // If linking fails, user can still login via OTP
+      }
+
+      // Update Firestore user profile
+      await FirebaseFirestore.instance.collection("users").doc(phoneUser.uid).set({
+        "uid": phoneUser.uid,
+        "email": emailFromPhone,
+        "displayName": name,
+        "imageUrl": phoneUser.photoURL ??
+            "https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg",
+        "phone": phone,
+        "phoneNumber": phoneUser.phoneNumber ?? phone,
+        "provider": "phone",
+        "role": "user",
+        "address": [],
+        "dateOfBirth": null,
+        "gender": null,
+        "bio": null,
+        "createdAt": FieldValue.serverTimestamp(),
+        "updatedAt": FieldValue.serverTimestamp(),
+        "phoneVerified": true,
+      }, SetOptions(merge: true));
+
+      // Sign out to prevent auto-login after registration
+      await authService.value.signOut();
+
+      if (mounted) {
+        await DialogHelper.hideLoadingDialog(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        DialogHelper.hideLoadingDialog(context);
-    final l10n = AppLocalizations.of(context);
-    _showSnackbar("${l10n?.registrationError ?? 'Lỗi đăng ký'}: $e");
+        await DialogHelper.hideLoadingDialog(context);
+        final l10n = AppLocalizations.of(context);
+        _showSnackbar("${l10n?.registrationError ?? 'Lỗi đăng ký'}: $e");
       }
     }
   }
@@ -400,14 +422,19 @@ class _OtpVerificationPageState extends State<OtpVerificationPage>
                   activeColor: Colors.pink.shade300,
                   inactiveColor: Colors.grey.shade300,
                   selectedColor: Colors.pink.shade300,
+                  errorBorderColor: Colors.red,
                 ),
                 animationDuration: const Duration(milliseconds: 300),
                 enableActiveFill: true,
+                errorAnimationController: null,
+                beforeTextPaste: (text) {
+                  return true;
+                },
                 onCompleted: (value) {
                   setState(() {
                     _currentOTP = value;
                   });
-                  _verifyOTP(null);
+                  // Don't auto-verify, wait for user to press button
                 },
                 onChanged: (value) {
                   setState(() {

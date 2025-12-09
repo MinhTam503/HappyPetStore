@@ -97,7 +97,7 @@ class _RegisterPageNewState extends State<RegisterPageNew>
     }
 
     if (!_isEmail(account) && !_isPhoneNumber(account)) {
-      _showSnackbar('Số điện thoại không hợp lệ. Cho phép nhập 09xxxxxxxx; hệ thống sẽ lưu +84xxxxxxxxx.');
+      _showSnackbar('Số điện thoại không hợp lệ. Vui lòng nhập số hợp lệ (0xxxxxxxx hoặc +84xxxxxxxx).');
       return;
     }
 

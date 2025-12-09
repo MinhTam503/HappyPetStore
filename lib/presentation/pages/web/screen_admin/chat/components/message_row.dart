@@ -35,12 +35,12 @@ class MessageRow extends StatelessWidget {
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: Theme.of(context).colorScheme.surface,
+              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
               backgroundImage:
               avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+              onBackgroundImageError: avatarUrl.isNotEmpty ? (_, __) {} : null,
               child:
               avatarUrl.isEmpty ? const Icon(Icons.person, size: 16) : null,
-              onBackgroundImageError: (_, __) {},
             ),
             const SizedBox(width: 8),
           ],

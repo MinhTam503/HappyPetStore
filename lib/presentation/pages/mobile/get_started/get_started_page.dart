@@ -139,7 +139,7 @@ class _GetStartedPageState extends State<GetStartedPage> {
                 child: ElevatedButton(
                   onPressed: _nextPage,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -210,7 +210,7 @@ class OnboardingPageContent extends StatelessWidget {
                   return Icon(
                     Icons.pets,
                     size: 150,
-                    color: primaryColor.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
                   );
                 },
               ),
@@ -223,10 +223,10 @@ class OnboardingPageContent extends StatelessWidget {
           Text(
             content.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: primaryColor,
+              color: Theme.of(context).colorScheme.primary,
               height: 1.3,
             ),
           ),

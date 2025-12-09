@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class VerifyEmailPage extends StatefulWidget {
@@ -25,19 +24,30 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   }
 
   void _checkEmailVerified() async {
-    User? user = _auth.currentUser;
-    await user?.reload();
-    user = _auth.currentUser; // Lấy user mới sau reload
-    if (user != null && user.emailVerified) {
-      setState(() {
-        _isVerified = true;
-      });
-      // Chỉ chuyển trang khi bấm nút xác nhận
-      Navigator.pop(
-          context, true); // Trả về true cho RegisterPage biết đã xác thực
-    } else {
-      Fluttertoast.showToast(
-          msg: "Email chưa được xác nhận. Vui lòng kiểm tra hộp thư!");
+    try {
+      User? user = _auth.currentUser;
+      if (user == null) {
+        Fluttertoast.showToast(msg: "Phiên đăng nhập đã hết hạn!");
+        return;
+      }
+      
+      // Reload user from Firebase to get fresh emailVerified status
+      await user.reload();
+      user = _auth.currentUser; // Get updated user after reload
+      
+      if (user != null && user.emailVerified) {
+        setState(() {
+          _isVerified = true;
+        });
+        Fluttertoast.showToast(msg: "Email đã được xác thực thành công!");
+        // Return true to RegisterPage
+        Navigator.pop(context, true);
+      } else {
+        Fluttertoast.showToast(
+            msg: "Email chưa được xác nhận. Vui lòng kiểm tra hộp thư và click vào link xác thực!");
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Lỗi khi kiểm tra xác thực: $e");
     }
   }
 
@@ -107,15 +117,17 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   ElevatedButton.icon(
                     onPressed: _checkEmailVerified,
                     icon: const Icon(Icons.verified, size: 20),
-                    label: Text(AppLocalizations.of(context)!.iHaveVerified),
+                    label: Text(AppLocalizations.of(context)!.iHaveVerified, style: TextStyle(color:  Theme.of(context).colorScheme.onSurface
+                            .withOpacity(0.54)),),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
-                      textStyle: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      textStyle:  TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold, color:  Theme.of(context).colorScheme.onSurface
+                            .withOpacity(0.54)),
                     ),
                   ),
                   const SizedBox(height: 10),

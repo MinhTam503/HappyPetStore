@@ -180,6 +180,45 @@ class AuthService {
     }
   }
 
+  // Ensure user document exists (for email/password users who verified email outside the app)
+  Future<void> ensureUserDocument(User user, {String? displayName}) async {
+    try {
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists) {
+        debugPrint('⚠️ User document not found, creating for uid: ${user.uid}');
+        
+        // Determine provider
+        String provider = 'email';
+        if (user.providerData.isNotEmpty) {
+          final providerId = user.providerData.first.providerId;
+          if (providerId.contains('google')) provider = 'google';
+          else if (providerId.contains('facebook')) provider = 'facebook';
+          else if (providerId.contains('phone')) provider = 'phone';
+        }
+        
+        await _firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'email': user.email,
+          'displayName': displayName ?? user.displayName ?? 'User',
+          'imageUrl': user.photoURL ?? 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg',
+          'phoneNumber': user.phoneNumber,
+          'provider': provider,
+          'role': 'user',
+          'address': [],
+          'phone': '',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'authProvider': provider,
+        });
+        
+        debugPrint('✅ User document created successfully');
+      }
+    } catch (e) {
+      debugPrint('❌ Error ensuring user document: $e');
+    }
+  }
+
   Future<void> signOut() async {
     try {
       User? currentUser = _auth.currentUser;
@@ -281,7 +320,10 @@ class AuthService {
           .doc(user.uid)
           .get();
       if (userDoc.exists) {
-        return userDoc.data() as Map<String, dynamic>;
+        final data = userDoc.data() as Map<String, dynamic>;
+        // Thêm uid vào data để sử dụng làm ID
+        data['uid'] = user.uid;
+        return data;
       } else {
         return null;
       }

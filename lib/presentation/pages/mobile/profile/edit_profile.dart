@@ -10,7 +10,6 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:pet_shop/auth/login_or_register.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/core/utils/dialog_helper.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 // import 'package:pet_shop/core/constants/list_city.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/presentation/pages/mobile/address/address_list_page.dart';
@@ -46,7 +45,6 @@ class _EditProfileState extends State<EditProfile> {
   String? selectedGender;
   bool emailVerified = false;
   bool phoneVerified = false;
-  String? _pendingEmail;
   bool _isLogoutPromptVisible = false;
   String? _lastInfo;
   String? _lastError;
@@ -385,9 +383,13 @@ class _EditProfileState extends State<EditProfile> {
             if (phoneDoc is String && phoneDoc != phoneController.text) {
               phoneController.text = phoneDoc;
             }
+            // Filter out virtual emails created for phone-only accounts
             final emailDoc = data['email'] as String?;
-            if ((emailDoc ?? '') != emailController.text) {
+            final isVirtualEmail = emailDoc != null && emailDoc.endsWith('@petshop.local');
+            if (!isVirtualEmail && (emailDoc ?? '') != emailController.text) {
               emailController.text = emailDoc ?? '';
+            } else if (isVirtualEmail && emailController.text.isEmpty) {
+              emailController.text = ''; // Treat virtual email as no email
             }
             // deliveryInfos
             final deliveryData = data['deliveryInfos'];
@@ -404,7 +406,6 @@ class _EditProfileState extends State<EditProfile> {
             imageUrl = state.imageUrl;
             emailVerified = state.emailVerified;
             phoneVerified = state.phoneVerified;
-            _pendingEmail = state.pendingEmail;
           }
 
           // Thông điệp
@@ -530,15 +531,18 @@ class _EditProfileState extends State<EditProfile> {
                           ),
                           const SizedBox(height: 12),
                           ContactInfoCard(
-                            currentEmail: data['email'] as String?,
-                            currentPhone: (data['phone'] ?? data['phoneNumber'])
-                                as String?,
+                            currentEmail: (data['email'] as String?)?.endsWith('@petshop.local') == true
+                                ? null // Treat virtual email as no email
+                                : data['email'] as String?,
+                            currentPhone: (data['phone'] ?? data['phoneNumber']) as String?,
                             onChangeEmail: () async {
                               final changed = await Navigator.push<bool>(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => ChangeEmailPage(
-                                      currentEmail: data['email'] as String?),
+                                      currentEmail: (data['email'] as String?)?.endsWith('@petshop.local') == true
+                                          ? null // Treat virtual email as no email for edit
+                                          : data['email'] as String?),
                                 ),
                               );
                               if (changed == true) {
@@ -559,10 +563,10 @@ class _EditProfileState extends State<EditProfile> {
                               }
                             },
                           ),
-                          if (_pendingEmail != null) ...[
+                          if (state.pendingEmail != null) ...[
                             const SizedBox(height: 6),
                             Text(
-                              'Email mới đang chờ xác minh: ${_pendingEmail}',
+                              'Email mới đang chờ xác minh: ${state.pendingEmail}',
                               style: TextStyle(
                                   color: Colors.orange.shade700, fontSize: 12),
                             ),
@@ -592,23 +596,18 @@ class _EditProfileState extends State<EditProfile> {
                             isSaving: state.isSaving,
                             onPressed: () {
                               context.read<EditProfileBloc>().add(
-                                    EditProfileUpdateSubmitted(
-                                      displayName:
-                                          displayNameController.text.trim(),
-                                      // Email/SĐT được đổi qua trang riêng; giữ nguyên giá trị hiện tại
-                                      phone: ((data['phone'] ??
-                                                      data['phoneNumber'])
-                                                  as String? ??
-                                              '')
-                                          .trim(),
-                                      email: (data['email'] as String? ?? '')
-                                          .trim(),
-                                      deliveryInfos: deliveryInfos,
-                                      imageUrl: imageUrl,
-                                      gender: selectedGender,
-                                      birthDate: selectedBirthDate,
-                                    ),
-                                  );
+                                EditProfileUpdateSubmitted(
+                                  displayName: displayNameController.text.trim(),
+                                  // Email/SĐT được đổi qua trang riêng; giữ nguyên giá trị hiện tại
+                                  phone: ((data['phone'] ?? data['phoneNumber']) as String? ?? '').trim(),
+                                  // Keep virtual email if exists (for authentication), but treat as empty for user
+                                  email: (data['email'] as String? ?? '').trim(),
+                                  deliveryInfos: deliveryInfos,
+                                  imageUrl: imageUrl,
+                                  gender: selectedGender,
+                                  birthDate: selectedBirthDate,
+                                ),
+                              );
                             },
                           ),
                         ],

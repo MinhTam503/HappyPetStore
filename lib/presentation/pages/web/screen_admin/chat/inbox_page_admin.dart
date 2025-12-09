@@ -38,8 +38,8 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
   @override
   Widget build(BuildContext context) {
     final conversations = FirebaseFirestore.instance
-        .collection('conversations')
-        .orderBy('timestamp', descending: true)
+        .collection('customerConversations')
+        .orderBy('lastMessageTime', descending: true)
         .snapshots();
 
     return Scaffold(
@@ -127,73 +127,31 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final doc = docs[index];
-                    final email = doc.id;
+                    final customerId = doc.id; // Đây là uid của khách hàng
 
                     final lastMessage = (doc['lastMessage'] ?? '').toString();
-                    final ts = doc['timestamp'];
-                    final unread = (doc.data() as Map<String, dynamic>)
-                            .containsKey('unread')
-                        ? (doc['unread'] as num?)?.toInt() ?? 0
-                        : 0;
+                    final ts = doc['lastMessageTime'];
+                    final unreadMap = (doc['unreadCount'] as Map<String, dynamic>?) ?? {};
+                    final unread = (unreadMap['shop_admin'] as num?)?.toInt() ?? 0;
 
-                    // !!! PHẢI return FutureBuilder
-                    return FutureBuilder<QuerySnapshot>(
+                    // Lấy thông tin user từ uid
+                    return FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
-                          .collection('conversations')
-                          .doc(email)
-                          .collection('messages')
-                          .where('sender',
-                              isEqualTo: email) // chỉ lấy tin khách gửi
-                          .orderBy('timestamp', descending: true)
-                          .limit(1)
+                          .collection('users')
+                          .doc(customerId)
                           .get(),
-                      builder: (ctx, snap) {
+                      builder: (ctx, userSnap) {
+                        String displayName = customerId;
                         String imageUrl = '';
-                        if (snap.hasData && snap.data!.docs.isNotEmpty) {
-                          final m = snap.data!.docs.first.data()
-                              as Map<String, dynamic>;
-                          imageUrl = (m['imageUrl'] ?? '').toString();
+                        
+                        if (userSnap.hasData && userSnap.data!.exists) {
+                          final userData = userSnap.data!.data() as Map<String, dynamic>;
+                          displayName = userData['displayName'] ?? userData['name'] ?? userData['email'] ?? customerId;
+                          imageUrl = userData['imageUrl'] ?? '';
                         }
 
-                        // fallback từ users nếu vẫn rỗng
-                        if (imageUrl.isEmpty) {
-                          return FutureBuilder<QuerySnapshot>(
-                            future: FirebaseFirestore.instance
-                                .collection('users')
-                                .where('email', isEqualTo: email)
-                                .limit(1)
-                                .get(),
-                            builder: (ctx2, snap2) {
-                              if (snap2.hasData &&
-                                  snap2.data!.docs.isNotEmpty) {
-                                final u = snap2.data!.docs.first.data()
-                                    as Map<String, dynamic>;
-                                imageUrl = (u['imageUrl'] ?? '').toString();
-                              }
-
-                              return ConversationCard(
-                                email: email,
-                                lastMessage: lastMessage,
-                                imageUrl: imageUrl,
-                                time: _fmtTime(ts),
-                                unread: unread,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          ChatDetailPage(customerEmail: email),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        }
-
-                        // có imageUrl rồi thì trả thẳng
                         return ConversationCard(
-                          email: email,
+                          email: displayName, // Hiển thị tên thay vì uid
                           lastMessage: lastMessage,
                           imageUrl: imageUrl,
                           time: _fmtTime(ts),
@@ -203,7 +161,7 @@ class _InboxPageAdminState extends State<InboxPageAdmin> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    ChatDetailPage(customerEmail: email),
+                                    ChatDetailPage(customerId: customerId),
                               ),
                             );
                           },
