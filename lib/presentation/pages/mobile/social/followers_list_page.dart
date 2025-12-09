@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/presentation/bloc/social/social_bloc.dart';
 import 'package:pet_shop/presentation/bloc/social/social_event.dart';
 import 'package:pet_shop/presentation/bloc/social/social_state.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/social_settings_page.dart';
 
 class FollowersListPage extends StatefulWidget {
   final String userId;
@@ -20,10 +22,51 @@ class FollowersListPage extends StatefulWidget {
 }
 
 class _FollowersListPageState extends State<FollowersListPage> {
+  bool _canView = true;
+  bool _isCheckingPermission = true;
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _checkPermissionAndLoad();
+  }
+
+  Future<void> _checkPermissionAndLoad() async {
+    try {
+      final userId = await UserManager().getUserIdForOperations();
+
+      // Check if viewer has permission to see this list
+      if (widget.isFollowersMode) {
+        final canView = await SocialPrivacyHelper.canViewFollowers(
+          widget.userId,
+          userId,
+        );
+        setState(() {
+          _canView = canView;
+          _isCheckingPermission = false;
+        });
+      } else {
+        final canView = await SocialPrivacyHelper.canViewFollowing(
+          widget.userId,
+          userId,
+        );
+        setState(() {
+          _canView = canView;
+          _isCheckingPermission = false;
+        });
+      }
+
+      if (_canView) {
+        _loadData();
+      }
+    } catch (e) {
+      debugPrint('Error checking permission: $e');
+      setState(() {
+        _canView = true; // Default to allowing
+        _isCheckingPermission = false;
+      });
+      _loadData();
+    }
   }
 
   void _loadData() {
@@ -40,7 +83,42 @@ class _FollowersListPageState extends State<FollowersListPage> {
           widget.isFollowersMode ? l10n.followersList : l10n.followingList,
         ),
       ),
-      body: BlocBuilder<SocialBloc, SocialState>(
+      body: _isCheckingPermission
+          ? const Center(child: CircularProgressIndicator())
+          : !_canView
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.isFollowersMode
+                            ? 'Follower list is private'
+                            : 'Following list is private',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          fontSize: 16,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Only the account owner can view this list',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              : BlocBuilder<SocialBloc, SocialState>(
         builder: (context, state) {
           if (state is SocialLoading) {
             return const Center(child: CircularProgressIndicator());

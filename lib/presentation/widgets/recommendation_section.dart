@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/currency_helper.dart';
 import 'package:pet_shop/domain/entities/recommendation_entities.dart';
@@ -262,23 +263,63 @@ class _RecommendationSectionState extends State<RecommendationSection> {
       child: Card(
         elevation: 2,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             _trackInteraction(item.petId, InteractionType.view);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DetailPet(
-                  pet: {
-                    'id': item.petId,
-                    'name': item.name,
-                    'category': item.category,
-                    'breed': item.breed,
-                    'price': item.price,
-                    'image': item.imageUrl,
-                  },
-                ),
-              ),
-            );
+            
+            // Fetch full pet data from Firestore to ensure all fields including color
+            try {
+              final petDoc = await FirebaseFirestore.instance
+                  .collection('Pets')
+                  .doc(item.petId)
+                  .get();
+              
+              Map<String, dynamic> petData;
+              if (petDoc.exists) {
+                petData = petDoc.data()!;
+                petData['id'] = petDoc.id;
+              } else {
+                // Fallback to available data
+                petData = {
+                  'id': item.petId,
+                  'name': item.name,
+                  'category': item.category,
+                  'breed': item.breed,
+                  'price': item.price,
+                  'imageUrl': item.imageUrl,
+                  'color': 'colorMixed',
+                };
+              }
+              
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetailPet(pet: petData),
+                  ),
+                );
+              }
+            } catch (e) {
+              debugPrint('Error fetching pet details: $e');
+              // Fallback navigation with available data
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetailPet(
+                      pet: {
+                        'id': item.petId,
+                        'name': item.name,
+                        'category': item.category,
+                        'breed': item.breed,
+                        'price': item.price,
+                        'imageUrl': item.imageUrl,
+                        'color': 'colorMixed',
+                      },
+                    ),
+                  ),
+                );
+              }
+            }
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -521,7 +562,7 @@ class _RecommendationListPageState extends State<RecommendationListPage> {
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           if (userId != null) {
             context.read<RecommendationBloc>().add(
               TrackUserInteraction(
@@ -532,21 +573,60 @@ class _RecommendationListPageState extends State<RecommendationListPage> {
             );
           }
           
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DetailPet(
-                pet: {
-                  'id': item.petId,
-                  'name': item.name,
-                  'category': item.category,
-                  'breed': item.breed,
-                  'price': item.price,
-                  'image': item.imageUrl,
-                },
-              ),
-            ),
-          );
+          // Fetch full pet data from Firestore to ensure all fields including color
+          try {
+            final petDoc = await FirebaseFirestore.instance
+                .collection('Pets')
+                .doc(item.petId)
+                .get();
+            
+            Map<String, dynamic> petData;
+            if (petDoc.exists) {
+              petData = petDoc.data()!;
+              petData['id'] = petDoc.id;
+            } else {
+              // Fallback to available data
+              petData = {
+                'id': item.petId,
+                'name': item.name,
+                'category': item.category,
+                'breed': item.breed,
+                'price': item.price,
+                'imageUrl': item.imageUrl,
+                'color': 'colorMixed',
+              };
+            }
+            
+            if (mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetailPet(pet: petData),
+                ),
+              );
+            }
+          } catch (e) {
+            debugPrint('Error fetching pet details: $e');
+            // Fallback navigation with available data
+            if (mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetailPet(
+                    pet: {
+                      'id': item.petId,
+                      'name': item.name,
+                      'category': item.category,
+                      'breed': item.breed,
+                      'price': item.price,
+                      'imageUrl': item.imageUrl,
+                      'color': 'colorMixed',
+                    },
+                  ),
+                ),
+              );
+            }
+          }
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -12,6 +12,9 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/widgets/post_detail_sheet.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/social_settings_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pet_shop/core/utils/notification_helper.dart';
+import 'package:pet_shop/presentation/widgets/social/comment_widget.dart';
 
 class SocialProfilePage extends StatefulWidget {
   final String userId;
@@ -291,16 +294,16 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                             ],
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'report',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.flag, color: Colors.orange),
-                              const SizedBox(width: 12),
-                              Text(l10n.reportUser),
-                            ],
-                          ),
-                        ),
+                        // PopupMenuItem(
+                        //   value: 'report',
+                        //   child: Row(
+                        //     children: [
+                        //       const Icon(Icons.flag, color: Colors.orange),
+                        //       const SizedBox(width: 12),
+                        //       Text(l10n.reportUser),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ),
                 ],
@@ -359,7 +362,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
       builder: (context, snapshot) {
         final blockedUserIds = snapshot.data ?? [];
         
-        // Calculate filtered counts
+        // Calculate filtered counts - always show numbers
         final followersCount = profile.followers
             .where((id) => !blockedUserIds.contains(id))
             .length;
@@ -386,7 +389,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
                   ),
                   const SizedBox(width: 24),
                   
-                  // Stats
+                  // Stats - Always show numbers
                   Expanded(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -577,8 +580,7 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
               post: post,
               currentUserId: _currentUserId,
               onCommentTap: (postId) {
-                // Handle comment tap - navigate to comments
-                // Can be implemented later
+                _showCommentsSheet(context, postId);
               },
               onDelete: isOwnPost
                   ? () {
@@ -644,10 +646,53 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
   }
   
   Widget _buildFollowersList(BuildContext context, SocialPetProfile profile) {
-    return FutureBuilder<List<String>>(
-      future: _getBlockedUserIds(),
+    // Check permission first
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        _getBlockedUserIds(),
+        SocialPrivacyHelper.canViewFollowers(widget.userId, _currentUserId),
+      ]),
       builder: (context, snapshot) {
-        final blockedUserIds = snapshot.data ?? [];
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final blockedUserIds = (snapshot.data?[0] as List<String>?) ?? [];
+        final canView = (snapshot.data?[1] as bool?) ?? true;
+
+        // If user can't view, show privacy message
+        if (!canView) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context)!.followersPrivate,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppLocalizations.of(context)!.onlyOwnerCanView,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
         
         // Filter out blocked users
         final filteredFollowers = profile.followers
@@ -747,10 +792,53 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
   }
   
   Widget _buildFollowingList(BuildContext context, SocialPetProfile profile) {
-    return FutureBuilder<List<String>>(
-      future: _getBlockedUserIds(),
+    // Check permission first
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        _getBlockedUserIds(),
+        SocialPrivacyHelper.canViewFollowing(widget.userId, _currentUserId),
+      ]),
       builder: (context, snapshot) {
-        final blockedUserIds = snapshot.data ?? [];
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final blockedUserIds = (snapshot.data?[0] as List<String>?) ?? [];
+        final canView = (snapshot.data?[1] as bool?) ?? true;
+
+        // If user can't view, show privacy message
+        if (!canView) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context)!.followingPrivate,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppLocalizations.of(context)!.onlyOwnerCanView,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
         
         // Filter out blocked users
         final filteredFollowing = profile.following
@@ -1193,6 +1281,337 @@ class _SocialProfilePageState extends State<SocialProfilePage> with SingleTicker
         );
       }
     }
+  }
+
+  void _showCommentsSheet(BuildContext context, String postId) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final l10n = AppLocalizations.of(context);
+    
+    // Load post to get author ID
+    try {
+      final postDoc = await FirebaseFirestore.instance
+          .collection('socialPosts')
+          .doc(postId)
+          .get();
+
+      if (!postDoc.exists) {
+        if (context.mounted) {
+          NotificationHelper.showError(
+            context,
+            l10n?.error ?? 'Lỗi',
+            'Bài viết không tìm thấy',
+          );
+        }
+        return;
+      }
+
+      final postAuthorId = postDoc.data()?['authorId'] as String?;
+      if (postAuthorId == null) return;
+
+      // Check if comments are allowed
+      final commentsAllowed = await SocialPrivacyHelper.areCommentsAllowed(postAuthorId);
+      if (!commentsAllowed) {
+        if (context.mounted) {
+          NotificationHelper.showError(
+            context,
+            l10n?.error ?? 'Lỗi',
+            'Bình luận đã bị tắt cho bài viết này',
+          );
+        }
+        return;
+      }
+    } catch (e) {
+      if (context.mounted) {
+        NotificationHelper.showError(
+          context,
+          l10n?.error ?? 'Lỗi',
+          'Lỗi kiểm tra quyền: $e',
+        );
+      }
+      return;
+    }
+
+    String? replyingToUser;
+    String? replyingToCommentId;
+
+    // Load comments when opening sheet
+    if (context.mounted) {
+      context.read<SocialBloc>().add(LoadComments(postId));
+    }
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.75,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const SizedBox(width: 48),
+                                Text(
+                                  l10n!.commentCount,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () => Navigator.pop(sheetContext),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+
+                      // Comments list
+                      Expanded(
+                        child: BlocBuilder<SocialBloc, SocialState>(
+                          builder: (context, state) {
+                            if (state is SocialLoaded) {
+                              if (state.currentComments.isEmpty) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.comment_outlined,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        l10n.noCommentsYet,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        l10n.beFirstToComment,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              final topLevelComments = state.currentComments
+                                  .where((c) => c.parentId == null)
+                                  .toList();
+
+                              return ListView.builder(
+                                controller: scrollController,
+                                itemCount: topLevelComments.length,
+                                padding: const EdgeInsets.only(top: 8),
+                                itemBuilder: (context, index) {
+                                  final comment = topLevelComments[index];
+
+                                  return CommentWidget(
+                                    comment: comment,
+                                    currentUserId: currentUser?.uid,
+                                    onLike: () {
+                                      context.read<SocialBloc>().add(
+                                            LikeComment(postId, comment.id),
+                                          );
+                                    },
+                                    onReply: () {
+                                      setState(() {
+                                        replyingToUser = comment.userName;
+                                        replyingToCommentId = comment.id;
+                                      });
+                                    },
+                                    onDelete: () async {
+                                      final shouldDelete =
+                                          await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: Text(l10n.deleteComment),
+                                          content: Text(
+                                              l10n.deleteCommentConfirm),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, false),
+                                              child: Text(l10n.cancel),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, true),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: Colors.red,
+                                              ),
+                                              child: Text(l10n.delete),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (shouldDelete == true &&
+                                          context.mounted) {
+                                        context.read<SocialBloc>().add(
+                                              DeleteComment(
+                                                  postId, comment.id),
+                                            );
+                                      }
+                                    },
+                                  );
+                                },
+                              );
+                            }
+
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Comment input
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, -2),
+                            ),
+                          ],
+                        ),
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewInsets.bottom,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (replyingToUser != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                color: Colors.grey[100],
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      l10n.replyingTo('@$replyingToUser'),
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          replyingToUser = null;
+                                          replyingToCommentId = null;
+                                        });
+                                      },
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: TextEditingController(),
+                                      decoration: InputDecoration(
+                                        hintText: l10n.addComment,
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(24),
+                                          borderSide: BorderSide(
+                                            color: Colors.grey[300]!,
+                                          ),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                      ),
+                                      onSubmitted: (text) {
+                                        if (text.trim().isNotEmpty) {
+                                          context.read<SocialBloc>().add(
+                                                AddComment(
+                                                  postId,
+                                                  text.trim(),
+                                                  parentId:
+                                                      replyingToCommentId,
+                                                ),
+                                              );
+                                          setState(() {
+                                            replyingToUser = null;
+                                            replyingToCommentId = null;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }
 

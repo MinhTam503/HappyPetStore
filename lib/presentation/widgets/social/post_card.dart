@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/domain/entities/social_post.dart';
 
 /// Instagram-style post card widget
@@ -187,11 +186,12 @@ class PostCard extends StatelessWidget {
             ),
             onPressed: onLike,
           ),
-          // Comment button
-          IconButton(
-            icon: const Icon(Icons.comment_outlined),
-            onPressed: onComment,
-          ),
+          // Comment button - visibility controlled by parent widget
+          if (onComment != null)
+            IconButton(
+              icon: const Icon(Icons.comment_outlined),
+              onPressed: onComment,
+            ),
         ],
       ),
     );

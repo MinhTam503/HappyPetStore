@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/blocked_accounts_page.dart';
@@ -21,7 +20,9 @@ class _SocialSettingsPageState extends State<SocialSettingsPage> {
   bool _accountPrivate = false;
   bool _showFollowersToPublic = true;
   bool _showFollowingToPublic = true;
-  bool _allowComments = true;  @override
+  bool _allowComments = true;
+
+  @override
   void initState() {
     super.initState();
     _loadSettings();
@@ -331,28 +332,28 @@ class _SocialSettingsPageState extends State<SocialSettingsPage> {
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                // const SizedBox(height: 24),
 
-                // Account Actions Section
-                _SectionHeader(
-                  title: l10n.accountActions,
-                  icon: Icons.settings_outlined,
-                ),
-                const SizedBox(height: 12),
-                _SettingsCard(
-                  children: [
-                    _SettingsItem(
-                      icon: Icons.delete_forever,
-                      iconBg: const Color(0xffffe3e3),
-                      iconColor: Colors.red,
-                      title: l10n.deleteAccount,
-                      subtitle: l10n.deleteAccountDescription,
-                      onTap: () {
-                        _showDeleteAccountDialog();
-                      },
-                    ),
-                  ],
-                ),
+                // // Account Actions Section
+                // _SectionHeader(
+                //   title: l10n.accountActions,
+                //   icon: Icons.settings_outlined,
+                // ),
+                // const SizedBox(height: 12),
+                // _SettingsCard(
+                //   children: [
+                //     _SettingsItem(
+                //       icon: Icons.delete_forever,
+                //       iconBg: const Color(0xffffe3e3),
+                //       iconColor: Colors.red,
+                //       title: l10n.deleteAccount,
+                //       subtitle: l10n.deleteAccountDescription,
+                //       onTap: () {
+                //         _showDeleteAccountDialog();
+                //       },
+                //     ),
+                //   ],
+                // ),
 
                 const SizedBox(height: 40),
               ],
@@ -383,17 +384,157 @@ class _SocialSettingsPageState extends State<SocialSettingsPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement account deletion
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.comingSoon)),
-              );
+              _deleteAccount();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(l10n.deleteAccount),
+            child: Text(l10n.delete),
           ),
         ],
       ),
     );
+  }
+
+  /// Delete social account (posts, profile, but keep main user account)
+  Future<void> _deleteAccount() async {
+    if (_currentUserId == null) return;
+
+    try {
+      // Show loading
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final batch = FirebaseFirestore.instance.batch();
+      final userId = _currentUserId!;
+
+      // Delete social profile
+      final profileRef = FirebaseFirestore.instance
+          .collection('socialPetProfiles')
+          .doc(userId);
+      batch.delete(profileRef);
+
+      // Delete all posts
+      final postsSnapshot = await FirebaseFirestore.instance
+          .collection('socialPosts')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      for (var doc in postsSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete settings
+      final settingsRef =
+          FirebaseFirestore.instance.collection('socialSettings').doc(userId);
+      batch.delete(settingsRef);
+
+      // Delete blocked users
+      final blockedRef =
+          FirebaseFirestore.instance.collection('blockedUsers').doc(userId);
+      batch.delete(blockedRef);
+
+      // Commit all deletes
+      await batch.commit();
+
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      Navigator.pop(context); // Close loading
+      Navigator.pop(context); // Go back to previous page
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.accountDeleted),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error deleting account: $e');
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      Navigator.pop(context); // Close loading
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.errorDeletingAccount),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+/// Helper class for social privacy settings
+class SocialPrivacyHelper {
+  /// Static method to check if user can view followers/following
+  static Future<bool> canViewFollowers(String userId, String? viewerId) async {
+    if (userId == viewerId) return true; // Owner can always view
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('socialSettings')
+          .doc(userId)
+          .get();
+
+      if (!doc.exists) return true; // Default: public
+      return doc.data()?['showFollowersToPublic'] ?? true;
+    } catch (e) {
+      debugPrint('Error checking follower visibility: $e');
+      return true; // Default to public on error
+    }
+  }
+
+  static Future<bool> canViewFollowing(String userId, String? viewerId) async {
+    if (userId == viewerId) return true; // Owner can always view
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('socialSettings')
+          .doc(userId)
+          .get();
+
+      if (!doc.exists) return true; // Default: public
+      return doc.data()?['showFollowingToPublic'] ?? true;
+    } catch (e) {
+      debugPrint('Error checking following visibility: $e');
+      return true; // Default to public on error
+    }
+  }
+
+  /// Check if account is private
+  static Future<bool> isAccountPrivate(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('socialSettings')
+          .doc(userId)
+          .get();
+
+      if (!doc.exists) return false; // Default: public
+      return doc.data()?['accountPrivate'] ?? false;
+    } catch (e) {
+      debugPrint('Error checking account privacy: $e');
+      return false; // Default to public on error
+    }
+  }
+
+  /// Check if comments are allowed
+  static Future<bool> areCommentsAllowed(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('socialSettings')
+          .doc(userId)
+          .get();
+
+      if (!doc.exists) return true; // Default: allowed
+      return doc.data()?['allowComments'] ?? true;
+    } catch (e) {
+      debugPrint('Error checking comment settings: $e');
+      return true; // Default to allowed on error
+    }
   }
 }
 
@@ -417,15 +558,13 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context)
-                                    .colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             icon,
             size: 20,
-            color: Theme.of(context)
-                                    .colorScheme.primary,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(width: 12),
@@ -512,8 +651,7 @@ class _SettingsToggle extends StatelessWidget {
       trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
-        activeColor: Theme.of(context)
-                                    .colorScheme.primary,
+        activeColor: Theme.of(context).colorScheme.primary,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

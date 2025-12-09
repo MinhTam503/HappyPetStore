@@ -8,6 +8,7 @@ import 'package:pet_shop/domain/entities/social_pet_profile.dart';
 import 'package:pet_shop/domain/repositories/social_repository.dart';
 import 'package:pet_shop/presentation/bloc/social/social_event.dart';
 import 'package:pet_shop/presentation/bloc/social/social_state.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/social_settings_page.dart';
 
 class SocialBloc extends Bloc<SocialEvent, SocialState> {
   final SocialRepository _repository;
@@ -768,6 +769,30 @@ class SocialBloc extends Bloc<SocialEvent, SocialState> {
       final userId = await _getUserId();
       if (userId == null) {
         emit(const SocialError('User not authenticated'));
+        return;
+      }
+
+      // Get post to check author and permissions
+      final postDoc = await FirebaseFirestore.instance
+          .collection('socialPosts')
+          .doc(event.postId)
+          .get();
+
+      if (!postDoc.exists) {
+        emit(const SocialError('Không tìm thấy bài viết'));
+        return;
+      }
+
+      final postAuthorId = postDoc.data()?['authorId'] as String?;
+      if (postAuthorId == null) {
+        emit(const SocialError('Dữ liệu bài viết không hợp lệ'));
+        return;
+      }
+
+      // Check if comments are allowed
+      final commentsAllowed = await SocialPrivacyHelper.areCommentsAllowed(postAuthorId);
+      if (!commentsAllowed) {
+        emit(const SocialError('Bình luận đã bị tắt cho bài viết này'));
         return;
       }
 

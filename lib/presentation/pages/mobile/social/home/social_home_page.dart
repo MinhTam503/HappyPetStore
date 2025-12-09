@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pet_shop/core/constants/app_constants.dart';
 import 'package:pet_shop/core/services/user_manager.dart';
 import 'package:pet_shop/core/utils/notification_helper.dart';
 import 'package:pet_shop/presentation/bloc/social/social_bloc.dart';
@@ -13,6 +12,7 @@ import 'package:pet_shop/presentation/pages/mobile/social/widgets/following_feed
 import 'package:pet_shop/presentation/pages/mobile/social/widgets/explore_grid.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/widgets/post_detail_sheet.dart';
 import 'package:pet_shop/presentation/widgets/social/comment_widget.dart';
+import 'package:pet_shop/presentation/pages/mobile/social/social_settings_page.dart';
 
 /// Social Home Page - Instagram-style feed
 class SocialHomePage extends StatefulWidget {
@@ -315,13 +315,61 @@ class _SocialHomePageState extends State<SocialHomePage>
     );
   }
 
-  void _showCommentsSheet(BuildContext context, String postId) {
+  void _showCommentsSheet(BuildContext context, String postId) async {
     final currentUser = FirebaseAuth.instance.currentUser;
+    final l10n = AppLocalizations.of(context);
+    
+    // Load post to get author ID
+    try {
+      final postDoc = await FirebaseFirestore.instance
+          .collection('socialPosts')
+          .doc(postId)
+          .get();
+
+      if (!postDoc.exists) {
+        if (context.mounted) {
+          NotificationHelper.showError(
+            context,
+            l10n?.error ?? 'Lỗi',
+            'Bài viết không tìm thấy',
+          );
+        }
+        return;
+      }
+
+      final postAuthorId = postDoc.data()?['authorId'] as String?;
+      if (postAuthorId == null) return;
+
+      // Check if comments are allowed
+      final commentsAllowed = await SocialPrivacyHelper.areCommentsAllowed(postAuthorId);
+      if (!commentsAllowed) {
+        if (context.mounted) {
+          NotificationHelper.showError(
+            context,
+            l10n?.error ?? 'Lỗi',
+            'Bình luận đã bị tắt cho bài viết này',
+          );
+        }
+        return;
+      }
+    } catch (e) {
+      if (context.mounted) {
+        NotificationHelper.showError(
+          context,
+          l10n?.error ?? 'Lỗi',
+          'Lỗi kiểm tra quyền: $e',
+        );
+      }
+      return;
+    }
+
     String? replyingToUser;
     String? replyingToCommentId; // Store parent comment ID
 
     // Load comments when opening sheet
-    context.read<SocialBloc>().add(LoadComments(postId));
+    if (context.mounted) {
+      context.read<SocialBloc>().add(LoadComments(postId));
+    }
 
     showModalBottomSheet(
       context: context,
@@ -363,9 +411,9 @@ class _SocialHomePageState extends State<SocialHomePage>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const SizedBox(width: 48),
-                                const Text(
-                                  'Comments',
-                                  style: TextStyle(
+                                Text(
+                                  AppLocalizations.of(context)!.commentCount,
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
