@@ -119,9 +119,9 @@ class SettingsMenu extends StatelessWidget {
             ),
             selectedColor: Theme.of(context).colorScheme.onPrimary,
             fillColor: Theme.of(context).primaryColor,
-            children: [
+            children: const [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -132,7 +132,7 @@ class SettingsMenu extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -175,9 +175,9 @@ class SettingsMenu extends StatelessWidget {
             ),
             selectedColor: Theme.of(context).colorScheme.onPrimary,
             fillColor: Theme.of(context).primaryColor,
-            children: [
+            children: const [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -188,7 +188,7 @@ class SettingsMenu extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

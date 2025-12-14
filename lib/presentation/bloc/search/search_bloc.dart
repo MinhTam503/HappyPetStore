@@ -761,7 +761,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
 
       // Gọi API tìm kiếm hình ảnh
-      final uri = Uri.parse('https://train-pet-image.onrender.com/search');
+      // Development (localhost):
+      final uri = Uri.parse('http://10.0.0.2:5000/search');
+      // Production (sau này sử dụng):
+      // final uri = Uri.parse('https://trainimagepet-api.onrender.com/search');
       var request = http.MultipartRequest('POST', uri);
       request.files.add(await http.MultipartFile.fromPath('file', imagePath));
 
@@ -782,22 +785,30 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
           // Lấy tất cả pets từ Firestore
           final allPetsSnapshot = await _firestore.collection('Pets').get();
-          final allPets = allPetsSnapshot.docs.map((d) => d.data()).toList();
+          final allPets = allPetsSnapshot.docs.map((d) {
+            final data = d.data();
+            data['id'] = d.id; // Thêm ID vào data
+            return data;
+          }).toList();
 
           // Lọc pets có imageUrl chứa tên file tương tự VÀ available
           final results = allPets.where((item) {
             final imageUrl = item['imageUrl'] as String? ?? '';
             final matchesImage = fileNames.any((fileName) => imageUrl.contains(fileName));
             
-            // Filter out unavailable pets
-            final isAvailable = item['isAvailable'] ?? true;
-            final status = item['status']?.toString().toLowerCase() ?? '';
-            final isNotSold = isAvailable && status != 'sold';
+            // Filter theo isAvailable - nếu null hoặc không tồn tại thì mặc định là true
+            final isAvailable = item['isAvailable'] is bool 
+                ? (item['isAvailable'] as bool)
+                : true; // Mặc định true nếu null hoặc không tồn tại
             
-            return matchesImage && isNotSold;
+            // Kiểm tra status - chỉ lọc nếu sold
+            final status = item['status']?.toString().toLowerCase() ?? '';
+            final isNotSold = status != 'sold';
+            
+            return matchesImage && isAvailable && isNotSold;
           }).toList();
 
-          print('Found ${results.length} matching pets');
+          print('Found ${results.length} matching pets (after filtering isAvailable)');
 
           await _emitWithHistory(
             emit: emit,

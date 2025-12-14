@@ -56,25 +56,28 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           if (state is SearchLoading) {
             if (!isLoading) {
               setState(() => isLoading = true);
-              DialogHelper.showLoadingDialog(context, message: 'Đang tìm kiếm...');
+              DialogHelper.showLoadingDialog(context,
+                  message: 'Đang tìm kiếm...');
             }
           } else {
             if (isLoading) {
               setState(() => isLoading = false);
               DialogHelper.hideLoadingDialog(context);
             }
-            
+
             if (state is SearchError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message)),
               );
             } else if (state is SearchSuccess) {
-              if (state.searchResults.isNotEmpty && !_isNavigatingToNewResults) {
+              if (state.searchResults.isNotEmpty &&
+                  !_isNavigatingToNewResults) {
                 // Check if these are new results from a new search
-                final currentQuery = state.searchResults.isNotEmpty ? 
-                  state.searchResults.first['name']?.toString() ?? '' : '';
+                final currentQuery = state.searchResults.isNotEmpty
+                    ? state.searchResults.first['name']?.toString() ?? ''
+                    : '';
                 final originalQuery = widget.searchQuery;
-                
+
                 if (currentQuery != originalQuery && currentQuery.isNotEmpty) {
                   // This is a new search from within results page, replace current page
                   setState(() => _isNavigatingToNewResults = true);
@@ -87,7 +90,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                   return;
                 }
               }
-              
+
               setState(() {
                 results = state.searchResults;
                 _isNavigatingToNewResults = false;
@@ -113,7 +116,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 _navigateBackToSearch();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
@@ -125,17 +129,19 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        widget.searchImage != null 
+                        widget.searchImage != null
                             ? 'Tìm kiếm bằng hình ảnh'
-                            : widget.searchQuery.isNotEmpty 
-                                ? widget.searchQuery 
+                            : widget.searchQuery.isNotEmpty
+                                ? widget.searchQuery
                                 : 'Tìm kiếm thú cưng...',
                         style: TextStyle(
-                          color: widget.searchQuery.isNotEmpty || widget.searchImage != null
+                          color: widget.searchQuery.isNotEmpty ||
+                                  widget.searchImage != null
                               ? Colors.black
                               : Colors.grey[600],
                           fontSize: 16,
-                          fontWeight: widget.searchQuery.isNotEmpty || widget.searchImage != null
+                          fontWeight: widget.searchQuery.isNotEmpty ||
+                                  widget.searchImage != null
                               ? FontWeight.w500
                               : FontWeight.normal,
                         ),
@@ -197,19 +203,21 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                     Row(
                       children: [
                         Icon(
-                          widget.searchImage != null ? Icons.image_search : Icons.pets, 
-                          color: widget.searchImage != null ? Colors.purple : Theme.of(context)
-                                    .colorScheme.primary, 
-                          size: 20
-                        ),
+                            widget.searchImage != null
+                                ? Icons.image_search
+                                : Icons.pets,
+                            color: widget.searchImage != null
+                                ? Colors.purple
+                                : Theme.of(context).colorScheme.primary,
+                            size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             results.isEmpty
-                                ? widget.searchImage != null 
+                                ? widget.searchImage != null
                                     ? 'Không tìm thấy thú cưng tương tự'
                                     : 'Không tìm thấy kết quả'
-                                : widget.searchImage != null 
+                                : widget.searchImage != null
                                     ? 'Tìm thấy ${results.length} thú cưng tương tự'
                                     : 'Tìm thấy ${results.length} thú cưng',
                             style: const TextStyle(
@@ -220,16 +228,18 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                         ),
                         if (widget.searchImage != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.purple.shade100,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.auto_awesome, color: Colors.purple, size: 14),
-                                const SizedBox(width: 4),
+                                Icon(Icons.auto_awesome,
+                                    color: Colors.purple, size: 14),
+                                SizedBox(width: 4),
                                 Text(
                                   'AI Search',
                                   style: TextStyle(
@@ -243,12 +253,13 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                           ),
                       ],
                     ),
-                    
+
                     // Hiển thị hình ảnh tìm kiếm nếu có
                     if (widget.searchImage != null) ...[
                       const SizedBox(height: 12),
                       Container(
-                        height: 120,
+                        height: 130,
+                        width: 130,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
@@ -295,30 +306,19 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                                   ),
                                 ),
                                 child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    const Icon(
-                                      Icons.image_search,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      'Hình ảnh tìm kiếm',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const Spacer(),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
                                         color: Colors.white.withOpacity(0.2),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
-                                        results.isNotEmpty ? '${results.length} kết quả' : 'Không có kết quả',
+                                        results.isNotEmpty
+                                            ? '${results.length} kết quả'
+                                            : 'Không có kết quả',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 11,
@@ -338,7 +338,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 ),
               ),
               const Divider(height: 1),
-              
+
               // Kết quả tìm kiếm
               Expanded(
                 child: results.isEmpty
@@ -347,13 +347,15 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              widget.searchImage != null ? Icons.image_search_outlined : Icons.search_off,
+                              widget.searchImage != null
+                                  ? Icons.image_search_outlined
+                                  : Icons.search_off,
                               size: 80,
                               color: Colors.grey[400],
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              widget.searchImage != null 
+                              widget.searchImage != null
                                   ? 'Không tìm thấy thú cưng tương tự'
                                   : 'Không tìm thấy kết quả',
                               style: TextStyle(
@@ -383,8 +385,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                               icon: const Icon(Icons.search),
                               label: const Text('Tìm kiếm mới'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme.primary,
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 24, vertical: 12),
@@ -396,7 +398,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                     : GridView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: results.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 0.75,
                           mainAxisSpacing: 16,

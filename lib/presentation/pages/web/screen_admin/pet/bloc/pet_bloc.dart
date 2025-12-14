@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -86,8 +86,8 @@ class PetBloc extends Bloc<PetEvent, PetState> {
         'status': 'available', // Initialize status for new pets
       });
 
-      // Train AI
-      await _callTrainAPI();
+      // Gọi API train cho pet mới
+      await _callPetAddAPI(pet.id);
 
       emit(const PetActionSuccess('Thêm thú cưng thành công!'));
       
@@ -108,6 +108,7 @@ class PetBloc extends Bloc<PetEvent, PetState> {
     try {
       final pet = event.pet;
       String finalImageUrl = pet.imageUrl;
+      bool imageChanged = false;
 
       // Upload new image if provided
       if (event.imageBytes != null) {
@@ -117,6 +118,7 @@ class PetBloc extends Bloc<PetEvent, PetState> {
           emit(const PetError('Lỗi upload hình ảnh'));
           return;
         }
+        imageChanged = true;
       }
 
       // Parse price
@@ -144,6 +146,11 @@ class PetBloc extends Bloc<PetEvent, PetState> {
         'status': pet.isAvailable ? 'available' : currentStatus,
       });
 
+      // Gọi API update nếu có thay đổi hình ảnh
+      if (imageChanged) {
+        await _callPetUpdateAPI(pet.id);
+      }
+
       emit(const PetActionSuccess('Cập nhật thành công!'));
       
       // Reload pets
@@ -161,6 +168,9 @@ class PetBloc extends Bloc<PetEvent, PetState> {
     emit(const PetActionInProgress('Đang xóa...'));
     
     try {
+      // Gọi API delete trước khi xóa khỏi Firestore
+      await _callPetDeleteAPI(event.petId);
+
       // Delete image from Storage
       try {
         final imageRef = FirebaseStorage.instance.refFromURL(event.imageUrl);
@@ -360,17 +370,67 @@ class PetBloc extends Bloc<PetEvent, PetState> {
     return 0.0;
   }
 
-  Future<void> _callTrainAPI() async {
+  // API Methods cho training model
+  Future<void> _callPetAddAPI(String petId) async {
     try {
-      final uri = Uri.parse('https://train-pet-image.onrender.com/train');
-      final response = await http.post(uri);
+      // Development (localhost):
+      final uri = Uri.parse('http://localhost:5000/pet/add');
+      // Production (sau này sử dụng):
+      // final uri = Uri.parse('https://trainimagepet-api.onrender.com/pet/add');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'pet_id': petId}),
+      );
       if (response.statusCode == 200) {
-        debugPrint('Train thành công!');
+        debugPrint('✅ Pet $petId đã được thêm vào training model');
       } else {
-        debugPrint('Train thất bại: ${response.statusCode}');
+        debugPrint('⚠️ Lỗi thêm pet vào model: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Lỗi train: $e');
+      debugPrint('❌ Lỗi gọi API add pet: $e');
+    }
+  }
+
+  Future<void> _callPetUpdateAPI(String petId) async {
+    try {
+      // Development (localhost):
+      final uri = Uri.parse('http://localhost:5000/pet/update');
+      // Production (sau này sử dụng):
+      // final uri = Uri.parse('https://trainimagepet-api.onrender.com/pet/update');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'pet_id': petId}),
+      );
+      if (response.statusCode == 200) {
+        debugPrint('✅ Pet $petId đã được cập nhật trong training model');
+      } else {
+        debugPrint('⚠️ Lỗi cập nhật pet trong model: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Lỗi gọi API update pet: $e');
+    }
+  }
+
+  Future<void> _callPetDeleteAPI(String petId) async {
+    try {
+      // Development (localhost):
+      final uri = Uri.parse('http://localhost:5000/pet/delete');
+      // Production (sau này sử dụng):
+      // final uri = Uri.parse('https://trainimagepet-api.onrender.com/pet/delete');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'pet_id': petId}),
+      );
+      if (response.statusCode == 200) {
+        debugPrint('✅ Pet $petId đã được xóa khỏi training model');
+      } else {
+        debugPrint('⚠️ Lỗi xóa pet khỏi model: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Lỗi gọi API delete pet: $e');
     }
   }
 }
