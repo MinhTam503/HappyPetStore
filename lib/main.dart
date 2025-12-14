@@ -120,11 +120,29 @@ Future<void> main() async {
   // Setup dependency injection AFTER Firebase is initialized
   serviceLocator.setup();
 
-  // Initialize ChatBot dependencies
-  await chatbot_sl.setupServiceLocator();
+  // Initialize ChatBot dependencies with timeout
+  try {
+    await chatbot_sl.setupServiceLocator()
+        .timeout(const Duration(seconds: 10));
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('⚠️ ChatBot setup timeout (offline mode): $e');
+    }
+  }
 
-  // Initialize UserManager for centralized user state management
-  await userManager.initialize();
+  // Initialize UserManager with timeout to prevent blocking
+  try {
+    await userManager.initialize()
+        .timeout(const Duration(seconds: 10));
+    if (kDebugMode) {
+      debugPrint('✅ UserManager initialized successfully');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('⚠️ UserManager initialization timeout (offline mode): $e');
+      debugPrint('📱 App will continue in offline mode');
+    }
+  }
 
   // Initialize push notifications (Android)
   try {
@@ -148,28 +166,34 @@ Future<void> main() async {
     }
   }
 
-  // Initialize recommendation system
+  // Initialize recommendation system with timeout
   try {
-    await setupRecommendationDI();
-    await RecommendationTrackingService().initialize();
+    await setupRecommendationDI()
+        .timeout(const Duration(seconds: 8));
+    
+    await RecommendationTrackingService().initialize()
+        .timeout(const Duration(seconds: 8));
 
     // Initialize search recommendations manager with auto-refresh
-    await SearchRecommendationsManager().initialize();
+    await SearchRecommendationsManager().initialize()
+        .timeout(const Duration(seconds: 8));
 
     if (kDebugMode) {
       debugPrint('🎯 Recommendation system initialized successfully');
     }
   } catch (e) {
     if (kDebugMode) {
-      debugPrint('❌ Failed to initialize recommendation system: $e');
+      debugPrint('⚠️ Recommendation system timeout (offline mode): $e');
+      debugPrint('📱 App will continue without recommendations');
     }
   }
 
-  // Load initial theme preference on mobile
+  // Load initial theme preference on mobile with timeout
   if (!kIsWeb) {
     try {
       final settingsService = SettingsService();
-      final useAdminTheme = await settingsService.getUseAdminTheme();
+      final useAdminTheme = await settingsService.getUseAdminTheme()
+          .timeout(const Duration(seconds: 5));
       
       debugPrint('🎨 App starting with theme setting: useAdminTheme=$useAdminTheme');
       
@@ -185,7 +209,7 @@ Future<void> main() async {
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to load theme preference: $e');
+        debugPrint('⚠️ Theme loading timeout (using default theme): $e');
       }
     }
   }

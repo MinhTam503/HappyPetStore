@@ -761,18 +761,43 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
 
       // Gọi API tìm kiếm hình ảnh
-      // Development (localhost):
-      final uri = Uri.parse('http://10.0.0.2:5000/search');
+      // Development (Android Emulator):
+      // 10.0.2.2 = localhost của máy host từ góc nhìn Android emulator
+      final uri = Uri.parse('http://10.0.2.2:5000/search');
       // Production (sau này sử dụng):
       // final uri = Uri.parse('https://trainimagepet-api.onrender.com/search');
+      
+      print('🔍 Calling image search API: $uri');
+      print('📁 Image path: $imagePath');
+      
       var request = http.MultipartRequest('POST', uri);
       request.files.add(await http.MultipartFile.fromPath('file', imagePath));
 
-      var response = await request.send();
+      print('📤 Sending request...');
+      var response = await request.send()
+          .timeout(const Duration(seconds: 30)); // Thêm timeout 30s
+      
+      print('📥 Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final respStr = await response.stream.bytesToString();
         final data = jsonDecode(respStr);
+
+        print('📊 API Response: $data');
+
+        // Kiểm tra nếu API trả về message "No similar images found"
+        if (data['message'] != null && 
+            data['message'].toString().toLowerCase().contains('no similar images')) {
+          print('ℹ️ No similar images found from API');
+          // Trả về empty results - UI sẽ hiển thị empty state với i18n text
+          await _emitWithHistory(
+            emit: emit,
+            searchResults: const [],
+            suggestions: const [],
+            selectedCategory: null,
+          );
+          return;
+        }
 
         if (data['similar_images'] != null &&
             data['similar_images'].isNotEmpty) {
@@ -781,7 +806,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
               .map((img) => path.basename(img['image_path'] as String))
               .toList();
 
-          print('Found similar images: $fileNames');
+          print('✅ Found similar images: $fileNames');
 
           // Lấy tất cả pets từ Firestore
           final allPetsSnapshot = await _firestore.collection('Pets').get();
@@ -808,7 +833,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             return matchesImage && isAvailable && isNotSold;
           }).toList();
 
-          print('Found ${results.length} matching pets (after filtering isAvailable)');
+          print('✅ Found ${results.length} matching pets (after filtering isAvailable)');
 
           await _emitWithHistory(
             emit: emit,
@@ -817,7 +842,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             selectedCategory: null,
           );
         } else {
-          // Không tìm thấy kết quả
+          // Không tìm thấy kết quả hoặc empty array
+          print('ℹ️ Empty similar_images array');
           await _emitWithHistory(
             emit: emit,
             searchResults: const [],
@@ -825,6 +851,15 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
             selectedCategory: null,
           );
         }
+      } else if (response.statusCode == 404) {
+        // 404 có nghĩa là không tìm thấy ảnh tương tự - không phải lỗi
+        print('ℹ️ No similar images found (404)');
+        await _emitWithHistory(
+          emit: emit,
+          searchResults: const [],
+          suggestions: const [],
+          selectedCategory: null,
+        );
       } else {
         if (!emit.isDone)
           emit(SearchError('Lỗi máy chủ: ${response.statusCode}'));

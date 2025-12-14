@@ -747,22 +747,22 @@ class _NewSearchPageState extends State<SearchPage> {
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      'Đang chuẩn bị tìm kiếm',
+                                      'Không tìm thấy thú cưng tương tự',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.grey[800],
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Hệ thống đang xử lý hình ảnh của bạn',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
+                                    // const SizedBox(height: 8),
+                                    // Text(
+                                    //   'Hệ thống đang xử lý hình ảnh của bạn',
+                                    //   style: TextStyle(
+                                    //     fontSize: 14,
+                                    //     color: Colors.grey[600],
+                                    //   ),
+                                    //   textAlign: TextAlign.center,
+                                    // ),
                                   ],
                                 ),
                               ),
