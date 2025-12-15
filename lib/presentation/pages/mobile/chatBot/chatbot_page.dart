@@ -43,6 +43,14 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
   // Animation for listening indicator
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  
+  // Spam protection - Rate limiting
+  final List<DateTime> _messageTimes = [];
+  static const int _maxMessagesPerWindow = 5; // Max 5 messages
+  static const Duration _timeWindow = Duration(seconds: 15); // in 15 seconds
+  static const Duration _cooldownPeriod = Duration(seconds: 15); // Cooldown after hitting limit
+  bool _isRateLimited = false;
+  DateTime? _rateLimitStartTime;
 
   @override
   void initState() {
@@ -300,6 +308,58 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
         }
       });
     }
+  }
+  
+  bool _checkRateLimit() {
+    // If already rate limited, don't allow
+    if (_isRateLimited) {
+      debugPrint('⛔ Rate limited - rejecting message');
+      return false;
+    }
+    
+    final now = DateTime.now();
+    
+    // Check if reached limit BEFORE cleaning (prevent spam by removing old messages)
+    if (_messageTimes.length >= _maxMessagesPerWindow) {
+      // Set flag SYNCHRONOUSLY to prevent race condition
+      _isRateLimited = true;
+      _rateLimitStartTime = now; // Save when limit was hit
+      
+      debugPrint('⛔ Rate limit reached! Must wait $_cooldownPeriod.');
+      
+      // Update UI
+      setState(() {});
+      
+      _showSnack(
+        'Bạn đã gửi tối đa $_maxMessagesPerWindow tin nhắn! Vui lòng chờ ${_cooldownPeriod.inSeconds} giây.',
+      );
+      
+      // Auto reset after FULL cooldown period from NOW
+      Future.delayed(_cooldownPeriod, () {
+        if (mounted) {
+          _messageTimes.clear(); // Clear all messages on reset
+          _isRateLimited = false;
+          _rateLimitStartTime = null;
+          setState(() {});
+          debugPrint('✅ Rate limit reset - can send messages again');
+        }
+      });
+      
+      return false;
+    }
+    
+    // Add current message time ONLY if check passed
+    _messageTimes.add(now);
+    debugPrint('📊 Messages sent: ${_messageTimes.length}/$_maxMessagesPerWindow');
+    
+    // Auto-clean old messages only when NOT at limit (to prevent gradual slot recovery)
+    if (_messageTimes.length < _maxMessagesPerWindow) {
+      _messageTimes.removeWhere(
+        (time) => now.difference(time) > _timeWindow,
+      );
+    }
+    
+    return true;
   }
 
   @override
@@ -859,10 +919,10 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
               ),
               maxLines: null,
               textCapitalization: TextCapitalization.sentences,
-              enabled: !_isListening && !_isInitializingListening, // Disable typing when listening or initializing
+              enabled: !_isListening && !_isInitializingListening && !_isRateLimited, // Disable when listening, initializing, or rate limited
               onSubmitted: (value) {
                 final message = _messageController.text.trim();
-                if (message.isNotEmpty) {
+                if (message.isNotEmpty && _checkRateLimit()) {
                   context.read<ChatBotBloc>().add(
                         SendChatBotMessage(
                           userId: widget.userId,
@@ -894,11 +954,11 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
                           ),
                         )
                       : const Icon(Icons.send, color: Colors.white),
-                  onPressed: (isLoading || _isListening || _isInitializingListening)
+                  onPressed: (isLoading || _isListening || _isInitializingListening || _isRateLimited)
                       ? null
                       : () {
                           final message = _messageController.text.trim();
-                          if (message.isNotEmpty) {
+                          if (message.isNotEmpty && _checkRateLimit()) {
                             blocContext.read<ChatBotBloc>().add(
                                   SendChatBotMessage(
                                     userId: widget.userId,
@@ -1226,6 +1286,7 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
       builder: (blocContext, state) {
         return GestureDetector(
           onTap: () {
+            if (!_checkRateLimit()) return;
             // Send the quick reply as a message
             blocContext.read<ChatBotBloc>().add(
                   SendChatBotMessage(
@@ -1275,6 +1336,7 @@ class _ChatBotPageState extends State<ChatBotPage> with SingleTickerProviderStat
         final label = action.text.isNotEmpty ? action.text : action.type;
         return GestureDetector(
           onTap: () {
+            if (!_checkRateLimit()) return;
             // Send the action label as a follow-up message
             blocContext.read<ChatBotBloc>().add(
                   SendChatBotMessage(
