@@ -159,7 +159,10 @@ class _SensitiveWordsAdminState extends State<SensitiveWordsAdmin> {
                 _addWord(controller.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Add'),
           ),
         ],
@@ -184,7 +187,10 @@ class _SensitiveWordsAdminState extends State<SensitiveWordsAdmin> {
               Navigator.pop(context);
               _deleteWord(wordId);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: Text(l10n.delete),
           ),
         ],

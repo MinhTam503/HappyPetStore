@@ -13,6 +13,7 @@ import 'package:pet_shop/presentation/pages/mobile/social/widgets/explore_grid.d
 import 'package:pet_shop/presentation/pages/mobile/social/widgets/post_detail_sheet.dart';
 import 'package:pet_shop/presentation/widgets/social/comment_widget.dart';
 import 'package:pet_shop/presentation/pages/mobile/social/social_settings_page.dart';
+import 'package:pet_shop/presentation/pages/mobile/tab/bottom_navigator.dart';
 
 /// Social Home Page - Instagram-style feed
 class SocialHomePage extends StatefulWidget {
@@ -42,7 +43,7 @@ class _SocialHomePageState extends State<SocialHomePage>
     if (_currentUserId != null) {
       context.read<SocialBloc>().add(EnsureUserProfile(_currentUserId!));
 
-      // Load user avatar
+      // Load user avatar (locked check is in StreamBuilder)
       try {
         final profileDoc = await FirebaseFirestore.instance
             .collection('socialPetProfiles')
@@ -56,7 +57,7 @@ class _SocialHomePageState extends State<SocialHomePage>
           });
         }
       } catch (e) {
-        debugPrint('Error loading user avatar: $e');
+        debugPrint('Error loading user profile: $e');
       }
     }
 
@@ -77,6 +78,113 @@ class _SocialHomePageState extends State<SocialHomePage>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Real-time check for account lock status
+    if (_currentUserId == null) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('socialPetProfiles')
+          .doc(_currentUserId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        // Check if account is locked
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          final isLocked = data?['isLocked'] == true;
+          
+          if (isLocked) {
+            // Show locked screen
+            return _buildLockedAccountScreen(context, l10n);
+          }
+        }
+
+        return _buildMainScaffold(context, l10n, theme, isDark);
+      },
+    );
+  }
+
+  Widget _buildLockedAccountScreen(BuildContext context, AppLocalizations? l10n) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n?.socialNetwork ?? 'Mạng xã hội'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, size: 100, color: Colors.red),
+              const SizedBox(height: 24),
+              Text(
+                l10n?.accountLocked ?? 'Tài khoản bị khóa',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Tài khoản đã bị khóa vui lòng liên hệ quản trị viên để biết thêm thông tin!',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.grey[700]),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Bạn không thể sử dụng tính năng mạng xã hội khi tài khoản bị khóa.',
+                        style: TextStyle(color: Colors.grey[700]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Navigate to home (BottomNavigator index 0)
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const BottomNavigator(initialIndex: 0),
+                    ),
+                    (route) => false,
+                  );
+                },
+                icon: const Icon(Icons.exit_to_app),
+                label: const Text('Thoát'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainScaffold(BuildContext context, AppLocalizations? l10n, ThemeData theme, bool isDark) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,

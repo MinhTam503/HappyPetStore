@@ -115,7 +115,7 @@ class _PostDetailSheetState extends State<PostDetailSheet> {
                       children: [
                         const SizedBox(width: 48),
                         const Text(
-                          'Post',
+                          'Bài viết',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

@@ -81,9 +81,14 @@ class _SocialPostsAdminState extends State<SocialPostsAdmin> {
 
   Future<void> _togglePostVisibility(String postId, bool currentlyHidden) async {
     try {
+      print('🔄 Toggling post $postId: currentlyHidden=$currentlyHidden -> ${!currentlyHidden}');
+      
       await FirebaseFirestore.instance.collection('socialPosts').doc(postId).update({
         'isHidden': !currentlyHidden,
       });
+      
+      print('✅ Post visibility updated successfully');
+      
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,6 +99,7 @@ class _SocialPostsAdminState extends State<SocialPostsAdmin> {
         );
       }
     } catch (e) {
+      print('❌ Error toggling post visibility: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

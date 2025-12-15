@@ -153,7 +153,12 @@ class SocialRepositoryImpl implements SocialRepository {
           .limit(limit)
           .get();
 
+      // Filter out hidden posts (admin feature)
       return querySnapshot.docs
+          .where((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            return data?['isHidden'] != true;
+          })
           .map((doc) => SocialPostModel.fromFirestore(doc))
           .toList();
     } catch (e) {
@@ -459,7 +464,12 @@ class SocialRepositoryImpl implements SocialRepository {
           .limit(limit)
           .get();
 
+      // Filter out hidden posts (admin feature)
       return snapshot.docs
+          .where((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            return data?['isHidden'] != true;
+          })
           .map((doc) => SocialPostModel.fromFirestore(doc))
           .toList();
     } catch (e) {
@@ -499,7 +509,12 @@ class SocialRepositoryImpl implements SocialRepository {
             .limit(limit)
             .get();
 
+        // Filter out hidden posts (admin feature)
         posts.addAll(snapshot.docs
+            .where((doc) {
+              final data = doc.data() as Map<String, dynamic>?;
+              return data?['isHidden'] != true;
+            })
             .map((doc) => SocialPostModel.fromFirestore(doc)));
       }
 
@@ -549,7 +564,12 @@ class SocialRepositoryImpl implements SocialRepository {
           .limit(limit * 2)
           .get();
 
+      // Filter out hidden posts (admin feature)
       var posts = snapshot.docs
+          .where((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            return data?['isHidden'] != true;
+          })
           .map((doc) => SocialPostModel.fromFirestore(doc))
           .toList();
       

@@ -325,7 +325,7 @@ class _ExploreGridState extends State<ExploreGrid> with AutomaticKeepAliveClient
             ),
             const SizedBox(height: 8),
             Text(
-              'Discover amazing pet posts',
+              'Khám phá cách bài viết mới',
               textAlign: TextAlign.center,
               style: TextStyle(color: theme.textTheme.bodySmall?.color),
             ),

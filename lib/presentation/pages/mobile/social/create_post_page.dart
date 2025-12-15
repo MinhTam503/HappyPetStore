@@ -272,14 +272,60 @@ class _CreatePostPageState extends State<CreatePostPage> {
     return imageUrls;
   }
   
+  Future<bool> _checkForSensitiveWords(String caption, List<String> tags) async {
+    try {
+      // Get all sensitive words from Firestore
+      final snapshot = await FirebaseFirestore.instance
+          .collection('sensitiveWords')
+          .get();
+      
+      final sensitiveWords = snapshot.docs
+          .map((doc) => (doc.data()['word'] as String).toLowerCase())
+          .toList();
+      
+      if (sensitiveWords.isEmpty) {
+        return false; // No sensitive words configured
+      }
+      
+      // Check caption
+      final lowerCaption = caption.toLowerCase();
+      for (final word in sensitiveWords) {
+        if (lowerCaption.contains(word)) {
+          debugPrint('🚫 Sensitive word detected in caption: $word');
+          return true;
+        }
+      }
+      
+      // Check tags
+      for (final tag in tags) {
+        final lowerTag = tag.toLowerCase().replaceAll('#', '');
+        for (final word in sensitiveWords) {
+          if (lowerTag.contains(word)) {
+            debugPrint('🚫 Sensitive word detected in tag: $word');
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    } catch (e) {
+      debugPrint('Error checking sensitive words: $e');
+      // On error, allow post to go through (fail open)
+      return false;
+    }
+  }
+  
   Future<void> _createPost() async {
     final l10n = AppLocalizations.of(context);
     
-    // Validation
-    if (_selectedImages.isEmpty) {
+    // Extract hashtags from caption
+    final caption = _captionController.text.trim();
+    
+    // Validation - Chỉ cần có caption hoặc ảnh (ít nhất 1 trong 2)
+    if (caption.isEmpty && _selectedImages.isEmpty) {
       NotificationHelper.showWarning(
         context,
-        l10n?.selectAtLeastOnePhoto ?? 'Please select at least 1 photo',
+        'Vui lòng nhập nội dung hoặc chọn ảnh',
       );
       return;
     }
@@ -288,6 +334,33 @@ class _CreatePostPageState extends State<CreatePostPage> {
       NotificationHelper.showError(
         context,
         l10n?.pleaseLogin ?? 'Please login',
+      );
+      return;
+    }
+    
+    final tags = <String>[];
+    final hashtagRegex = RegExp(r'#(\w+)');
+    final matches = hashtagRegex.allMatches(caption);
+    for (final match in matches) {
+      tags.add(match.group(1)!.toLowerCase());
+    }
+    
+    // Check for sensitive words
+    final hasSensitiveWords = await _checkForSensitiveWords(caption, tags);
+    if (hasSensitiveWords) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n?.sensitiveWordDetected ?? 'Sensitive Word Detected'),
+          content: Text(l10n?.sensitiveWordWarning ?? 'Your content contains inappropriate words. Please edit before posting.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n?.ok ?? 'OK'),
+            ),
+          ],
+        ),
       );
       return;
     }
@@ -307,17 +380,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
       // Ensure user profile exists first
       await _ensureUserProfileExists();
       
-      // Upload images to Firebase Storage
-      final imageUrls = await _uploadImages();
-      
-      // Extract hashtags from caption
-      final caption = _captionController.text.trim();
-      final tags = <String>[];
-      final hashtagRegex = RegExp(r'#(\w+)');
-      final matches = hashtagRegex.allMatches(caption);
-      for (final match in matches) {
-        tags.add(match.group(1)!.toLowerCase());
-      }
+      // Upload images to Firebase Storage (if any)
+      final imageUrls = _selectedImages.isEmpty ? <String>[] : await _uploadImages();
       
       // Create post with user ID as petId
       context.read<SocialBloc>().add(

@@ -63,23 +63,34 @@ class _SocialAccountsAdminState extends State<SocialAccountsAdmin> {
 
   Future<void> _toggleAccountStatus(String accountId, bool isLocked) async {
     try {
+      print('🔄 Toggling account $accountId: isLocked=$isLocked -> ${!isLocked}');
+      
       await FirebaseFirestore.instance
           .collection('socialPetProfiles')
           .doc(accountId)
           .update({'isLocked': !isLocked});
+      
+      print('✅ Account lock status updated successfully');
       
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(!isLocked ? l10n.accountLocked : l10n.accountUnlocked),
+            backgroundColor: Colors.green,
           ),
         );
+        // Trigger rebuild to reflect changes
+        setState(() {});
       }
     } catch (e) {
+      print('❌ Error toggling account lock: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -103,9 +114,10 @@ class _SocialAccountsAdminState extends State<SocialAccountsAdmin> {
               _toggleAccountStatus(account.id, isLocked);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: isLocked ? primaryColor : Colors.orange,
+              backgroundColor: isLocked ? Colors.green : Colors.orange,
+              foregroundColor: Colors.white,
             ),
-            child: Text(isLocked ? 'Unlock' : 'Lock'),
+            child: Text(isLocked ? l10n.unlock : 'Khoá'),
           ),
         ],
       ),
@@ -256,19 +268,24 @@ class _SocialAccountsAdminState extends State<SocialAccountsAdmin> {
                     }
 
                     final account = accounts[index - 1];
-                    return _AccountCard(
-                      account: account,
-                      onView: () => _showAccountDetails(account),
-                      onToggleStatus: () {
-                        // Get lock status from Firestore
-                        FirebaseFirestore.instance
-                            .collection('socialPetProfiles')
-                            .doc(account.id)
-                            .get()
-                            .then((doc) {
-                          final isLocked = doc.data()?['isLocked'] ?? false;
-                          _showLockDialog(account, isLocked);
-                        });
+                    
+                    // Wrap with StreamBuilder to show real-time lock status
+                    return StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('socialPetProfiles')
+                          .doc(account.id)
+                          .snapshots(),
+                      builder: (context, docSnapshot) {
+                        final isLocked = docSnapshot.hasData
+                            ? ((docSnapshot.data!.data() as Map<String, dynamic>?)?['isLocked'] == true)
+                            : false;
+                        
+                        return _AccountCard(
+                          account: account,
+                          isLocked: isLocked,
+                          onView: () => _showAccountDetails(account),
+                          onToggleStatus: () => _showLockDialog(account, isLocked),
+                        );
                       },
                     );
                   },
@@ -284,11 +301,13 @@ class _SocialAccountsAdminState extends State<SocialAccountsAdmin> {
 
 class _AccountCard extends StatelessWidget {
   final SocialPetProfile account;
+  final bool isLocked;
   final VoidCallback onView;
   final VoidCallback onToggleStatus;
 
   const _AccountCard({
     required this.account,
+    required this.isLocked,
     required this.onView,
     required this.onToggleStatus,
   });
@@ -308,16 +327,38 @@ class _AccountCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Avatar
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: primaryColor.withOpacity(0.1),
-                backgroundImage: account.avatarUrl.isNotEmpty
-                    ? NetworkImage(account.avatarUrl)
-                    : null,
-                child: account.avatarUrl.isEmpty
-                    ? Icon(Icons.person, size: 40, color: primaryColor)
-                    : null,
+              // Avatar with lock indicator
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: primaryColor.withOpacity(0.1),
+                    backgroundImage: account.avatarUrl.isNotEmpty
+                        ? NetworkImage(account.avatarUrl)
+                        : null,
+                    child: account.avatarUrl.isEmpty
+                        ? Icon(Icons.person, size: 40, color: primaryColor)
+                        : null,
+                  ),
+                  if (isLocked)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.lock,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 16),
               
@@ -326,11 +367,44 @@ class _AccountCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      account.displayName ?? account.petName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            account.displayName ?? account.petName,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isLocked) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.lock, size: 12, color: Colors.red),
+                                const SizedBox(width: 4),
+                                Text(
+                                  l10n.locked,
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (account.email != null) ...[
                       const SizedBox(height: 4),
@@ -372,10 +446,10 @@ class _AccountCard extends StatelessWidget {
                     color: primaryColor,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.lock_outline),
+                    icon: Icon(isLocked ? Icons.lock_open : Icons.lock_outline),
                     onPressed: onToggleStatus,
-                    tooltip: l10n.lockAccount,
-                    color: Colors.orange,
+                    tooltip: isLocked ? l10n.unlockAccount : l10n.lockAccount,
+                    color: isLocked ? Colors.green : Colors.orange,
                   ),
                 ],
               ),

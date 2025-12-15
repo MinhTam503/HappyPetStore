@@ -791,11 +791,15 @@ class _GroupMembersTab extends StatelessWidget {
     if (confirmed != true) return;
 
     try {
+      print('🔄 Removing member $userId from group ${group.id}');
+      
       final updatedParticipants = List<String>.from(group.participants)
         ..remove(userId);
       final updatedAdmins = List<String>.from(group.admins)..remove(userId);
       final updatedParticipantsInfo = Map<String, dynamic>.from(group.participantsInfo)
         ..remove(userId);
+
+      print('👥 Updated participants: ${updatedParticipants.length} members');
 
       await FirebaseFirestore.instance
           .collection('groupConversations')
@@ -806,6 +810,8 @@ class _GroupMembersTab extends StatelessWidget {
         'participantsInfo': updatedParticipantsInfo,
       });
 
+      print('✅ Member removed successfully');
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -813,8 +819,11 @@ class _GroupMembersTab extends StatelessWidget {
             backgroundColor: Colors.green,
           ),
         );
+        // Pop the dialog to trigger UI refresh from StreamBuilder
+        Navigator.of(context).pop();
       }
     } catch (e) {
+      print('❌ Error removing member: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -1179,6 +1179,8 @@
     "enterSensitiveWord": "Nhập từ nhạy cảm",
     "wordAlreadyExists": "Từ này đã tồn tại",
     "contentViolation": "Nội dung chứa từ ngữ bị cấm",
+    "sensitiveWordDetected": "Phát hiện từ ngữ cấm",
+    "sensitiveWordWarning": "Nội dung của bạn có chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa lại trước khi đăng.",
     "totalSensitiveWords": "Tổng số từ nhạy cảm",
     "noSensitiveWordsFound": "Không tìm thấy từ nhạy cảm nào",
     "addFirstWord": "Thêm từ nhạy cảm đầu tiên",

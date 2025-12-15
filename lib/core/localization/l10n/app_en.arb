@@ -2353,6 +2353,8 @@
   "enterSensitiveWord": "Enter sensitive word",
   "wordAlreadyExists": "This word already exists",
   "contentViolation": "Content contains prohibited words",
+  "sensitiveWordDetected": "Sensitive Word Detected",
+  "sensitiveWordWarning": "Your content contains inappropriate words. Please edit before posting.",
   "totalSensitiveWords": "Total Sensitive Words",
   "noSensitiveWordsFound": "No sensitive words found",
   "addFirstWord": "Add your first sensitive word",
